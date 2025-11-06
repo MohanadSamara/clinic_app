@@ -11,6 +11,7 @@ class Appointment {
   final double? price;
   final int? driverId;
   final int? doctorId;
+  final String? doctorName;
   final String urgencyLevel; // 'routine', 'urgent', 'emergency'
   final double? locationLat;
   final double? locationLng;
@@ -27,6 +28,7 @@ class Appointment {
     this.price,
     this.driverId,
     this.doctorId,
+    this.doctorName,
     this.urgencyLevel = 'routine',
     this.locationLat,
     this.locationLng,
@@ -63,6 +65,7 @@ class Appointment {
         : (m['price'] as double?),
     driverId: m['driver_id'],
     doctorId: m['doctor_id'],
+    doctorName: m['doctor_name'],
     urgencyLevel: m['urgency_level'] ?? 'routine',
     locationLat: (m['location_lat'] as num?)?.toDouble(),
     locationLng: (m['location_lng'] as num?)?.toDouble(),
@@ -80,6 +83,7 @@ class Appointment {
     double? price,
     int? driverId,
     int? doctorId,
+    String? doctorName,
     String? urgencyLevel,
     double? locationLat,
     double? locationLng,
@@ -96,6 +100,7 @@ class Appointment {
       price: price ?? this.price,
       driverId: driverId ?? this.driverId,
       doctorId: doctorId ?? this.doctorId,
+      doctorName: doctorName ?? this.doctorName,
       urgencyLevel: urgencyLevel ?? this.urgencyLevel,
       locationLat: locationLat ?? this.locationLat,
       locationLng: locationLng ?? this.locationLng,

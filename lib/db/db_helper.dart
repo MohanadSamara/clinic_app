@@ -33,7 +33,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -54,31 +54,16 @@ class DBHelper {
         debugPrint('Error adding doctor_id column: $e');
       }
     }
+    if (oldVersion < 5) {
+      // Add new tables for service assignments and sessions
+      await _createNewTablesV5(db);
+    }
   }
 
   Future _createDB(Database db, int version) async {
     // Only drop tables if version is 1 (fresh install)
     // For upgrades, preserve existing data
-    if (version == 1) {
-      try {
-        await db.execute('DROP TABLE IF EXISTS vehicle_checks');
-        await db.execute('DROP TABLE IF EXISTS routes');
-        await db.execute('DROP TABLE IF EXISTS service_requests');
-        await db.execute('DROP TABLE IF EXISTS vaccination_records');
-        await db.execute('DROP TABLE IF EXISTS documents');
-        await db.execute('DROP TABLE IF EXISTS driver_status');
-        await db.execute('DROP TABLE IF EXISTS payments');
-        await db.execute('DROP TABLE IF EXISTS notifications');
-        await db.execute('DROP TABLE IF EXISTS inventory');
-        await db.execute('DROP TABLE IF EXISTS medical_records');
-        await db.execute('DROP TABLE IF EXISTS services');
-        await db.execute('DROP TABLE IF EXISTS appointments');
-        await db.execute('DROP TABLE IF EXISTS pets');
-        await db.execute('DROP TABLE IF EXISTS users');
-      } catch (e) {
-        debugPrint('Error dropping tables: $e');
-      }
-    }
+    // Note: Removed table dropping to preserve data on app restart
 
     // Users table
     await db.execute('''
@@ -211,6 +196,9 @@ class DBHelper {
 
     // Create new tables for version 3
     await _createNewTablesV3(db);
+
+    // Create new tables for version 5
+    await _createNewTablesV5(db);
 
     // Insert default services after creating tables
     await _insertDefaultServices(db);
@@ -369,6 +357,13 @@ class DBHelper {
           'password': '123456',
           'phone': '+96287654321',
           'role': 'owner',
+        },
+        {
+          'name': 'Mike Johnson',
+          'email': 'driver@example.com',
+          'password': '123456',
+          'phone': '+9625551234',
+          'role': 'driver',
         },
       ];
 
@@ -594,12 +589,29 @@ class DBHelper {
       whereClause += '(location_lat IS NOT NULL AND location_lng IS NOT NULL)';
     }
 
-    return await db.query(
-      'appointments',
-      where: whereClause.isNotEmpty ? whereClause : null,
-      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
-      orderBy: 'scheduled_at DESC',
-    );
+    // Join with users table to get driver information
+    final query =
+        '''
+      SELECT
+        appointments.*,
+        driver.name as driver_name,
+        driver.email as driver_email,
+        driver.phone as driver_phone,
+        doctor.name as doctor_name,
+        doctor.email as doctor_email,
+        doctor.phone as doctor_phone,
+        owner.name as owner_name,
+        owner.email as owner_email,
+        owner.phone as owner_phone
+      FROM appointments
+      LEFT JOIN users driver ON appointments.driver_id = driver.id
+      LEFT JOIN users doctor ON appointments.doctor_id = doctor.id
+      LEFT JOIN users owner ON appointments.owner_id = owner.id
+      ${whereClause.isNotEmpty ? 'WHERE $whereClause' : ''}
+      ORDER BY appointments.scheduled_at DESC
+    ''';
+
+    return await db.rawQuery(query, whereArgs);
   }
 
   Future<List<Map<String, dynamic>>> getAppointmentsByOwner(int ownerId) async {
@@ -877,11 +889,8 @@ class DBHelper {
 
   Future<List<Map<String, dynamic>>> getAvailableDrivers() async {
     final db = await instance.database;
-    return await db.query(
-      'driver_status',
-      where: 'status=?',
-      whereArgs: ['available'],
-    );
+    // Return all drivers with role 'driver' - consider them available
+    return await db.query('users', where: 'role=?', whereArgs: ['driver']);
   }
 
   Future<int> updateDriverStatus(
@@ -1081,6 +1090,57 @@ class DBHelper {
     return null;
   }
 
+  Future _createNewTablesV5(Database db) async {
+    // Doctors table with service assignment
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS doctors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER UNIQUE,
+        assigned_service_id INTEGER,
+        license_number TEXT,
+        specialization TEXT,
+        experience_years INTEGER,
+        is_available INTEGER DEFAULT 1,
+        created_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (assigned_service_id) REFERENCES services (id)
+      );
+    ''');
+
+    // Vans table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS vans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT,
+        license_plate TEXT,
+        driver_id INTEGER,
+        is_active INTEGER
+      );
+    ''');
+
+    // Driver doctor assignments table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS driver_doctor_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver_id INTEGER,
+        doctor_id INTEGER,
+        is_active INTEGER
+      );
+    ''');
+
+    // Service sessions table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS service_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        user_role TEXT,
+        selected_service_id INTEGER,
+        session_date TEXT,
+        is_active INTEGER
+      );
+    ''');
+  }
+
   // ---------- REPORTING / KPIs ----------
   Future<Map<String, int>> getAppointmentKpis({
     required DateTime start,
@@ -1183,5 +1243,162 @@ class DBHelper {
       "ORDER BY day ASC",
       [startIso, endIso],
     );
+  }
+
+  // ---------- VANS ----------
+  Future<int> insertVan(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('vans', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getVans() async {
+    final db = await instance.database;
+    return await db.query('vans');
+  }
+
+  Future<int> updateVan(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('vans', data, where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<int> deleteVan(int id) async {
+    final db = await instance.database;
+    return await db.delete('vans', where: 'id=?', whereArgs: [id]);
+  }
+
+  // ---------- DOCTORS ----------
+  Future<int> insertDoctor(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('doctors', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getDoctors() async {
+    final db = await instance.database;
+    return await db.query('doctors');
+  }
+
+  Future<List<Map<String, dynamic>>> getDoctorsByService(int serviceId) async {
+    final db = await instance.database;
+    return await db.query(
+      'doctors',
+      where: 'assigned_service_id = ? AND is_available = 1',
+      whereArgs: [serviceId],
+    );
+  }
+
+  Future<Map<String, dynamic>?> getDoctorByUserId(int userId) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'doctors',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  Future<int> updateDoctor(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('doctors', data, where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<int> deleteDoctor(int id) async {
+    final db = await instance.database;
+    return await db.delete('doctors', where: 'id=?', whereArgs: [id]);
+  }
+
+  // ---------- DRIVER DOCTOR ASSIGNMENTS ----------
+  Future<int> insertDriverDoctorAssignment(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('driver_doctor_assignments', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getDriverDoctorAssignments() async {
+    final db = await instance.database;
+    return await db.query('driver_doctor_assignments');
+  }
+
+  Future<int> updateDriverDoctorAssignment(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final db = await instance.database;
+    return await db.update(
+      'driver_doctor_assignments',
+      data,
+      where: 'id=?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteDriverDoctorAssignment(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'driver_doctor_assignments',
+      where: 'id=?',
+      whereArgs: [id],
+    );
+  }
+
+  // ---------- SERVICE SESSIONS ----------
+  Future<int> insertServiceSession(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('service_sessions', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getServiceSessions({
+    int? userId,
+    String? userRole,
+    String? sessionDate,
+  }) async {
+    final db = await instance.database;
+    String whereClause = '';
+    List<dynamic> whereArgs = [];
+
+    if (userId != null) {
+      whereClause += 'user_id=?';
+      whereArgs.add(userId);
+    }
+
+    if (userRole != null) {
+      if (whereClause.isNotEmpty) whereClause += ' AND ';
+      whereClause += 'user_role=?';
+      whereArgs.add(userRole);
+    }
+
+    if (sessionDate != null) {
+      if (whereClause.isNotEmpty) whereClause += ' AND ';
+      whereClause += 'session_date=?';
+      whereArgs.add(sessionDate);
+    }
+
+    return await db.query(
+      'service_sessions',
+      where: whereClause.isNotEmpty ? whereClause : null,
+      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
+    );
+  }
+
+  Future<int> updateServiceSession(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update(
+      'service_sessions',
+      data,
+      where: 'id=?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteServiceSession(int id) async {
+    final db = await instance.database;
+    return await db.delete('service_sessions', where: 'id=?', whereArgs: [id]);
+  }
+
+  // ---------- USERS ----------
+  Future<Map<String, dynamic>?> getUserById(int id) async {
+    final db = await instance.database;
+    final res = await db.query('users', where: 'id=?', whereArgs: [id]);
+    if (res.isNotEmpty) return res.first;
+    return null;
   }
 }

@@ -75,7 +75,7 @@ class AppointmentProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      // If doctor confirms appointment, automatically assign a driver
+      // Auto-assign driver when appointment is confirmed
       if (status == 'confirmed') {
         final appointment = _appointments[index];
         await _autoAssignDriver(appointment);
@@ -229,45 +229,14 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _autoAssignDoctor(Appointment appointment) async {
-    try {
-      // Only assign doctor if not already assigned
-      if (appointment.doctorId != null) {
-        debugPrint('Doctor already assigned to appointment ${appointment.id}');
-        return;
-      }
-
-      // Get all doctors
-      final doctors = await DBHelper.instance.getAllUsers(role: 'doctor');
-
-      if (doctors.isNotEmpty) {
-        // For now, assign the first available doctor
-        // In a real app, you might use specialty-based or load-balancing assignment
-        final doctorId = doctors.first['id'] as int;
-
-        // Assign doctor to appointment
-        await assignDoctorToAppointment(appointment.id!, doctorId);
-
-        debugPrint(
-          'Auto-assigned doctor $doctorId to appointment ${appointment.id}',
-        );
-      } else {
-        debugPrint('No doctors found for appointment ${appointment.id}');
-      }
-    } catch (e) {
-      debugPrint('Error auto-assigning doctor: $e');
-    }
-  }
-
   Future<void> _autoAssignDriver(Appointment appointment) async {
     try {
-      // Get available drivers
+      // First, try to get available drivers
       final availableDrivers = await DBHelper.instance.getAvailableDrivers();
 
       if (availableDrivers.isNotEmpty) {
-        // For now, assign the first available driver
-        // In a real app, you might use location-based assignment
-        final driverId = availableDrivers.first['driver_id'] as int;
+        // Assign the first available driver
+        final driverId = availableDrivers.first['id'] as int;
 
         // Assign driver to appointment
         await assignDriverToAppointment(appointment.id!, driverId);

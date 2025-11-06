@@ -7,11 +7,11 @@ import 'dart:io' show Platform;
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
+import '../../providers/service_assignment_provider.dart';
 import '../../models/appointment.dart';
 import '../../models/service.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
-import '../../db/db_helper.dart';
 import '../select_location_screen.dart';
 
 class BookingScreen extends StatefulWidget {
@@ -45,7 +45,10 @@ class _BookingScreenState extends State<BookingScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppointmentProvider>().loadServices();
       _loadUserPets();
-      _loadDoctors();
+      // Load doctor assignments first, then doctors
+      context.read<ServiceAssignmentProvider>().loadDoctors().then((_) {
+        _loadDoctors();
+      });
     });
   }
 
@@ -62,13 +65,27 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _loadDoctors() async {
-    try {
-      final doctorsData = await DBHelper.instance.getAllUsers(role: 'doctor');
+    if (_selectedService == null) {
       setState(() {
-        _doctors = doctorsData.map((data) => User.fromMap(data)).toList();
+        _doctors = [];
+      });
+      return;
+    }
+
+    try {
+      final serviceAssignmentProvider = context
+          .read<ServiceAssignmentProvider>();
+      final selectedDate = _selectedDate.toIso8601String().split('T')[0];
+      final availableDoctors = await serviceAssignmentProvider
+          .getAvailableDoctorsForService(_selectedService!.id!, selectedDate);
+      setState(() {
+        _doctors = availableDoctors;
       });
     } catch (e) {
       debugPrint('Error loading doctors: $e');
+      setState(() {
+        _doctors = [];
+      });
     }
   }
 
@@ -139,6 +156,10 @@ class _BookingScreenState extends State<BookingScreen> {
                       setState(() {
                         _selectedDate = selectedDay;
                       });
+                      // Reload doctors when date changes
+                      if (_selectedService != null) {
+                        _loadDoctors();
+                      }
                     },
                     calendarStyle: const CalendarStyle(
                       selectedDecoration: BoxDecoration(
@@ -200,7 +221,10 @@ class _BookingScreenState extends State<BookingScreen> {
                   onChanged: (service) {
                     setState(() {
                       _selectedService = service;
+                      _selectedDoctor =
+                          null; // Reset doctor selection when service changes
                     });
+                    _loadDoctors(); // Reload doctors when service changes
                   },
                 ),
                 const SizedBox(height: 24),
@@ -209,23 +233,50 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<User>(
-                  initialValue: _selectedDoctor,
-                  hint: const Text('Choose a doctor'),
-                  items: _doctors.map((doctor) {
-                    return DropdownMenuItem(
-                      value: doctor,
-                      child: Text('Dr. ${doctor.name}'),
-                    );
-                  }).toList(),
-                  onChanged: (doctor) {
-                    setState(() {
-                      _selectedDoctor = doctor;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Please select a doctor' : null,
-                ),
+                if (_selectedService == null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey),
+                    ),
+                    child: const Text(
+                      'Please select a service first to see available doctors',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                else if (_doctors.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange),
+                    ),
+                    child: const Text(
+                      'No doctors available for this service today',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  )
+                else
+                  DropdownButtonFormField<User>(
+                    initialValue: _selectedDoctor,
+                    hint: const Text('Choose a doctor'),
+                    items: _doctors.map((doctor) {
+                      return DropdownMenuItem(
+                        value: doctor,
+                        child: Text('Dr. ${doctor.name}'),
+                      );
+                    }).toList(),
+                    onChanged: (doctor) {
+                      setState(() {
+                        _selectedDoctor = doctor;
+                      });
+                    },
+                    validator: (value) =>
+                        value == null ? 'Please select a doctor' : null,
+                  ),
                 const SizedBox(height: 24),
                 const Text(
                   'Select Pet',
@@ -445,228 +496,5 @@ class _BookingScreenState extends State<BookingScreen> {
         _lng = result['lng'];
       });
     }
-  }
-}
-
-class _MapPickerDialog extends StatefulWidget {
-  final double? initialLat;
-  final double? initialLng;
-  final String? initialAddress;
-
-  const _MapPickerDialog({
-    this.initialLat,
-    this.initialLng,
-    this.initialAddress,
-  });
-
-  @override
-  State<_MapPickerDialog> createState() => _MapPickerDialogState();
-}
-
-class _MapPickerDialogState extends State<_MapPickerDialog> {
-  double _selectedLat = 31.963158; // Amman, Jordan
-  double _selectedLng = 35.930359;
-  String _selectedAddress = '';
-  bool _isLoadingAddress = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialLat != null && widget.initialLng != null) {
-      _selectedLat = widget.initialLat!;
-      _selectedLng = widget.initialLng!;
-    }
-    if (widget.initialAddress != null) {
-      _selectedAddress = widget.initialAddress!;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Check if Google Maps is supported on this platform
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      // For desktop platforms, show a simplified location picker
-      return _buildDesktopLocationPicker();
-    } else {
-      // For mobile platforms, show a message about map integration
-      return _buildMobileLocationPicker();
-    }
-  }
-
-  Widget _buildDesktopLocationPicker() {
-    return Dialog(
-      child: SizedBox(
-        height: 400,
-        width: 400,
-        child: Column(
-          children: [
-            AppBar(
-              title: const Text('Select Location (Desktop)'),
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop({
-                    'address': _selectedAddress,
-                    'lat': _selectedLat,
-                    'lng': _selectedLng,
-                  }),
-                  child: const Text('Save'),
-                ),
-              ],
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Enter Location Coordinates',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Latitude',
-                        hintText: 'e.g., 31.963158',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      controller: TextEditingController(
-                        text: _selectedLat.toString(),
-                      ),
-                      onChanged: (value) {
-                        final lat = double.tryParse(value);
-                        if (lat != null && lat >= -90 && lat <= 90) {
-                          setState(() {
-                            _selectedLat = lat;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Longitude',
-                        hintText: 'e.g., 35.930359',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      controller: TextEditingController(
-                        text: _selectedLng.toString(),
-                      ),
-                      onChanged: (value) {
-                        final lng = double.tryParse(value);
-                        if (lng != null && lng >= -180 && lng <= 180) {
-                          setState(() {
-                            _selectedLng = lng;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Address (Optional)',
-                        hintText: 'Enter address or leave blank',
-                        border: OutlineInputBorder(),
-                      ),
-                      controller: TextEditingController(text: _selectedAddress),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedAddress = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Current Selection:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('Lat: ${_selectedLat.toStringAsFixed(6)}'),
-                          Text('Lng: ${_selectedLng.toStringAsFixed(6)}'),
-                          if (_selectedAddress.isNotEmpty)
-                            Text('Address: $_selectedAddress'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMobileLocationPicker() {
-    return Dialog(
-      child: SizedBox(
-        height: 300,
-        child: Column(
-          children: [
-            AppBar(
-              title: const Text('Location Selection'),
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.map, size: 64, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Interactive Map',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Map integration will be available on mobile devices.\n\nFor now, please enter your location manually.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).pop({
-                        'address': 'Location selected',
-                        'lat': 31.963158,
-                        'lng': 35.930359,
-                      }),
-                      icon: const Icon(Icons.check),
-                      label: const Text('Use Default Location'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

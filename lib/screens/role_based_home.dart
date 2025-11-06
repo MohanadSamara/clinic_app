@@ -19,7 +19,7 @@ class RoleBasedHome extends StatelessWidget {
           return const LoginScreen();
         }
 
-        final role = authProvider.user!.role;
+        final role = authProvider.user!.role?.toLowerCase();
 
         switch (role) {
           case 'owner':

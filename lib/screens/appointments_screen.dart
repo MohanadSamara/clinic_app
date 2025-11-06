@@ -153,6 +153,25 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                             ),
                           ],
                         ),
+                        if (a.doctorName != null &&
+                            a.doctorName!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.medical_services,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Dr. ${a.doctorName}',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Row(
                           children: [

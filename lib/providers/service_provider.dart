@@ -12,7 +12,7 @@ class ServiceProvider extends ChangeNotifier {
 
   Future<void> loadServices({String? category, bool? activeOnly}) async {
     _isLoading = true;
-    notifyListeners();
+    // Removed notifyListeners() here to prevent calling during build
 
     try {
       final data = await DBHelper.instance.getServices(
