@@ -1,13 +1,13 @@
 // lib/models/user.dart
+import 'dart:convert';
 
 class User {
   final int? id;
   final String name;
   final String email;
-  final String password; // plain text in demo (not secure)
+  final String password; // Will be hashed in production
   final String? phone;
   final String role;
-  final Map<String, dynamic>? permissions; // role-based permissions
 
   User({
     this.id,
@@ -16,7 +16,6 @@ class User {
     required this.password,
     this.phone,
     this.role = 'owner',
-    this.permissions,
   });
 
   Map<String, dynamic> toMap() => {
@@ -26,7 +25,6 @@ class User {
     'password': password,
     'phone': phone,
     'role': role,
-    // 'permissions': permissions != null ? jsonEncode(permissions) : null, // Commented out for now
   };
 
   factory User.fromMap(Map<String, dynamic> m) => User(
@@ -36,6 +34,23 @@ class User {
     password: m['password'] ?? '',
     phone: m['phone'],
     role: m['role'] ?? 'owner',
-    // permissions: m['permissions'] != null ? jsonDecode(m['permissions']) : null, // Commented out for now
   );
+
+  User copyWith({
+    int? id,
+    String? name,
+    String? email,
+    String? password,
+    String? phone,
+    String? role,
+  }) {
+    return User(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+    );
+  }
 }

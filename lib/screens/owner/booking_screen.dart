@@ -7,12 +7,11 @@ import 'dart:io' show Platform;
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
-import '../../providers/service_assignment_provider.dart';
+import '../../db/db_helper.dart';
 import '../../models/appointment.dart';
 import '../../models/service.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
-import '../select_location_screen.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -45,10 +44,7 @@ class _BookingScreenState extends State<BookingScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppointmentProvider>().loadServices();
       _loadUserPets();
-      // Load doctor assignments first, then doctors
-      context.read<ServiceAssignmentProvider>().loadDoctors().then((_) {
-        _loadDoctors();
-      });
+      _loadDoctors();
     });
   }
 
@@ -65,21 +61,18 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _loadDoctors() async {
-    if (_selectedService == null) {
-      setState(() {
-        _doctors = [];
-      });
-      return;
-    }
-
     try {
-      final serviceAssignmentProvider = context
-          .read<ServiceAssignmentProvider>();
-      final selectedDate = _selectedDate.toIso8601String().split('T')[0];
-      final availableDoctors = await serviceAssignmentProvider
-          .getAvailableDoctorsForService(_selectedService!.id!, selectedDate);
+      // Get all doctors from the database
+      final dbHelper = DBHelper.instance;
+      final allUsers = await dbHelper.getAllUsers(role: 'doctor');
+      final doctors = <User>[];
+
+      for (final userData in allUsers) {
+        doctors.add(User.fromMap(userData));
+      }
+
       setState(() {
-        _doctors = availableDoctors;
+        _doctors = doctors;
       });
     } catch (e) {
       debugPrint('Error loading doctors: $e');
@@ -156,10 +149,6 @@ class _BookingScreenState extends State<BookingScreen> {
                       setState(() {
                         _selectedDate = selectedDay;
                       });
-                      // Reload doctors when date changes
-                      if (_selectedService != null) {
-                        _loadDoctors();
-                      }
                     },
                     calendarStyle: const CalendarStyle(
                       selectedDecoration: BoxDecoration(
@@ -224,7 +213,6 @@ class _BookingScreenState extends State<BookingScreen> {
                       _selectedDoctor =
                           null; // Reset doctor selection when service changes
                     });
-                    _loadDoctors(); // Reload doctors when service changes
                   },
                 ),
                 const SizedBox(height: 24),
@@ -233,20 +221,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                if (_selectedService == null)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey),
-                    ),
-                    child: const Text(
-                      'Please select a service first to see available doctors',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                else if (_doctors.isEmpty)
+                if (_doctors.isEmpty)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -255,7 +230,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       border: Border.all(color: Colors.orange),
                     ),
                     child: const Text(
-                      'No doctors available for this service today',
+                      'No doctors available',
                       style: TextStyle(color: Colors.orange),
                     ),
                   )
@@ -484,17 +459,10 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _openMapForAddress() async {
-    // Navigate to the new SelectLocationScreen
-    final result = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (context) => const SelectLocationScreen()),
+    // For now, just show a simple address input
+    // TODO: Implement location selection screen
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Location selection not implemented yet')),
     );
-
-    if (result != null) {
-      setState(() {
-        _addressController.text = result['address'] ?? '';
-        _lat = result['lat'];
-        _lng = result['lng'];
-      });
-    }
   }
 }

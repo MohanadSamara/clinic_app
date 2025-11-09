@@ -4,8 +4,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'owner/owner_dashboard.dart';
 import 'doctor/doctor_dashboard.dart';
-import 'driver/driver_dashboard.dart';
-import 'admin/admin_dashboard.dart';
 import 'login_screen.dart';
 
 class RoleBasedHome extends StatelessWidget {
@@ -15,23 +13,43 @@ class RoleBasedHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
+        // Show loading indicator while initializing
+        if (!authProvider.isInitialized) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Redirect to login if not authenticated
         if (!authProvider.isLoggedIn || authProvider.user == null) {
           return const LoginScreen();
         }
 
-        final role = authProvider.user!.role?.toLowerCase();
+        final user = authProvider.user!;
+        final role = user.role.toLowerCase();
 
+        // Route based on user role with proper error handling
         switch (role) {
           case 'owner':
             return const OwnerDashboard();
           case 'doctor':
             return const DoctorDashboard();
-          case 'driver':
-            return const DriverDashboard();
           case 'admin':
-            return const AdminDashboard();
+            // TODO: Implement AdminDashboard when needed
+            return const Scaffold(
+              body: Center(child: Text('Admin Dashboard - Coming Soon')),
+            );
+          case 'driver':
+            // TODO: Implement DriverDashboard when needed
+            return const Scaffold(
+              body: Center(child: Text('Driver Dashboard - Coming Soon')),
+            );
           default:
-            return const OwnerDashboard(); // Default to owner dashboard
+            // Log unexpected role for debugging
+            debugPrint(
+              'Unexpected user role: $role, defaulting to owner dashboard',
+            );
+            return const OwnerDashboard();
         }
       },
     );

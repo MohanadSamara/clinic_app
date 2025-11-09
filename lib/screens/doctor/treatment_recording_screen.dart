@@ -184,16 +184,22 @@ class _TreatmentRecordingScreenState extends State<TreatmentRecordingScreen> {
   void _saveTreatmentRecord() async {
     if (_diagnosisController.text.isEmpty ||
         _treatmentController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in diagnosis and treatment')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in diagnosis and treatment'),
+          ),
+        );
+      }
       return;
     }
 
     if (_selectedPetId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a patient')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a patient')),
+        );
+      }
       return;
     }
 
@@ -216,21 +222,23 @@ class _TreatmentRecordingScreenState extends State<TreatmentRecordingScreen> {
       record,
     );
 
-    if (success) {
-      // Clear form
-      _diagnosisController.clear();
-      _treatmentController.clear();
-      _prescriptionController.clear();
-      _notesController.clear();
-      setState(() => _isEmergency = false);
+    if (mounted) {
+      if (success) {
+        // Clear form
+        _diagnosisController.clear();
+        _treatmentController.clear();
+        _prescriptionController.clear();
+        _notesController.clear();
+        setState(() => _isEmergency = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Treatment record saved successfully')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save treatment record')),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Treatment record saved successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save treatment record')),
+        );
+      }
     }
   }
 

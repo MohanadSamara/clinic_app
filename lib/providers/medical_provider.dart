@@ -10,13 +10,12 @@ class MedicalProvider extends ChangeNotifier {
   List<MedicalRecord> get medicalRecords => _medicalRecords;
   bool get isLoading => _isLoading;
 
-  Future<void> loadMedicalRecords({int? petId, int? doctorId}) async {
+  Future<void> loadMedicalRecords({int? doctorId}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
       final data = await DBHelper.instance.getMedicalRecords(
-        petId: petId,
         doctorId: doctorId,
       );
       _medicalRecords = data
@@ -70,19 +69,5 @@ class MedicalProvider extends ChangeNotifier {
       debugPrint('Error deleting medical record: $e');
       return false;
     }
-  }
-
-  List<MedicalRecord> getMedicalRecordsByPet(int petId) {
-    return _medicalRecords.where((record) => record.petId == petId).toList();
-  }
-
-  List<MedicalRecord> getMedicalRecordsByDoctor(int doctorId) {
-    return _medicalRecords
-        .where((record) => record.doctorId == doctorId)
-        .toList();
-  }
-
-  MedicalRecord? getMedicalRecordById(int id) {
-    return _medicalRecords.firstWhere((record) => record.id == id);
   }
 }

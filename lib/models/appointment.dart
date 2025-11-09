@@ -9,7 +9,6 @@ class Appointment {
   final String status;
   final String? address;
   final double? price;
-  final int? driverId;
   final int? doctorId;
   final String? doctorName;
   final String urgencyLevel; // 'routine', 'urgent', 'emergency'
@@ -26,7 +25,6 @@ class Appointment {
     this.status = 'pending',
     this.address,
     this.price,
-    this.driverId,
     this.doctorId,
     this.doctorName,
     this.urgencyLevel = 'routine',
@@ -44,7 +42,6 @@ class Appointment {
     'status': status,
     'address': address,
     'price': price,
-    'driver_id': driverId,
     'doctor_id': doctorId,
     'urgency_level': urgencyLevel,
     'location_lat': locationLat,
@@ -63,7 +60,6 @@ class Appointment {
     price: (m['price'] is int)
         ? (m['price'] as int).toDouble()
         : (m['price'] as double?),
-    driverId: m['driver_id'],
     doctorId: m['doctor_id'],
     doctorName: m['doctor_name'],
     urgencyLevel: m['urgency_level'] ?? 'routine',
@@ -81,7 +77,6 @@ class Appointment {
     String? status,
     String? address,
     double? price,
-    int? driverId,
     int? doctorId,
     String? doctorName,
     String? urgencyLevel,
@@ -98,7 +93,6 @@ class Appointment {
       status: status ?? this.status,
       address: address ?? this.address,
       price: price ?? this.price,
-      driverId: driverId ?? this.driverId,
       doctorId: doctorId ?? this.doctorId,
       doctorName: doctorName ?? this.doctorName,
       urgencyLevel: urgencyLevel ?? this.urgencyLevel,

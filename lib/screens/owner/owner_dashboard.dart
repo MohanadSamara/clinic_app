@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/medical_provider.dart';
+import '../../providers/pet_provider.dart';
+import '../../models/medical_record.dart';
 import 'pet_management_screen.dart';
 import 'booking_screen.dart';
-import '../appointments_screen.dart';
+import 'appointments_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -109,46 +112,84 @@ class _OwnerHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+              child: Column(
                 children: [
-                  _DashboardCard(
-                    title: 'My Pets',
-                    icon: Icons.pets,
-                    color: Theme.of(context).colorScheme.secondary,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const PetManagementScreen(),
-                      ),
+                  // Quick Stats Row
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Active Pets',
+                            value: '3', // TODO: Get from provider
+                            icon: Icons.pets,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Upcoming Appts',
+                            value: '2', // TODO: Get from provider
+                            icon: Icons.schedule,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  _DashboardCard(
-                    title: 'Book Appointment',
-                    icon: Icons.calendar_today,
-                    color: Theme.of(context).colorScheme.primary,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const BookingScreen(),
-                      ),
+                  const SizedBox(height: 16),
+                  // Main Action Grid
+                  Expanded(
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        _DashboardCard(
+                          title: 'My Pets',
+                          icon: Icons.pets,
+                          color: Theme.of(context).colorScheme.secondary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const PetManagementScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Book Appointment',
+                          icon: Icons.calendar_today,
+                          color: Theme.of(context).colorScheme.primary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const BookingScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Medical History',
+                          icon: Icons.medical_services,
+                          color: Theme.of(context).colorScheme.tertiary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const _MedicalHistoryScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Emergency',
+                          icon: Icons.emergency,
+                          color: Colors.red,
+                          onTap: () => _showEmergencyDialog(context),
+                        ),
+                      ],
                     ),
-                  ),
-                  _DashboardCard(
-                    title: 'Medical History',
-                    icon: Icons.medical_services,
-                    color: Theme.of(context).colorScheme.tertiary,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const AppointmentsScreen(),
-                      ),
-                    ),
-                  ),
-                  _DashboardCard(
-                    title: 'Emergency',
-                    icon: Icons.emergency,
-                    color: Colors.red,
-                    onTap: () => _showEmergencyDialog(context),
                   ),
                 ],
               ),
@@ -185,6 +226,65 @@ class _OwnerHomeScreen extends StatelessWidget {
             child: const Text('Request Emergency'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -228,6 +328,127 @@ class _DashboardCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MedicalHistoryScreen extends StatefulWidget {
+  const _MedicalHistoryScreen();
+
+  @override
+  State<_MedicalHistoryScreen> createState() => _MedicalHistoryScreenState();
+}
+
+class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.user?.id != null) {
+        context.read<MedicalProvider>().loadMedicalRecords();
+        context.read<PetProvider>().loadPets(ownerId: authProvider.user!.id!);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Medical History')),
+      body: Consumer2<MedicalProvider, PetProvider>(
+        builder: (context, medicalProvider, petProvider, child) {
+          if (medicalProvider.isLoading || petProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final records = medicalProvider.medicalRecords;
+          if (records.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.medical_services_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'No medical records found',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: records.length,
+            itemBuilder: (context, index) {
+              final record = records[index];
+              final pet = petProvider.pets.cast().firstWhere(
+                (p) => p.id == record.petId,
+                orElse: () => null,
+              );
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.pets, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              pet?.name ?? 'Pet ID: ${record.petId}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            record.date.split('T')[0],
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailRow('Diagnosis', record.diagnosis),
+                      _buildDetailRow('Treatment', record.treatment),
+                      if (record.prescription != null &&
+                          record.prescription!.isNotEmpty)
+                        _buildDetailRow('Prescription', record.prescription!),
+                      if (record.notes != null && record.notes!.isNotEmpty)
+                        _buildDetailRow('Notes', record.notes!),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label:', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(value),
+        ],
       ),
     );
   }

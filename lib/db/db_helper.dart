@@ -33,7 +33,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -58,6 +58,7 @@ class DBHelper {
       // Add new tables for service assignments and sessions
       await _createNewTablesV5(db);
     }
+    // Version 6 migration removed - simplified user table
   }
 
   Future _createDB(Database db, int version) async {
@@ -69,11 +70,11 @@ class DBHelper {
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        email TEXT UNIQUE,
-        password TEXT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
         phone TEXT,
-        role TEXT
+        role TEXT NOT NULL DEFAULT 'owner'
       );
     ''');
 
@@ -105,7 +106,6 @@ class DBHelper {
         status TEXT,
         address TEXT,
         price REAL,
-        driver_id INTEGER,
         doctor_id INTEGER,
         urgency_level TEXT,
         location_lat REAL,
@@ -181,19 +181,6 @@ class DBHelper {
       );
     ''');
 
-    // Driver status table
-    await db.execute('''
-      CREATE TABLE driver_status (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        driver_id INTEGER,
-        latitude REAL,
-        longitude REAL,
-        status TEXT,
-        current_appointment_id INTEGER,
-        last_updated TEXT
-      );
-    ''');
-
     // Create new tables for version 3
     await _createNewTablesV3(db);
 
@@ -247,41 +234,7 @@ class DBHelper {
         request_date TEXT,
         scheduled_date TEXT,
         assigned_doctor_id INTEGER,
-        assigned_driver_id INTEGER,
         rejection_reason TEXT
-      );
-    ''');
-
-    // Routes table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS routes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        driver_id INTEGER,
-        date TEXT,
-        appointment_ids TEXT,
-        status TEXT,
-        total_distance REAL,
-        estimated_duration INTEGER,
-        start_time TEXT,
-        end_time TEXT
-      );
-    ''');
-
-    // Vehicle checks table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS vehicle_checks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        driver_id INTEGER,
-        check_date TEXT,
-        vehicle_condition TEXT,
-        fuel_level INTEGER,
-        tires_condition INTEGER,
-        lights_working INTEGER,
-        medical_equipment_present INTEGER,
-        missing_equipment TEXT,
-        malfunctioning_equipment TEXT,
-        notes TEXT,
-        photo_path TEXT
       );
     ''');
   }
@@ -357,13 +310,6 @@ class DBHelper {
           'password': '123456',
           'phone': '+96287654321',
           'role': 'owner',
-        },
-        {
-          'name': 'Mike Johnson',
-          'email': 'driver@example.com',
-          'password': '123456',
-          'phone': '+9625551234',
-          'role': 'driver',
         },
       ];
 
@@ -453,6 +399,21 @@ class DBHelper {
             appointment,
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
+        }
+
+        // Insert sample doctor record for all services
+        final services = await db.query('services');
+        for (final service in services) {
+          final serviceId = service['id'];
+          await db.insert('doctors', {
+            'user_id': doctorId,
+            'assigned_service_id': serviceId,
+            'license_number': 'DOC123456',
+            'specialization': 'General Veterinary',
+            'experience_years': 5,
+            'is_available': 1,
+            'created_at': DateTime.now().toIso8601String(),
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
     } catch (e) {
@@ -546,7 +507,6 @@ class DBHelper {
   Future<List<Map<String, dynamic>>> getAppointments({
     int? ownerId,
     int? doctorId,
-    int? driverId,
     String? status,
     DateTime? date,
     bool? hasLocation,
@@ -564,12 +524,6 @@ class DBHelper {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'doctor_id=?';
       whereArgs.add(doctorId);
-    }
-
-    if (driverId != null) {
-      if (whereClause.isNotEmpty) whereClause += ' AND ';
-      whereClause += 'driver_id=?';
-      whereArgs.add(driverId);
     }
 
     if (status != null) {
@@ -594,9 +548,6 @@ class DBHelper {
         '''
       SELECT
         appointments.*,
-        driver.name as driver_name,
-        driver.email as driver_email,
-        driver.phone as driver_phone,
         doctor.name as doctor_name,
         doctor.email as doctor_email,
         doctor.phone as doctor_phone,
@@ -604,7 +555,6 @@ class DBHelper {
         owner.email as owner_email,
         owner.phone as owner_phone
       FROM appointments
-      LEFT JOIN users driver ON appointments.driver_id = driver.id
       LEFT JOIN users doctor ON appointments.doctor_id = doctor.id
       LEFT JOIN users owner ON appointments.owner_id = owner.id
       ${whereClause.isNotEmpty ? 'WHERE $whereClause' : ''}
@@ -635,16 +585,6 @@ class DBHelper {
       data,
       where: 'id=?',
       whereArgs: [id],
-    );
-  }
-
-  Future<int> assignDriverToAppointment(int appointmentId, int driverId) async {
-    final db = await instance.database;
-    return await db.update(
-      'appointments',
-      {'driver_id': driverId},
-      where: 'id=?',
-      whereArgs: [appointmentId],
     );
   }
 
@@ -854,63 +794,6 @@ class DBHelper {
     return await db.update('payments', data, where: 'id=?', whereArgs: [id]);
   }
 
-  // ---------- DRIVER STATUS ----------
-  Future<int> insertOrUpdateDriverStatus(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    final driverId = data['driver_id'];
-    final existing = await db.query(
-      'driver_status',
-      where: 'driver_id=?',
-      whereArgs: [driverId],
-    );
-
-    if (existing.isNotEmpty) {
-      return await db.update(
-        'driver_status',
-        data,
-        where: 'driver_id=?',
-        whereArgs: [driverId],
-      );
-    } else {
-      return await db.insert('driver_status', data);
-    }
-  }
-
-  Future<Map<String, dynamic>?> getDriverStatus(int driverId) async {
-    final db = await instance.database;
-    final res = await db.query(
-      'driver_status',
-      where: 'driver_id=?',
-      whereArgs: [driverId],
-    );
-    if (res.isNotEmpty) return res.first;
-    return null;
-  }
-
-  Future<List<Map<String, dynamic>>> getAvailableDrivers() async {
-    final db = await instance.database;
-    // Return all drivers with role 'driver' - consider them available
-    return await db.query('users', where: 'role=?', whereArgs: ['driver']);
-  }
-
-  Future<int> updateDriverStatus(
-    int driverId,
-    String status,
-    int? appointmentId,
-  ) async {
-    final db = await instance.database;
-    return await db.update(
-      'driver_status',
-      {
-        'status': status,
-        'current_appointment_id': appointmentId,
-        'last_updated': DateTime.now().toIso8601String(),
-      },
-      where: 'driver_id=?',
-      whereArgs: [driverId],
-    );
-  }
-
   // ---------- DOCUMENTS ----------
   Future<int> insertDocument(Map<String, dynamic> data) async {
     final db = await instance.database;
@@ -1027,69 +910,6 @@ class DBHelper {
     );
   }
 
-  // ---------- ROUTES ----------
-  Future<int> insertRoute(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('routes', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getRoutesByDriver(
-    int driverId, {
-    DateTime? date,
-  }) async {
-    final db = await instance.database;
-    String whereClause = 'driver_id=?';
-    List<dynamic> whereArgs = [driverId];
-
-    if (date != null) {
-      whereClause += ' AND DATE(date)=?';
-      whereArgs.add(date.toIso8601String().split('T')[0]);
-    }
-
-    return await db.query(
-      'routes',
-      where: whereClause,
-      whereArgs: whereArgs,
-      orderBy: 'date DESC',
-    );
-  }
-
-  Future<int> updateRoute(int id, Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.update('routes', data, where: 'id=?', whereArgs: [id]);
-  }
-
-  // ---------- VEHICLE CHECKS ----------
-  Future<int> insertVehicleCheck(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('vehicle_checks', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getVehicleChecksByDriver(
-    int driverId,
-  ) async {
-    final db = await instance.database;
-    return await db.query(
-      'vehicle_checks',
-      where: 'driver_id=?',
-      whereArgs: [driverId],
-      orderBy: 'check_date DESC',
-    );
-  }
-
-  Future<Map<String, dynamic>?> getLatestVehicleCheck(int driverId) async {
-    final db = await instance.database;
-    final res = await db.query(
-      'vehicle_checks',
-      where: 'driver_id=?',
-      whereArgs: [driverId],
-      orderBy: 'check_date DESC',
-      limit: 1,
-    );
-    if (res.isNotEmpty) return res.first;
-    return null;
-  }
-
   Future _createNewTablesV5(Database db) async {
     // Doctors table with service assignment
     await db.execute('''
@@ -1104,39 +924,6 @@ class DBHelper {
         created_at TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id),
         FOREIGN KEY (assigned_service_id) REFERENCES services (id)
-      );
-    ''');
-
-    // Vans table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS vans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT,
-        license_plate TEXT,
-        driver_id INTEGER,
-        is_active INTEGER
-      );
-    ''');
-
-    // Driver doctor assignments table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS driver_doctor_assignments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        driver_id INTEGER,
-        doctor_id INTEGER,
-        is_active INTEGER
-      );
-    ''');
-
-    // Service sessions table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS service_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        user_role TEXT,
-        selected_service_id INTEGER,
-        session_date TEXT,
-        is_active INTEGER
       );
     ''');
   }
@@ -1245,27 +1032,6 @@ class DBHelper {
     );
   }
 
-  // ---------- VANS ----------
-  Future<int> insertVan(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('vans', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getVans() async {
-    final db = await instance.database;
-    return await db.query('vans');
-  }
-
-  Future<int> updateVan(int id, Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.update('vans', data, where: 'id=?', whereArgs: [id]);
-  }
-
-  Future<int> deleteVan(int id) async {
-    final db = await instance.database;
-    return await db.delete('vans', where: 'id=?', whereArgs: [id]);
-  }
-
   // ---------- DOCTORS ----------
   Future<int> insertDoctor(Map<String, dynamic> data) async {
     final db = await instance.database;
@@ -1305,93 +1071,6 @@ class DBHelper {
   Future<int> deleteDoctor(int id) async {
     final db = await instance.database;
     return await db.delete('doctors', where: 'id=?', whereArgs: [id]);
-  }
-
-  // ---------- DRIVER DOCTOR ASSIGNMENTS ----------
-  Future<int> insertDriverDoctorAssignment(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('driver_doctor_assignments', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getDriverDoctorAssignments() async {
-    final db = await instance.database;
-    return await db.query('driver_doctor_assignments');
-  }
-
-  Future<int> updateDriverDoctorAssignment(
-    int id,
-    Map<String, dynamic> data,
-  ) async {
-    final db = await instance.database;
-    return await db.update(
-      'driver_doctor_assignments',
-      data,
-      where: 'id=?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> deleteDriverDoctorAssignment(int id) async {
-    final db = await instance.database;
-    return await db.delete(
-      'driver_doctor_assignments',
-      where: 'id=?',
-      whereArgs: [id],
-    );
-  }
-
-  // ---------- SERVICE SESSIONS ----------
-  Future<int> insertServiceSession(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('service_sessions', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getServiceSessions({
-    int? userId,
-    String? userRole,
-    String? sessionDate,
-  }) async {
-    final db = await instance.database;
-    String whereClause = '';
-    List<dynamic> whereArgs = [];
-
-    if (userId != null) {
-      whereClause += 'user_id=?';
-      whereArgs.add(userId);
-    }
-
-    if (userRole != null) {
-      if (whereClause.isNotEmpty) whereClause += ' AND ';
-      whereClause += 'user_role=?';
-      whereArgs.add(userRole);
-    }
-
-    if (sessionDate != null) {
-      if (whereClause.isNotEmpty) whereClause += ' AND ';
-      whereClause += 'session_date=?';
-      whereArgs.add(sessionDate);
-    }
-
-    return await db.query(
-      'service_sessions',
-      where: whereClause.isNotEmpty ? whereClause : null,
-      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
-    );
-  }
-
-  Future<int> updateServiceSession(int id, Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.update(
-      'service_sessions',
-      data,
-      where: 'id=?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> deleteServiceSession(int id) async {
-    final db = await instance.database;
-    return await db.delete('service_sessions', where: 'id=?', whereArgs: [id]);
   }
 
   // ---------- USERS ----------

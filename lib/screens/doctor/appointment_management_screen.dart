@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/medical_provider.dart';
 import '../../models/appointment.dart';
+import '../../models/medical_record.dart';
 
 class AppointmentManagementScreen extends StatefulWidget {
   const AppointmentManagementScreen({super.key});
@@ -52,6 +54,21 @@ class _AppointmentManagementScreenState
             Tab(text: 'Completed', icon: Icon(Icons.check_circle)),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sort),
+            tooltip: 'Sorted by date & time',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Appointments are automatically sorted by date and time',
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,
@@ -75,25 +92,32 @@ class _AppointmentManagementScreenState
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
 
-        final appointments = appointmentProvider.appointments.where((apt) {
-          final aptDate = DateTime.parse(apt.scheduledAt).toLocal();
-          final aptDateOnly = DateTime(
-            aptDate.year,
-            aptDate.month,
-            aptDate.day,
-          );
+        final appointments =
+            appointmentProvider.appointments.where((apt) {
+                final aptDate = DateTime.parse(apt.scheduledAt).toLocal();
+                final aptDateOnly = DateTime(
+                  aptDate.year,
+                  aptDate.month,
+                  aptDate.day,
+                );
 
-          switch (filter) {
-            case 'today':
-              return aptDateOnly == today;
-            case 'upcoming':
-              return aptDateOnly.isAfter(today);
-            case 'completed':
-              return apt.status == 'completed';
-            default:
-              return true;
-          }
-        }).toList();
+                switch (filter) {
+                  case 'today':
+                    return aptDateOnly == today;
+                  case 'upcoming':
+                    return aptDateOnly.isAfter(today);
+                  case 'completed':
+                    return apt.status == 'completed';
+                  default:
+                    return true;
+                }
+              }).toList()
+              // Sort appointments by date and time (earliest first)
+              ..sort((a, b) {
+                final aDate = DateTime.parse(a.scheduledAt);
+                final bDate = DateTime.parse(b.scheduledAt);
+                return aDate.compareTo(bDate);
+              });
 
         if (appointments.isEmpty) {
           return Center(
@@ -170,14 +194,167 @@ class _AppointmentManagementScreenState
   }
 
   void _completeAppointment(Appointment appointment) async {
-    final success = await context
-        .read<AppointmentProvider>()
-        .updateAppointmentStatus(appointment.id!, 'completed');
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appointment marked as completed')),
-      );
+    // Show treatment recording dialog before marking complete
+    final treatmentDetails = await showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          _TreatmentCompletionDialog(appointment: appointment),
+    );
+
+    if (treatmentDetails != null) {
+      // Mark appointment as completed
+      final success = await context
+          .read<AppointmentProvider>()
+          .updateAppointmentStatus(appointment.id!, 'completed');
+
+      if (success) {
+        // Create treatment record
+        final medicalProvider = context.read<MedicalProvider>();
+        final authProvider = context.read<AuthProvider>();
+
+        final record = MedicalRecord(
+          petId: appointment.petId,
+          doctorId: authProvider.user!.id!,
+          diagnosis: treatmentDetails['diagnosis'] ?? '',
+          treatment: treatmentDetails['treatment'] ?? '',
+          prescription: treatmentDetails['prescription']?.isEmpty ?? true
+              ? null
+              : treatmentDetails['prescription'],
+          notes: treatmentDetails['notes']?.isEmpty ?? true
+              ? null
+              : treatmentDetails['notes'],
+          date: DateTime.now().toIso8601String(),
+        );
+
+        final recordSuccess = await medicalProvider.addMedicalRecord(record);
+
+        if (recordSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Appointment completed and treatment record saved'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Appointment completed but failed to save treatment record',
+              ),
+            ),
+          );
+        }
+      }
     }
+  }
+}
+
+class _TreatmentCompletionDialog extends StatefulWidget {
+  final Appointment appointment;
+
+  const _TreatmentCompletionDialog({required this.appointment});
+
+  @override
+  State<_TreatmentCompletionDialog> createState() =>
+      _TreatmentCompletionDialogState();
+}
+
+class _TreatmentCompletionDialogState
+    extends State<_TreatmentCompletionDialog> {
+  final _diagnosisController = TextEditingController();
+  final _treatmentController = TextEditingController();
+  final _prescriptionController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _diagnosisController.dispose();
+    _treatmentController.dispose();
+    _prescriptionController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Complete Appointment & Record Treatment'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Appointment: ${widget.appointment.serviceType}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _diagnosisController,
+              decoration: const InputDecoration(
+                labelText: 'Diagnosis *',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _treatmentController,
+              decoration: const InputDecoration(
+                labelText: 'Treatment Provided *',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _prescriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Prescription (Optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Additional Notes',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_diagnosisController.text.isEmpty ||
+                _treatmentController.text.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please fill in diagnosis and treatment'),
+                ),
+              );
+              return;
+            }
+
+            Navigator.of(context).pop({
+              'diagnosis': _diagnosisController.text,
+              'treatment': _treatmentController.text,
+              'prescription': _prescriptionController.text,
+              'notes': _notesController.text,
+            });
+          },
+          child: const Text('Complete & Save'),
+        ),
+      ],
+    );
   }
 }
 

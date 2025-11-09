@@ -12,7 +12,6 @@ class ServiceRequest {
   final DateTime requestDate;
   final DateTime? scheduledDate;
   final int? assignedDoctorId;
-  final int? assignedDriverId;
   final String? rejectionReason;
 
   ServiceRequest({
@@ -28,7 +27,6 @@ class ServiceRequest {
     required this.requestDate,
     this.scheduledDate,
     this.assignedDoctorId,
-    this.assignedDriverId,
     this.rejectionReason,
   });
 
@@ -46,7 +44,6 @@ class ServiceRequest {
       'request_date': requestDate.toIso8601String(),
       'scheduled_date': scheduledDate?.toIso8601String(),
       'assigned_doctor_id': assignedDoctorId,
-      'assigned_driver_id': assignedDriverId,
       'rejection_reason': rejectionReason,
     };
   }
@@ -67,7 +64,6 @@ class ServiceRequest {
           ? DateTime.parse(map['scheduled_date'])
           : null,
       assignedDoctorId: map['assigned_doctor_id'],
-      assignedDriverId: map['assigned_driver_id'],
       rejectionReason: map['rejection_reason'],
     );
   }
@@ -85,7 +81,6 @@ class ServiceRequest {
     DateTime? requestDate,
     DateTime? scheduledDate,
     int? assignedDoctorId,
-    int? assignedDriverId,
     String? rejectionReason,
   }) {
     return ServiceRequest(
@@ -101,7 +96,6 @@ class ServiceRequest {
       requestDate: requestDate ?? this.requestDate,
       scheduledDate: scheduledDate ?? this.scheduledDate,
       assignedDoctorId: assignedDoctorId ?? this.assignedDoctorId,
-      assignedDriverId: assignedDriverId ?? this.assignedDriverId,
       rejectionReason: rejectionReason ?? this.rejectionReason,
     );
   }

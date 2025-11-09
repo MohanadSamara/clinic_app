@@ -75,30 +75,10 @@ class AppointmentProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      // Auto-assign driver when appointment is confirmed
-      if (status == 'confirmed') {
-        final appointment = _appointments[index];
-        await _autoAssignDriver(appointment);
-      }
-
-      // If doctor completes appointment, also update driver status to completed
+      // If doctor completes appointment, mark as completed
       if (status == 'completed') {
         final appointment = _appointments[index];
-        if (appointment.driverId != null) {
-          // Update driver status to completed
-          await DBHelper.instance.updateDriverStatus(
-            appointment.driverId!,
-            'completed',
-            appointment.id,
-          );
-
-          // Send notification to driver about completion
-          await _sendNotificationToDriver(
-            appointment.driverId!,
-            appointment.id!,
-            'Appointment completed by doctor',
-          );
-        }
+        // Appointment is now completed by doctor
       }
 
       return true;
@@ -125,57 +105,6 @@ class AppointmentProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error updating appointment: $e');
       return false;
-    }
-  }
-
-  Future<bool> assignDriverToAppointment(
-    int appointmentId,
-    int driverId,
-  ) async {
-    try {
-      await DBHelper.instance.assignDriverToAppointment(
-        appointmentId,
-        driverId,
-      );
-      final index = _appointments.indexWhere((a) => a.id == appointmentId);
-      if (index != -1) {
-        _appointments[index] = _appointments[index].copyWith(
-          driverId: driverId,
-        );
-        notifyListeners();
-      }
-
-      // Send notification to driver about assignment
-      await _sendNotificationToDriver(
-        driverId,
-        appointmentId,
-        'New appointment assigned',
-      );
-
-      return true;
-    } catch (e) {
-      debugPrint('Error assigning driver: $e');
-      return false;
-    }
-  }
-
-  Future<void> _sendNotificationToDriver(
-    int driverId,
-    int appointmentId,
-    String message,
-  ) async {
-    try {
-      await DBHelper.instance.insertNotification({
-        'user_id': driverId,
-        'title': 'Appointment Update',
-        'message': message,
-        'type': 'appointment',
-        'is_read': 0,
-        'created_at': DateTime.now().toIso8601String(),
-        'data': '{"appointment_id": $appointmentId}',
-      });
-    } catch (e) {
-      debugPrint('Error sending notification to driver: $e');
     }
   }
 
@@ -229,38 +158,6 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _autoAssignDriver(Appointment appointment) async {
-    try {
-      // First, try to get available drivers
-      final availableDrivers = await DBHelper.instance.getAvailableDrivers();
-
-      if (availableDrivers.isNotEmpty) {
-        // Assign the first available driver
-        final driverId = availableDrivers.first['id'] as int;
-
-        // Assign driver to appointment
-        await assignDriverToAppointment(appointment.id!, driverId);
-
-        // Update driver status to indicate they have an assignment
-        await DBHelper.instance.updateDriverStatus(
-          driverId,
-          'assigned',
-          appointment.id,
-        );
-
-        debugPrint(
-          'Auto-assigned driver $driverId to appointment ${appointment.id}',
-        );
-      } else {
-        debugPrint(
-          'No available drivers found for appointment ${appointment.id}',
-        );
-      }
-    } catch (e) {
-      debugPrint('Error auto-assigning driver: $e');
-    }
-  }
-
   Appointment? getAppointmentById(int id) {
     return _appointments.firstWhere((appointment) => appointment.id == id);
   }
@@ -306,15 +203,4 @@ bool canDoctorUpdateAppointment(String currentStatus, String newStatus) {
   // Doctors can manage all transitions except owner-only actions
   final allowed = _allowedTransitions[currentStatus] ?? {};
   return allowed.contains(newStatus);
-}
-
-bool canDriverUpdateAppointment(String currentStatus, String newStatus) {
-  // Drivers can only update status during service delivery
-  if (currentStatus == 'confirmed') {
-    return newStatus == 'en_route';
-  }
-  if (currentStatus == 'en_route') {
-    return newStatus == 'in_progress' || newStatus == 'delayed';
-  }
-  return false;
 }

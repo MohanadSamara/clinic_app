@@ -2,10 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/service_assignment_provider.dart';
 import '../../providers/service_provider.dart';
 import '../../models/service.dart';
-import '../../models/service_session.dart';
 import 'appointment_management_screen.dart';
 import 'treatment_recording_screen.dart';
 import 'inventory_management_screen.dart';
@@ -81,56 +79,16 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
       context,
       listen: false,
     );
-    final serviceAssignmentProvider = Provider.of<ServiceAssignmentProvider>(
-      context,
-      listen: false,
-    );
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     await serviceProvider.loadServices();
-    await serviceAssignmentProvider.loadDoctors();
-
-    // Load today's service session if exists
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    await serviceAssignmentProvider.loadServiceSessions(
-      userId: authProvider.user?.id,
-      userRole: 'doctor',
-      sessionDate: today,
-    );
-
-    final sessions = serviceAssignmentProvider.serviceSessions;
-    if (sessions.isNotEmpty) {
-      final session = sessions.first;
-      _selectedService = serviceProvider.services.firstWhere(
-        (s) => s.id == session.selectedServiceId,
-      );
-    }
   }
 
   Future<void> _selectService(Service service) async {
     setState(() => _isLoading = true);
 
-    final serviceAssignmentProvider = Provider.of<ServiceAssignmentProvider>(
-      context,
-      listen: false,
-    );
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    final session = ServiceSession(
-      userId: authProvider.user!.id!,
-      userRole: 'doctor',
-      selectedServiceId: service.id!,
-      sessionDate: today,
-      isActive: true,
-    );
-
-    final success = await serviceAssignmentProvider.createServiceSession(
-      session,
-    );
-    if (success) {
-      setState(() => _selectedService = service);
-    }
+    // Simple service selection without complex provider logic
+    await Future.delayed(const Duration(milliseconds: 500)); // Simulate loading
+    setState(() => _selectedService = service);
 
     setState(() => _isLoading = false);
   }
@@ -140,9 +98,6 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
     final serviceProvider = Provider.of<ServiceProvider>(context);
-    final serviceAssignmentProvider = Provider.of<ServiceAssignmentProvider>(
-      context,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -236,51 +191,99 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+              child: Column(
                 children: [
-                  _DashboardCard(
-                    title: 'Today\'s Appointments',
-                    icon: const Icon(Icons.calendar_today, color: Colors.white),
-                    color: Colors.blue,
-                    count: '5', // TODO: Get from provider
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const AppointmentManagementScreen(),
-                      ),
+                  // Quick Stats Row
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Today\'s Appts',
+                            value: '5', // TODO: Get from provider
+                            icon: Icons.calendar_today,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Completed Today',
+                            value: '3', // TODO: Get from provider
+                            icon: Icons.check_circle,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  _DashboardCard(
-                    title: 'Pending Reviews',
-                    icon: const Icon(Icons.pending, color: Colors.white),
-                    color: Colors.orange,
-                    count: '3', // TODO: Get from provider
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const TreatmentRecordingScreen(),
-                      ),
+                  const SizedBox(height: 16),
+                  // Main Action Grid
+                  Expanded(
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        _DashboardCard(
+                          title: 'Appointments',
+                          icon: const Icon(
+                            Icons.calendar_today,
+                            color: Colors.white,
+                          ),
+                          color: Colors.blue,
+                          count: '5', // TODO: Get from provider
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const AppointmentManagementScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Treatment Records',
+                          icon: const Icon(
+                            Icons.medical_services,
+                            color: Colors.white,
+                          ),
+                          color: Colors.teal,
+                          count: '12', // TODO: Get from provider
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const TreatmentRecordingScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Low Stock Alerts',
+                          icon: const Icon(Icons.warning, color: Colors.white),
+                          color: Colors.red,
+                          count: '2', // TODO: Get from provider
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const InventoryManagementScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Emergency Queue',
+                          icon: const Icon(
+                            Icons.emergency,
+                            color: Colors.white,
+                          ),
+                          color: Colors.red,
+                          count: '1', // TODO: Get from provider
+                          onTap: () => _showEmergencyQueue(context),
+                        ),
+                      ],
                     ),
-                  ),
-                  _DashboardCard(
-                    title: 'Low Stock Alerts',
-                    icon: const Icon(Icons.warning, color: Colors.white),
-                    color: Colors.red,
-                    count: '2', // TODO: Get from provider
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const InventoryManagementScreen(),
-                      ),
-                    ),
-                  ),
-                  _DashboardCard(
-                    title: 'Emergency Queue',
-                    icon: const Icon(Icons.emergency, color: Colors.white),
-                    color: Colors.red,
-                    count: '1', // TODO: Get from provider
-                    onTap: () => _showEmergencyQueue(context),
                   ),
                 ],
               ),
@@ -303,6 +306,65 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

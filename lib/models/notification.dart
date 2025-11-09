@@ -43,4 +43,26 @@ class Notification {
     createdAt: m['created_at'] ?? '',
     data: m['data'] != null ? jsonDecode(m['data']) : null,
   );
+
+  Notification copyWith({
+    int? id,
+    int? userId,
+    String? title,
+    String? message,
+    String? type,
+    bool? isRead,
+    String? createdAt,
+    Map<String, dynamic>? data,
+  }) {
+    return Notification(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+      data: data ?? this.data,
+    );
+  }
 }

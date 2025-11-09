@@ -11,32 +11,36 @@ import 'providers/inventory_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/payment_provider.dart';
-import 'providers/service_assignment_provider.dart';
-import 'services/calendar_service.dart';
 import 'screens/role_based_home.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize auth provider to check for existing session
+  final authProvider = AuthProvider();
+  await authProvider.initialize();
+
+  runApp(MyApp(authProvider: authProvider));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final AuthProvider authProvider;
+
+  const MyApp({super.key, required this.authProvider});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
-        Provider<CalendarService>(create: (_) => CalendarService()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => PetProvider()),
         ChangeNotifierProvider(create: (_) => MedicalProvider()),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
-        ChangeNotifierProvider(create: (_) => ServiceAssignmentProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

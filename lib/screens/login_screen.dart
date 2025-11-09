@@ -25,58 +25,105 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Vet2U - Login')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: _email,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _password,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock),
+              ),
               obscureText: true,
+              textInputAction: TextInputAction.done,
             ),
-            const SizedBox(height: 12),
-            _loading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: () async {
-                      setState(() => _loading = true);
-                      try {
-                        await auth.login(
-                          email: _email.text.trim(),
-                          password: _password.text.trim(),
-                        );
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RoleBasedHome(),
-                          ),
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(e.toString())));
-                      } finally {
-                        setState(() => _loading = false);
-                      }
-                    },
-                    child: const Text('Login'),
-                  ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: auth.isLoading || _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _login,
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
             TextButton(
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const RegisterScreen()),
               ),
-              child: const Text('Register'),
+              child: const Text('Don\'t have an account? Register here'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _login() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Basic validation
+    if (_email.text.trim().isEmpty) {
+      _showError('Please enter your email');
+      return;
+    }
+    if (_password.text.isEmpty) {
+      _showError('Please enter your password');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await auth.login(email: _email.text.trim(), password: _password.text);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+        );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
