@@ -1,14 +1,21 @@
 // lib/screens/owner/owner_dashboard.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/pet_provider.dart';
+import '../../providers/appointment_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../providers/payment_provider.dart';
 import '../../models/medical_record.dart';
 import 'pet_management_screen.dart';
 import 'booking_screen.dart';
 import 'appointments_screen.dart';
+import 'payment_screen.dart';
+import 'service_request_screen.dart';
+import 'notifications_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -68,18 +75,62 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   }
 }
 
-class _OwnerHomeScreen extends StatelessWidget {
+class _OwnerHomeScreen extends StatefulWidget {
   const _OwnerHomeScreen();
+
+  @override
+  State<_OwnerHomeScreen> createState() => _OwnerHomeScreenState();
+}
+
+class _OwnerHomeScreenState extends State<_OwnerHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDashboardData();
+    });
+  }
+
+  Future<void> _loadDashboardData() async {
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.user?.id == null) return;
+    final ownerId = authProvider.user!.id!;
+    await Future.wait([
+      context.read<PetProvider>().loadPets(ownerId: ownerId),
+      context.read<AppointmentProvider>().loadAppointments(ownerId: ownerId),
+      context.read<NotificationProvider>().loadNotifications(ownerId),
+      context.read<NotificationProvider>().refreshOwnerReminders(ownerId),
+      context.read<PaymentProvider>().loadInvoicesForOwner(ownerId),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
+    final currency = NumberFormat.simpleCurrency();
+    final petCount = context.watch<PetProvider>().pets.length;
+    final appointments = context.watch<AppointmentProvider>().appointments;
+    final upcomingCount =
+        appointments.where((a) => a.status != 'completed').length;
+    final outstandingBalance = context
+        .watch<PaymentProvider>()
+        .invoices
+        .where((invoice) => !invoice.isPaid)
+        .fold<double>(0, (sum, invoice) => sum + invoice.balance);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vet2U - Pet Owner'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const OwnerNotificationsScreen(),
+              ),
+            ),
+          ),
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return IconButton(
@@ -107,14 +158,13 @@ class _OwnerHomeScreen extends StatelessWidget {
             Text(
               'Welcome back, ${user?.name ?? 'Pet Owner'}!',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
             ),
             const SizedBox(height: 24),
             Expanded(
               child: Column(
                 children: [
-                  // Quick Stats Row
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -125,7 +175,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             title: 'Active Pets',
-                            value: '3', // TODO: Get from provider
+                            value: '$petCount',
                             icon: Icons.pets,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
@@ -134,7 +184,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             title: 'Upcoming Appts',
-                            value: '2', // TODO: Get from provider
+                            value: '$upcomingCount',
                             icon: Icons.schedule,
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -143,7 +193,6 @@ class _OwnerHomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Main Action Grid
                   Expanded(
                     child: GridView.count(
                       crossAxisCount: 2,
@@ -183,10 +232,37 @@ class _OwnerHomeScreen extends StatelessWidget {
                           ),
                         ),
                         _DashboardCard(
-                          title: 'Emergency',
-                          icon: Icons.emergency,
-                          color: Colors.red,
-                          onTap: () => _showEmergencyDialog(context),
+                          title: 'Service Request',
+                          icon: Icons.directions_car,
+                          color: Colors.orange,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ServiceRequestScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Billing',
+                          icon: Icons.receipt_long,
+                          color: Colors.blueGrey,
+                          subtitle:
+                              'Due: ${currency.format(outstandingBalance)}',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const PaymentScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Reminders',
+                          icon: Icons.notifications_active,
+                          color: Colors.teal,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const OwnerNotificationsScreen(),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -201,31 +277,9 @@ class _OwnerHomeScreen extends StatelessWidget {
   }
 
   void _showEmergencyDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Emergency Service'),
-        content: const Text('Do you need immediate veterinary assistance?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement emergency booking
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Emergency request sent!')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Request Emergency'),
-          ),
-        ],
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ServiceRequestScreen(),
       ),
     );
   }
@@ -295,12 +349,14 @@ class _DashboardCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String? subtitle;
 
   const _DashboardCard({
     required this.title,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.subtitle,
   });
 
   @override
@@ -322,9 +378,21 @@ class _DashboardCard extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  subtitle!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.grey[600]),
+                ),
+              ],
             ],
           ),
         ),

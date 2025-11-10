@@ -40,4 +40,24 @@ class Document {
       uploadDate: DateTime.parse(map['upload_date']),
     );
   }
+
+  Document copyWith({
+    int? id,
+    int? petId,
+    String? fileName,
+    String? fileType,
+    String? filePath,
+    String? description,
+    DateTime? uploadDate,
+  }) {
+    return Document(
+      id: id ?? this.id,
+      petId: petId ?? this.petId,
+      fileName: fileName ?? this.fileName,
+      fileType: fileType ?? this.fileType,
+      filePath: filePath ?? this.filePath,
+      description: description ?? this.description,
+      uploadDate: uploadDate ?? this.uploadDate,
+    );
+  }
 }

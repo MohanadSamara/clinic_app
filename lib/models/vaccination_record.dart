@@ -46,4 +46,26 @@ class VaccinationRecord {
       notes: map['notes'],
     );
   }
+
+  VaccinationRecord copyWith({
+    int? id,
+    int? petId,
+    String? vaccineName,
+    DateTime? vaccinationDate,
+    DateTime? nextDueDate,
+    String? batchNumber,
+    String? veterinarianName,
+    String? notes,
+  }) {
+    return VaccinationRecord(
+      id: id ?? this.id,
+      petId: petId ?? this.petId,
+      vaccineName: vaccineName ?? this.vaccineName,
+      vaccinationDate: vaccinationDate ?? this.vaccinationDate,
+      nextDueDate: nextDueDate ?? this.nextDueDate,
+      batchNumber: batchNumber ?? this.batchNumber,
+      veterinarianName: veterinarianName ?? this.veterinarianName,
+      notes: notes ?? this.notes,
+    );
+  }
 }

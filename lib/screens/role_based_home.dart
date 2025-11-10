@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import 'owner/owner_dashboard.dart';
 import 'doctor/doctor_dashboard.dart';
 import 'login_screen.dart';
+import 'driver/driver_dashboard.dart';
 
 class RoleBasedHome extends StatelessWidget {
   const RoleBasedHome({super.key});
@@ -40,10 +41,7 @@ class RoleBasedHome extends StatelessWidget {
               body: Center(child: Text('Admin Dashboard - Coming Soon')),
             );
           case 'driver':
-            // TODO: Implement DriverDashboard when needed
-            return const Scaffold(
-              body: Center(child: Text('Driver Dashboard - Coming Soon')),
-            );
+            return const DriverDashboard();
           default:
             // Log unexpected role for debugging
             debugPrint(

@@ -789,6 +789,23 @@ class DBHelper {
     return await db.query('payments', orderBy: 'created_at DESC');
   }
 
+  Future<List<Map<String, dynamic>>> getInvoicesByOwner(int ownerId) async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT a.id AS appointment_id,
+             a.service_type,
+             a.scheduled_at,
+             a.price,
+             a.status,
+             COALESCE(SUM(p.amount), 0) AS amount_paid
+      FROM appointments a
+      LEFT JOIN payments p ON p.appointment_id = a.id
+      WHERE a.owner_id = ?
+      GROUP BY a.id, a.service_type, a.scheduled_at, a.price, a.status
+      ORDER BY datetime(a.scheduled_at) DESC
+    ''', [ownerId]);
+  }
+
   Future<int> updatePayment(int id, Map<String, dynamic> data) async {
     final db = await instance.database;
     return await db.update('payments', data, where: 'id=?', whereArgs: [id]);
