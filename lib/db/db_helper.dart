@@ -33,7 +33,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -59,6 +59,15 @@ class DBHelper {
       await _createNewTablesV5(db);
     }
     // Version 6 migration removed - simplified user table
+    if (oldVersion < 7) {
+      try {
+        await db.execute(
+          'ALTER TABLE appointments ADD COLUMN driver_id INTEGER',
+        );
+      } catch (e) {
+        debugPrint('Error adding driver_id column: $e');
+      }
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -107,6 +116,7 @@ class DBHelper {
         address TEXT,
         price REAL,
         doctor_id INTEGER,
+        driver_id INTEGER,
         urgency_level TEXT,
         location_lat REAL,
         location_lng REAL
@@ -507,6 +517,7 @@ class DBHelper {
   Future<List<Map<String, dynamic>>> getAppointments({
     int? ownerId,
     int? doctorId,
+    int? driverId,
     String? status,
     DateTime? date,
     bool? hasLocation,
@@ -524,6 +535,12 @@ class DBHelper {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'doctor_id=?';
       whereArgs.add(doctorId);
+    }
+
+    if (driverId != null) {
+      if (whereClause.isNotEmpty) whereClause += ' AND ';
+      whereClause += 'driver_id=?';
+      whereArgs.add(driverId);
     }
 
     if (status != null) {
@@ -551,11 +568,14 @@ class DBHelper {
         doctor.name as doctor_name,
         doctor.email as doctor_email,
         doctor.phone as doctor_phone,
+        driver.name as driver_name,
+        driver.phone as driver_phone,
         owner.name as owner_name,
         owner.email as owner_email,
         owner.phone as owner_phone
       FROM appointments
       LEFT JOIN users doctor ON appointments.doctor_id = doctor.id
+      LEFT JOIN users driver ON appointments.driver_id = driver.id
       LEFT JOIN users owner ON appointments.owner_id = owner.id
       ${whereClause.isNotEmpty ? 'WHERE $whereClause' : ''}
       ORDER BY appointments.scheduled_at DESC
@@ -566,6 +586,10 @@ class DBHelper {
 
   Future<List<Map<String, dynamic>>> getAppointmentsByOwner(int ownerId) async {
     return await getAppointments(ownerId: ownerId);
+  }
+
+  Future<List<Map<String, dynamic>>> getAppointmentsByDriver(int driverId) async {
+    return await getAppointments(driverId: driverId);
   }
 
   Future<int> updateAppointmentStatus(int id, String status) async {
@@ -781,6 +805,22 @@ class DBHelper {
       where: 'appointment_id=?',
       whereArgs: [appointmentId],
       orderBy: 'created_at DESC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPaymentsByOwner(int ownerId) async {
+    final db = await instance.database;
+    return await db.rawQuery(
+      '''
+      SELECT payments.*, appointments.service_type, appointments.scheduled_at,
+             appointments.price, appointments.status as appointment_status
+      FROM payments
+      INNER JOIN appointments ON payments.appointment_id = appointments.id
+      WHERE appointments.owner_id = ?
+      ORDER BY payments.created_at DESC
+      '''
+          .trim(),
+      [ownerId],
     );
   }
 

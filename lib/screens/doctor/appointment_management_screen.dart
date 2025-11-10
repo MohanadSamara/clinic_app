@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
+import '../../models/user.dart';
+import '../../db/db_helper.dart';
 
 class AppointmentManagementScreen extends StatefulWidget {
   const AppointmentManagementScreen({super.key});
@@ -175,11 +177,22 @@ class _AppointmentManagementScreenState
     }
   }
 
-  void _rescheduleAppointment(Appointment appointment) {
-    // TODO: Implement reschedule dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reschedule feature coming soon')),
+  Future<void> _rescheduleAppointment(Appointment appointment) async {
+    final newDate = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => _RescheduleDialog(initial: appointment.scheduledAt),
     );
+
+    if (newDate != null) {
+      final success = await context
+          .read<AppointmentProvider>()
+          .rescheduleAppointment(appointment.id!, newDate);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Appointment rescheduled')),
+        );
+      }
+    }
   }
 
   void _rejectAppointment(Appointment appointment) async {
@@ -190,6 +203,42 @@ class _AppointmentManagementScreenState
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Appointment rejected')));
+    }
+  }
+
+  Future<void> _dispatchDriver(Appointment appointment) async {
+    final driversData = await DBHelper.instance.getAllUsers(role: 'driver');
+    if (driversData.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No drivers available to dispatch')),
+      );
+      return;
+    }
+
+    final drivers = driversData.map(User.fromMap).toList();
+    final selectedId = await showDialog<int>(
+      context: context,
+      builder: (context) => _DriverSelectionDialog(drivers: drivers),
+    );
+
+    if (selectedId != null) {
+      final selectedDriver =
+          drivers.firstWhere((driver) => driver.id == selectedId);
+      final success = await context
+          .read<AppointmentProvider>()
+          .assignDriverToAppointment(
+            appointment.id!,
+            selectedId,
+            dispatchImmediately: true,
+            driverName: selectedDriver.name,
+            driverPhone: selectedDriver.phone,
+          );
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver dispatched successfully')),
+        );
+      }
     }
   }
 
@@ -246,6 +295,126 @@ class _AppointmentManagementScreenState
         }
       }
     }
+  }
+}
+
+class _RescheduleDialog extends StatefulWidget {
+  final String? initial;
+
+  const _RescheduleDialog({this.initial});
+
+  @override
+  State<_RescheduleDialog> createState() => _RescheduleDialogState();
+}
+
+class _RescheduleDialogState extends State<_RescheduleDialog> {
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = TimeOfDay.now();
+
+  @override
+  void initState() {
+    super.initState();
+    final parsed = widget.initial != null
+        ? DateTime.tryParse(widget.initial!)?.toLocal()
+        : null;
+    if (parsed != null) {
+      _selectedDate = parsed;
+      _selectedTime = TimeOfDay.fromDateTime(parsed);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reschedule appointment'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.calendar_month),
+            title: Text('Date: ${_selectedDate.toLocal().toString().split(' ').first}'),
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _selectedDate,
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 90)),
+              );
+              if (date != null) {
+                setState(() => _selectedDate = date);
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.access_time),
+            title: Text('Time: ${_selectedTime.format(context)}'),
+            onTap: () async {
+              final time = await showTimePicker(
+                context: context,
+                initialTime: _selectedTime,
+              );
+              if (time != null) {
+                setState(() => _selectedTime = time);
+              }
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final result = DateTime(
+              _selectedDate.year,
+              _selectedDate.month,
+              _selectedDate.day,
+              _selectedTime.hour,
+              _selectedTime.minute,
+            );
+            Navigator.pop(context, result);
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverSelectionDialog extends StatelessWidget {
+  final List<User> drivers;
+
+  const _DriverSelectionDialog({required this.drivers});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Assign mobile clinic driver'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: drivers.length,
+          itemBuilder: (context, index) {
+            final driver = drivers[index];
+            return ListTile(
+              leading: const Icon(Icons.directions_car),
+              title: Text(driver.name),
+              subtitle: driver.phone != null ? Text(driver.phone!) : null,
+              onTap: () => Navigator.pop(context, driver.id),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 }
 
@@ -364,6 +533,7 @@ class _AppointmentCard extends StatelessWidget {
   final VoidCallback onReschedule;
   final VoidCallback onReject;
   final VoidCallback onComplete;
+  final VoidCallback onDispatch;
 
   const _AppointmentCard({
     required this.appointment,
@@ -371,12 +541,14 @@ class _AppointmentCard extends StatelessWidget {
     required this.onReschedule,
     required this.onReject,
     required this.onComplete,
+    required this.onDispatch,
   });
 
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(appointment.status);
     final statusIcon = _getStatusIcon(appointment.status);
+    final scheduled = DateTime.tryParse(appointment.scheduledAt)?.toLocal();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -386,6 +558,7 @@ class _AppointmentCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -408,14 +581,23 @@ class _AppointmentCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Scheduled: ${appointment.scheduledAt}',
+                        scheduled != null
+                            ? 'Scheduled ${scheduled.toString().split('.').first}'
+                            : 'Scheduled: ${appointment.scheduledAt}',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
-                      if (appointment.address != null)
+                      if (appointment.address != null &&
+                          appointment.address!.isNotEmpty)
                         Text(
                           'Location: ${appointment.address}',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
+                      if (appointment.ownerName != null)
+                        Text('Owner: ${appointment.ownerName}'),
+                      if (appointment.ownerPhone != null)
+                        Text('Contact: ${appointment.ownerPhone}'),
+                      if (appointment.driverName != null)
+                        Text('Driver: ${appointment.driverName}'),
                     ],
                   ),
                 ),
@@ -443,33 +625,47 @@ class _AppointmentCard extends StatelessWidget {
                 appointment.description!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Description: ${appointment.description}',
+                appointment.description!,
                 style: TextStyle(color: Colors.grey[700]),
               ),
             ],
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 if (appointment.status == 'pending') ...[
-                  TextButton(onPressed: onAccept, child: const Text('Accept')),
-                  TextButton(
+                  ElevatedButton.icon(
+                    onPressed: onAccept,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Accept'),
+                  ),
+                  OutlinedButton.icon(
                     onPressed: onReschedule,
-                    child: const Text('Reschedule'),
+                    icon: const Icon(Icons.calendar_today),
+                    label: const Text('Reschedule'),
                   ),
-                  TextButton(
+                  TextButton.icon(
                     onPressed: onReject,
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('Reject'),
-                  ),
-                ] else if (appointment.status == 'confirmed' ||
-                    appointment.status == 'en_route' ||
-                    appointment.status == 'in_progress') ...[
-                  ElevatedButton(
-                    onPressed: onComplete,
-                    child: const Text('Mark Complete'),
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    label: const Text('Reject'),
                   ),
                 ],
+                if (appointment.status == 'confirmed' ||
+                    appointment.status == 'en_route' ||
+                    appointment.status == 'in_progress')
+                  ElevatedButton.icon(
+                    onPressed: onComplete,
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('Mark complete'),
+                  ),
+                if (appointment.driverId == null &&
+                    appointment.urgencyLevel != 'routine')
+                  OutlinedButton.icon(
+                    onPressed: onDispatch,
+                    icon: const Icon(Icons.directions_car),
+                    label: const Text('Dispatch driver'),
+                  ),
               ],
             ),
           ],

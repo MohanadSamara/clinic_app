@@ -1,4 +1,6 @@
 // lib/providers/appointment_provider.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import '../models/appointment.dart';
@@ -28,7 +30,11 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadAppointments({int? ownerId, int? doctorId}) async {
+  Future<void> loadAppointments({
+    int? ownerId,
+    int? doctorId,
+    int? driverId,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -36,6 +42,7 @@ class AppointmentProvider extends ChangeNotifier {
       final data = await DBHelper.instance.getAppointments(
         ownerId: ownerId,
         doctorId: doctorId,
+        driverId: driverId,
       );
       _appointments = data.map((item) => Appointment.fromMap(item)).toList();
     } catch (e) {
@@ -44,6 +51,10 @@ class AppointmentProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadDriverAppointments(int driverId) async {
+    await loadAppointments(driverId: driverId);
   }
 
   Future<bool> bookAppointment(Appointment appointment) async {
@@ -63,6 +74,9 @@ class AppointmentProvider extends ChangeNotifier {
     int id,
     String status, {
     int? doctorId,
+    int? driverId,
+    bool notifyUsers = true,
+    String? note,
   }) async {
     try {
       await DBHelper.instance.updateAppointmentStatus(id, status);
@@ -71,14 +85,14 @@ class AppointmentProvider extends ChangeNotifier {
         _appointments[index] = _appointments[index].copyWith(
           status: status,
           doctorId: doctorId ?? _appointments[index].doctorId,
+          driverId: driverId ?? _appointments[index].driverId,
         );
         notifyListeners();
       }
 
-      // If doctor completes appointment, mark as completed
-      if (status == 'completed') {
+      if (notifyUsers && index != -1) {
         final appointment = _appointments[index];
-        // Appointment is now completed by doctor
+        await _notifyStatusChange(appointment, status, note: note);
       }
 
       return true;
@@ -86,6 +100,95 @@ class AppointmentProvider extends ChangeNotifier {
       debugPrint('Error updating appointment status: $e');
       return false;
     }
+  }
+
+  Future<bool> rescheduleAppointment(
+    int appointmentId,
+    DateTime newDateTime,
+  ) async {
+    try {
+      await DBHelper.instance.updateAppointment(appointmentId, {
+        'scheduled_at': newDateTime.toIso8601String(),
+        'status': 'rescheduled',
+      });
+      final index = _appointments.indexWhere((a) => a.id == appointmentId);
+      if (index != -1) {
+        _appointments[index] = _appointments[index].copyWith(
+          scheduledAt: newDateTime.toIso8601String(),
+          status: 'rescheduled',
+        );
+        notifyListeners();
+        await _notifyStatusChange(
+          _appointments[index],
+          'rescheduled',
+          note: 'New time: ${newDateTime.toLocal()}',
+        );
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error rescheduling appointment: $e');
+      return false;
+    }
+  }
+
+  Future<bool> assignDriverToAppointment(
+    int appointmentId,
+    int driverId, {
+    bool dispatchImmediately = false,
+    String? driverName,
+    String? driverPhone,
+  }) async {
+    try {
+      final updateData = {
+        'driver_id': driverId,
+      };
+      if (dispatchImmediately) {
+        updateData['status'] = 'en_route';
+      }
+      await DBHelper.instance.updateAppointment(appointmentId, updateData);
+      final index = _appointments.indexWhere((a) => a.id == appointmentId);
+      if (index != -1) {
+        _appointments[index] = _appointments[index].copyWith(
+          driverId: driverId,
+          driverName: driverName ?? _appointments[index].driverName,
+          driverPhone: driverPhone ?? _appointments[index].driverPhone,
+          status:
+              dispatchImmediately ? 'en_route' : _appointments[index].status,
+        );
+        notifyListeners();
+        await _sendNotification(
+          userId: driverId,
+          title: 'New dispatch assignment',
+          message:
+              'You have been assigned to appointment #$appointmentId. ${dispatchImmediately ? 'Please head out now.' : ''}',
+          data: {'appointment_id': appointmentId},
+        );
+        await _notifyStatusChange(
+          _appointments[index],
+          dispatchImmediately ? 'en_route' : 'assigned_driver',
+        );
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error assigning driver: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateDriverProgress(
+    int appointmentId,
+    String status,
+  ) async {
+    final index =
+        _appointments.indexWhere((element) => element.id == appointmentId);
+    if (index == -1) return false;
+    final appointment = _appointments[index];
+    return updateAppointmentStatus(
+      appointmentId,
+      status,
+      driverId: appointment.driverId,
+      notifyUsers: true,
+    );
   }
 
   Future<bool> updateAppointment(Appointment appointment) async {
@@ -143,18 +246,75 @@ class AppointmentProvider extends ChangeNotifier {
     int appointmentId,
     String message,
   ) async {
+    await _sendNotification(
+      userId: doctorId,
+      title: 'Appointment Update',
+      message: message,
+      data: {'appointment_id': appointmentId},
+    );
+  }
+
+  Future<void> _sendNotification({
+    required int userId,
+    required String title,
+    required String message,
+    Map<String, dynamic>? data,
+    String type = 'appointment',
+  }) async {
     try {
       await DBHelper.instance.insertNotification({
-        'user_id': doctorId,
-        'title': 'Appointment Update',
+        'user_id': userId,
+        'title': title,
         'message': message,
-        'type': 'appointment',
+        'type': type,
         'is_read': 0,
         'created_at': DateTime.now().toIso8601String(),
-        'data': '{"appointment_id": $appointmentId}',
+        'data': data != null ? jsonEncode(data) : null,
       });
     } catch (e) {
-      debugPrint('Error sending notification to doctor: $e');
+      debugPrint('Error sending notification to user $userId: $e');
+    }
+  }
+
+  Future<void> _notifyStatusChange(
+    Appointment appointment,
+    String status, {
+    String? note,
+  }) async {
+    final statusMessage = _statusMessages[status] ?? 'Appointment updated';
+    final message = note != null ? '$statusMessage ($note)' : statusMessage;
+    await _sendNotification(
+      userId: appointment.ownerId,
+      title: 'Appointment ${appointment.serviceType}',
+      message: message,
+      data: {
+        'appointment_id': appointment.id,
+        'status': status,
+      },
+    );
+
+    if (appointment.doctorId != null) {
+      await _sendNotification(
+        userId: appointment.doctorId!,
+        title: 'Appointment ${appointment.serviceType}',
+        message: 'Status updated to $status',
+        data: {
+          'appointment_id': appointment.id,
+          'status': status,
+        },
+      );
+    }
+
+    if (appointment.driverId != null) {
+      await _sendNotification(
+        userId: appointment.driverId!,
+        title: 'Route update',
+        message: 'Appointment status changed to $status',
+        data: {
+          'appointment_id': appointment.id,
+          'status': status,
+        },
+      );
     }
   }
 
@@ -173,7 +333,25 @@ class AppointmentProvider extends ChangeNotifier {
         .where((appointment) => appointment.doctorId == doctorId)
         .toList();
   }
+
+  List<Appointment> getAppointmentsByDriver(int driverId) {
+    return _appointments
+        .where((appointment) => appointment.driverId == driverId)
+        .toList();
+  }
 }
+
+const Map<String, String> _statusMessages = {
+  'pending': 'Appointment received',
+  'confirmed': 'Appointment confirmed',
+  'rescheduled': 'Appointment rescheduled',
+  'en_route': 'Mobile clinic is en route',
+  'in_progress': 'Doctor has arrived',
+  'completed': 'Appointment completed',
+  'cancelled': 'Appointment cancelled',
+  'delayed': 'Appointment delayed',
+  'assigned_driver': 'Driver assigned',
+};
 
 // Role-based permission checks
 const Map<String, Set<String>> _allowedTransitions = {

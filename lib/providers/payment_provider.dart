@@ -2,11 +2,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../db/db_helper.dart';
+import '../models/payment.dart';
+import '../models/appointment.dart';
 
 class PaymentProvider extends ChangeNotifier {
   bool _isProcessing = false;
+  bool _isLoading = false;
+  List<Payment> _payments = [];
+  List<Appointment> _unpaidAppointments = [];
 
   bool get isProcessing => _isProcessing;
+  bool get isLoading => _isLoading;
+  List<Payment> get payments => _payments;
+  List<Appointment> get unpaidAppointments => _unpaidAppointments;
+
+  Future<void> loadOwnerPayments(int ownerId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final paymentRows = await DBHelper.instance.getPaymentsByOwner(ownerId);
+      _payments = paymentRows.map((row) => Payment.fromMap(row)).toList();
+
+      final appointmentRows = await DBHelper.instance.getAppointments(
+        ownerId: ownerId,
+      );
+      final paidAppointmentIds = _payments
+          .where((p) => p.status != 'failed')
+          .map((p) => p.appointmentId)
+          .toSet();
+
+      _unpaidAppointments = appointmentRows
+          .map((row) => Appointment.fromMap(row))
+          .where((appointment) {
+        final price = appointment.price ?? 0;
+        final relevantStatus = appointment.status == 'completed' ||
+            appointment.status == 'confirmed' ||
+            appointment.status == 'in_progress' ||
+            appointment.status == 'rescheduled';
+        return price > 0 && relevantStatus &&
+            !paidAppointmentIds.contains(appointment.id);
+      }).toList();
+    } catch (e) {
+      debugPrint('Error loading owner payments: $e');
+      _payments = [];
+      _unpaidAppointments = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<int> recordPayment({
     required int appointmentId,
@@ -16,14 +60,29 @@ class PaymentProvider extends ChangeNotifier {
     required String transactionId,
     DateTime? createdAt,
   }) async {
+    final timestamp = (createdAt ?? DateTime.now()).toIso8601String();
     final id = await DBHelper.instance.insertPayment({
       'appointment_id': appointmentId,
       'amount': amount,
       'method': method,
       'status': status,
       'transaction_id': transactionId,
-      'created_at': (createdAt ?? DateTime.now()).toIso8601String(),
+      'created_at': timestamp,
     });
+    _payments.insert(
+      0,
+      Payment(
+        id: id,
+        appointmentId: appointmentId,
+        amount: amount,
+        method: method,
+        status: status,
+        transactionId: transactionId,
+        createdAt: timestamp,
+      ),
+    );
+    _unpaidAppointments.removeWhere((apt) => apt.id == appointmentId);
+    notifyListeners();
     return id;
   }
 
@@ -89,5 +148,18 @@ class PaymentProvider extends ChangeNotifier {
       _isProcessing = false;
       notifyListeners();
     }
+  }
+
+  double totalPaid() {
+    return _payments
+        .where((payment) => payment.status == 'completed')
+        .fold(0.0, (sum, payment) => sum + payment.amount);
+  }
+
+  double totalOutstanding() {
+    return _unpaidAppointments.fold(
+      0.0,
+      (sum, appointment) => sum + (appointment.price ?? 0),
+    );
   }
 }

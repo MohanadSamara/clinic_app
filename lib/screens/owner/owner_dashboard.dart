@@ -5,10 +5,15 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/pet_provider.dart';
+import '../../providers/payment_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../models/medical_record.dart';
+import '../../models/vaccination_record.dart';
 import 'pet_management_screen.dart';
 import 'booking_screen.dart';
 import 'appointments_screen.dart';
+import 'payment_screen.dart';
+import 'notifications_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -19,19 +24,62 @@ class OwnerDashboard extends StatefulWidget {
 
 class _OwnerDashboardState extends State<OwnerDashboard> {
   int _selectedIndex = 0;
+  bool _initializing = true;
 
-  final List<Widget> _screens = [
-    const _OwnerHomeScreen(),
-    const PetManagementScreen(),
-    const BookingScreen(),
-    const AppointmentsScreen(),
-    const _OwnerProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _refreshData();
+      if (mounted) {
+        setState(() => _initializing = false);
+      }
+    });
+  }
+
+  Future<void> _refreshData() async {
+    final auth = context.read<AuthProvider>();
+    final ownerId = auth.user?.id;
+    if (ownerId == null) return;
+
+    final petProvider = context.read<PetProvider>();
+    await petProvider.loadPets(ownerId: ownerId);
+
+    final appointmentProvider = context.read<AppointmentProvider>();
+    await appointmentProvider.loadAppointments(ownerId: ownerId);
+
+    final paymentProvider = context.read<PaymentProvider>();
+    await paymentProvider.loadOwnerPayments(ownerId);
+
+    final vaccinations = <VaccinationRecord>[];
+    for (final pet in petProvider.pets) {
+      if (pet.id == null) continue;
+      await petProvider.loadVaccinationRecords(pet.id!);
+      vaccinations.addAll(petProvider.getVaccinationRecordsByPet(pet.id!));
+    }
+
+    await context.read<NotificationProvider>().syncOwnerReminders(
+          ownerId: ownerId,
+          appointments: appointmentProvider.getAppointmentsByOwner(ownerId),
+          vaccinations: vaccinations,
+        );
+  }
+
+  List<Widget> _buildScreens() => [
+        _OwnerHomeScreen(
+          onRefresh: _refreshData,
+          loading: _initializing,
+        ),
+        const PetManagementScreen(),
+        const BookingScreen(),
+        const AppointmentsScreen(),
+        const _OwnerProfileScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: _buildScreens()[_selectedIndex],
       bottomNavigationBar: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return BottomNavigationBar(
@@ -69,12 +117,33 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 }
 
 class _OwnerHomeScreen extends StatelessWidget {
-  const _OwnerHomeScreen();
+  final Future<void> Function()? onRefresh;
+  final bool loading;
+
+  const _OwnerHomeScreen({this.onRefresh, this.loading = false});
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
+    final petProvider = context.watch<PetProvider>();
+    final appointmentProvider = context.watch<AppointmentProvider>();
+    final paymentProvider = context.watch<PaymentProvider>();
+    final notificationProvider = context.watch<NotificationProvider>();
+
+    final petCount = petProvider.pets.length;
+    final now = DateTime.now();
+    final upcomingAppointments = appointmentProvider.appointments.where((apt) {
+      final date = DateTime.tryParse(apt.scheduledAt)?.toLocal();
+      return date != null &&
+          date.isAfter(now.subtract(const Duration(hours: 1))) &&
+          apt.status != 'completed' &&
+          apt.status != 'cancelled';
+    }).length;
+    final unreadNotifications = notificationProvider.notifications
+        .where((n) => !n.isRead)
+        .length;
+    final outstandingBalance = paymentProvider.totalOutstanding();
 
     return Scaffold(
       appBar: AppBar(
@@ -99,100 +168,129 @@ class _OwnerHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: onRefresh ?? () async {},
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
           children: [
             Text(
               'Welcome back, ${user?.name ?? 'Pet Owner'}!',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
             ),
             const SizedBox(height: 24),
-            Expanded(
-              child: Column(
-                children: [
-                  // Quick Stats Row
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Active Pets',
-                            value: '3', // TODO: Get from provider
-                            icon: Icons.pets,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Upcoming Appts',
-                            value: '2', // TODO: Get from provider
-                            icon: Icons.schedule,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ],
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    title: 'Active pets',
+                    value: loading ? '...' : petCount.toString(),
+                    icon: Icons.pets,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    title: 'Upcoming visits',
+                    value: loading ? '...' : upcomingAppointments.toString(),
+                    icon: Icons.schedule,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    title: 'Unread alerts',
+                    value: loading ? '...' : unreadNotifications.toString(),
+                    icon: Icons.notifications_active,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    title: 'Balance due',
+                    value: loading
+                        ? '...'
+                        : '${String.fromCharCode(36)}${outstandingBalance.toStringAsFixed(2)}',
+                    icon: Icons.payments,
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            GridView.count(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              children: [
+                _DashboardCard(
+                  title: 'My pets',
+                  icon: Icons.pets,
+                  color: Theme.of(context).colorScheme.secondary,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PetManagementScreen(),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Main Action Grid
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        _DashboardCard(
-                          title: 'My Pets',
-                          icon: Icons.pets,
-                          color: Theme.of(context).colorScheme.secondary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const PetManagementScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Book Appointment',
-                          icon: Icons.calendar_today,
-                          color: Theme.of(context).colorScheme.primary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const BookingScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Medical History',
-                          icon: Icons.medical_services,
-                          color: Theme.of(context).colorScheme.tertiary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const _MedicalHistoryScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Emergency',
-                          icon: Icons.emergency,
-                          color: Colors.red,
-                          onTap: () => _showEmergencyDialog(context),
-                        ),
-                      ],
+                ),
+                _DashboardCard(
+                  title: 'Book visit',
+                  icon: Icons.calendar_today,
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const BookingScreen(),
                     ),
                   ),
-                ],
-              ),
+                ),
+                _DashboardCard(
+                  title: 'Medical records',
+                  icon: Icons.medical_services,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const _MedicalHistoryScreen(),
+                    ),
+                  ),
+                ),
+                _DashboardCard(
+                  title: 'Payments',
+                  icon: Icons.credit_card,
+                  color: Colors.indigo,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentScreen(),
+                    ),
+                  ),
+                ),
+                _DashboardCard(
+                  title: 'Notifications',
+                  icon: Icons.notifications,
+                  color: Colors.deepPurple,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen(),
+                    ),
+                  ),
+                ),
+                _DashboardCard(
+                  title: 'Emergency',
+                  icon: Icons.emergency,
+                  color: Colors.red,
+                  onTap: () => _showEmergencyDialog(context),
+                ),
+              ],
             ),
           ],
         ),

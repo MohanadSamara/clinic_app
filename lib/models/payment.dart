@@ -7,6 +7,9 @@ class Payment {
   final String status; // 'pending', 'completed', 'failed', 'refunded'
   final String transactionId;
   final String createdAt;
+  final String? serviceType;
+  final String? scheduledAt;
+  final String? appointmentStatus;
 
   Payment({
     this.id,
@@ -16,6 +19,9 @@ class Payment {
     this.status = 'pending',
     required this.transactionId,
     required this.createdAt,
+    this.serviceType,
+    this.scheduledAt,
+    this.appointmentStatus,
   });
 
   Map<String, dynamic> toMap() => {
@@ -36,5 +42,8 @@ class Payment {
     status: m['status'] ?? 'pending',
     transactionId: m['transaction_id'] ?? '',
     createdAt: m['created_at'] ?? '',
+    serviceType: m['service_type'],
+    scheduledAt: m['scheduled_at'],
+    appointmentStatus: m['appointment_status'],
   );
 }
