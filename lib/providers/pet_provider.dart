@@ -3,14 +3,20 @@ import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import '../models/pet.dart';
 import '../models/medical_record.dart';
+import '../models/document.dart';
+import '../models/vaccination_record.dart';
 
 class PetProvider extends ChangeNotifier {
   List<Pet> _pets = [];
   List<MedicalRecord> _medicalRecords = [];
   bool _isLoading = false;
+  List<Document> _documents = [];
+  List<VaccinationRecord> _vaccinationRecords = [];
 
   List<Pet> get pets => _pets;
   List<MedicalRecord> get medicalRecords => _medicalRecords;
+  List<Document> get documents => _documents;
+  List<VaccinationRecord> get vaccinationRecords => _vaccinationRecords;
   bool get isLoading => _isLoading;
 
   Future<void> loadPets({int? ownerId}) async {
@@ -38,6 +44,29 @@ class PetProvider extends ChangeNotifier {
           .toList();
     } catch (e) {
       debugPrint('Error loading medical records: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> loadDocuments(int petId) async {
+    try {
+      final data = await DBHelper.instance.getDocumentsByPet(petId);
+      _documents.removeWhere((doc) => doc.petId == petId);
+      _documents.addAll(data.map((item) => Document.fromMap(item)));
+    } catch (e) {
+      debugPrint('Error loading documents: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> loadVaccinationRecords(int petId) async {
+    try {
+      final data = await DBHelper.instance.getVaccinationRecordsByPet(petId);
+      _vaccinationRecords.removeWhere((record) => record.petId == petId);
+      _vaccinationRecords
+          .addAll(data.map((item) => VaccinationRecord.fromMap(item)));
+    } catch (e) {
+      debugPrint('Error loading vaccination records: $e');
     }
     notifyListeners();
   }
@@ -97,6 +126,74 @@ class PetProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> addDocument(Document document) async {
+    try {
+      final id = await DBHelper.instance.insertDocument(document.toMap());
+      final newDoc = document.copyWith(id: id);
+      _documents.insert(0, newDoc);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error adding document: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteDocument(int id) async {
+    try {
+      await DBHelper.instance.deleteDocument(id);
+      _documents.removeWhere((doc) => doc.id == id);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting document: $e');
+      return false;
+    }
+  }
+
+  Future<bool> addVaccinationRecord(VaccinationRecord record) async {
+    try {
+      final id =
+          await DBHelper.instance.insertVaccinationRecord(record.toMap());
+      final newRecord = record.copyWith(id: id);
+      _vaccinationRecords.insert(0, newRecord);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error adding vaccination record: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateVaccinationRecord(VaccinationRecord record) async {
+    if (record.id == null) return false;
+    try {
+      await DBHelper.instance
+          .updateVaccinationRecord(record.id!, record.toMap());
+      final index = _vaccinationRecords.indexWhere((r) => r.id == record.id);
+      if (index != -1) {
+        _vaccinationRecords[index] = record;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error updating vaccination record: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteVaccinationRecord(int id) async {
+    try {
+      await DBHelper.instance.deleteVaccinationRecord(id);
+      _vaccinationRecords.removeWhere((record) => record.id == id);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting vaccination record: $e');
+      return false;
+    }
+  }
+
   Pet? getPetById(int id) {
     return _pets.firstWhere((pet) => pet.id == id);
   }
@@ -107,5 +204,13 @@ class PetProvider extends ChangeNotifier {
 
   List<MedicalRecord> getMedicalRecordsByPet(int petId) {
     return _medicalRecords.where((record) => record.petId == petId).toList();
+  }
+
+  List<Document> getDocumentsByPet(int petId) {
+    return _documents.where((doc) => doc.petId == petId).toList();
+  }
+
+  List<VaccinationRecord> getVaccinationRecordsForPet(int petId) {
+    return _vaccinationRecords.where((record) => record.petId == petId).toList();
   }
 }

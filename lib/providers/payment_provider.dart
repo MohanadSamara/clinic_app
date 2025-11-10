@@ -2,11 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../db/db_helper.dart';
+import '../models/invoice_summary.dart';
 
 class PaymentProvider extends ChangeNotifier {
   bool _isProcessing = false;
+  bool _isLoadingInvoices = false;
+  List<InvoiceSummary> _invoices = [];
 
   bool get isProcessing => _isProcessing;
+  bool get isLoadingInvoices => _isLoadingInvoices;
+  List<InvoiceSummary> get invoices => List.unmodifiable(_invoices);
 
   Future<int> recordPayment({
     required int appointmentId,
@@ -87,6 +92,21 @@ class PaymentProvider extends ChangeNotifier {
       return false;
     } finally {
       _isProcessing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadInvoicesForOwner(int ownerId) async {
+    _isLoadingInvoices = true;
+    notifyListeners();
+    try {
+      final data = await DBHelper.instance.getInvoicesByOwner(ownerId);
+      _invoices = data.map(InvoiceSummary.fromMap).toList();
+    } catch (e) {
+      debugPrint('Error loading invoices for owner $ownerId: $e');
+      _invoices = [];
+    } finally {
+      _isLoadingInvoices = false;
       notifyListeners();
     }
   }

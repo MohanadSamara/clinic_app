@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/medical_provider.dart';
+import '../../providers/service_request_provider.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
+import '../../models/service_request.dart';
 
 class AppointmentManagementScreen extends StatefulWidget {
   const AppointmentManagementScreen({super.key});
@@ -55,6 +57,11 @@ class _AppointmentManagementScreenState
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.emergency),
+            tooltip: 'Review urgent service requests',
+            onPressed: _openUrgentRequests,
+          ),
           IconButton(
             icon: const Icon(Icons.sort),
             tooltip: 'Sorted by date & time',
@@ -245,6 +252,247 @@ class _AppointmentManagementScreenState
           );
         }
       }
+    }
+  }
+
+  Future<void> _openUrgentRequests() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.user?.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login again to review requests')),
+      );
+      return;
+    }
+
+    final provider = context.read<ServiceRequestProvider>();
+    await provider.loadRequests(requestType: 'urgent', status: 'pending');
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ChangeNotifierProvider.value(
+        value: provider,
+        child: _UrgentRequestsSheet(doctorId: auth.user!.id!),
+      ),
+    );
+  }
+}
+
+class _UrgentRequestsSheet extends StatelessWidget {
+  final int doctorId;
+
+  const _UrgentRequestsSheet({required this.doctorId});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Consumer<ServiceRequestProvider>(
+          builder: (context, provider, child) {
+            final requests = provider.requests
+                .where((request) => request.requestType == 'urgent')
+                .toList();
+
+            if (provider.isLoading) {
+              return const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (requests.isEmpty) {
+              return const SizedBox(
+                height: 180,
+                child: Center(
+                  child: Text('No pending urgent service requests'),
+                ),
+              );
+            }
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Urgent requests',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: requests.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final request = requests[index];
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Request #${request.id ?? '-'}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  Chip(
+                                    label: Text(request.status.toUpperCase()),
+                                    backgroundColor: Colors.orange.shade100,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(request.description),
+                              if (request.address != null &&
+                                  request.address!.isNotEmpty)
+                                Text('Address: ${request.address}'),
+                              if (request.latitude != null &&
+                                  request.longitude != null)
+                                Text(
+                                  'Location: ${request.latitude!.toStringAsFixed(5)}, ${request.longitude!.toStringAsFixed(5)}',
+                                ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: () => _approve(context, request),
+                                    icon: const Icon(Icons.check),
+                                    label: const Text('Approve'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  TextButton.icon(
+                                    onPressed: () => _reject(context, request),
+                                    icon: const Icon(Icons.close),
+                                    label: const Text('Reject'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _approve(
+    BuildContext context,
+    ServiceRequest request,
+  ) async {
+    DateTime scheduledDate = DateTime.now().add(const Duration(hours: 1));
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: scheduledDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 7)),
+    );
+    if (pickedDate != null) {
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(scheduledDate),
+      );
+      if (pickedTime != null) {
+        scheduledDate = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+      } else {
+        scheduledDate = pickedDate;
+      }
+    }
+
+    final provider = context.read<ServiceRequestProvider>();
+    final success = await provider.updateStatus(
+      request.id!,
+      'approved',
+      assignedDoctorId: doctorId,
+      scheduledDate: scheduledDate,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Urgent request approved and driver notified'
+              : 'Failed to approve request',
+        ),
+      ),
+    );
+    if (success) {
+      await provider.loadRequests(requestType: 'urgent', status: 'pending');
+    }
+  }
+
+  Future<void> _reject(
+    BuildContext context,
+    ServiceRequest request,
+  ) async {
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject request'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(
+            labelText: 'Reason for rejection',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.of(context).pop(reasonController.text.trim()),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null) return;
+
+    final provider = context.read<ServiceRequestProvider>();
+    final success = await provider.updateStatus(
+      request.id!,
+      'rejected',
+      rejectionReason: reason,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Request rejected' : 'Failed to update request',
+        ),
+      ),
+    );
+    if (success) {
+      await provider.loadRequests(requestType: 'urgent', status: 'pending');
     }
   }
 }
