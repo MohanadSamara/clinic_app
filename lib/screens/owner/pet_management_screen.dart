@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/pet.dart';
+import 'pet_medical_history_screen.dart';
+import 'pet_documents_screen.dart';
 
 class PetManagementScreen extends StatefulWidget {
   const PetManagementScreen({super.key});
@@ -75,6 +77,8 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                 onDelete: () => _showDeleteConfirmation(context, pet),
                 onViewMedicalHistory: () =>
                     _navigateToMedicalHistory(context, pet),
+                onManageDocuments: () =>
+                    _navigateToDocuments(context, pet),
               );
             },
           );
@@ -128,7 +132,17 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
 
   void _navigateToMedicalHistory(BuildContext context, Pet pet) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => MedicalHistoryScreen(pet: pet)),
+      MaterialPageRoute(
+        builder: (context) => PetMedicalHistoryScreen(pet: pet),
+      ),
+    );
+  }
+
+  void _navigateToDocuments(BuildContext context, Pet pet) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PetDocumentsScreen(pet: pet),
+      ),
     );
   }
 }
@@ -138,12 +152,14 @@ class _PetCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onViewMedicalHistory;
+  final VoidCallback onManageDocuments;
 
   const _PetCard({
     required this.pet,
     required this.onEdit,
     required this.onDelete,
     required this.onViewMedicalHistory,
+    required this.onManageDocuments,
   });
 
   @override
@@ -160,21 +176,26 @@ class _PetCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Theme.of(context).primaryColor,
-                  child: Text(
-                    pet.name.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  backgroundImage: pet.photoPath != null && pet.photoPath!.isNotEmpty
+                      ? NetworkImage(pet.photoPath!)
+                      : null,
+                  child: pet.photoPath == null || pet.photoPath!.isEmpty
+                      ? Text(
+                          pet.name.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                     Text(
                         pet.name,
                         style: const TextStyle(
                           fontSize: 20,
@@ -183,6 +204,20 @@ class _PetCard extends StatelessWidget {
                       ),
                       Text('${pet.species} ${pet.breed ?? ''}'),
                       if (pet.dob != null) Text('Born: ${pet.dob}'),
+                      if (pet.medicalHistorySummary != null &&
+                          pet.medicalHistorySummary!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            pet.medicalHistorySummary!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -198,6 +233,9 @@ class _PetCard extends StatelessWidget {
                       case 'medical':
                         onViewMedicalHistory();
                         break;
+                      case 'documents':
+                        onManageDocuments();
+                        break;
                     }
                   },
                   itemBuilder: (context) => [
@@ -205,6 +243,10 @@ class _PetCard extends StatelessWidget {
                     const PopupMenuItem(
                       value: 'medical',
                       child: Text('Medical History'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'documents',
+                      child: Text('Documents & Images'),
                     ),
                     const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
@@ -218,6 +260,33 @@ class _PetCard extends StatelessWidget {
                 style: TextStyle(color: Colors.grey[600]),
               ),
             ],
+            if (pet.vaccinationStatus != null &&
+                (pet.vaccinationStatus!['notes'] != null)) ...[
+              const SizedBox(height: 8),
+              Chip(
+                avatar: const Icon(Icons.verified, color: Colors.white, size: 18),
+                label: Text(pet.vaccinationStatus!['notes']),
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                labelStyle: const TextStyle(color: Colors.white),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onViewMedicalHistory,
+                  icon: const Icon(Icons.medical_services),
+                  label: const Text('Medical Records'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onManageDocuments,
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Documents'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -241,6 +310,9 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
   final _breedController = TextEditingController();
   final _dobController = TextEditingController();
   final _notesController = TextEditingController();
+  final _medicalHistoryController = TextEditingController();
+  final _vaccinationNotesController = TextEditingController();
+  final _photoUrlController = TextEditingController();
 
   @override
   void initState() {
@@ -251,6 +323,11 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
       _breedController.text = widget.pet!.breed ?? '';
       _dobController.text = widget.pet!.dob ?? '';
       _notesController.text = widget.pet!.notes ?? '';
+      _medicalHistoryController.text =
+          widget.pet!.medicalHistorySummary ?? '';
+      _vaccinationNotesController.text =
+          widget.pet!.vaccinationStatus?['notes'] ?? '';
+      _photoUrlController.text = widget.pet!.photoPath ?? '';
     }
   }
 
@@ -325,6 +402,32 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                 ),
                 maxLines: 3,
               ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _medicalHistoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Medical history summary',
+                  helperText:
+                      'Highlight allergies, chronic conditions, or recent procedures.',
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _vaccinationNotesController,
+                decoration: const InputDecoration(
+                  labelText: 'Vaccination status',
+                  helperText: 'e.g. Fully vaccinated, booster due in March',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _photoUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Photo URL (Optional)',
+                  helperText: 'Paste a link to your pet photo',
+                ),
+              ),
             ],
           ),
         ),
@@ -356,6 +459,21 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                 notes: _notesController.text.isEmpty
                     ? null
                     : _notesController.text,
+                medicalHistorySummary:
+                    _medicalHistoryController.text.isEmpty
+                        ? null
+                        : _medicalHistoryController.text,
+                vaccinationStatus:
+                    _vaccinationNotesController.text.isEmpty
+                        ? null
+                        : {
+                            'notes': _vaccinationNotesController.text,
+                            'updated_at':
+                                DateTime.now().toIso8601String(),
+                          },
+                photoPath: _photoUrlController.text.isEmpty
+                    ? null
+                    : _photoUrlController.text,
               );
 
               final success = widget.pet == null
@@ -389,21 +507,9 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
     _breedController.dispose();
     _dobController.dispose();
     _notesController.dispose();
+    _medicalHistoryController.dispose();
+    _vaccinationNotesController.dispose();
+    _photoUrlController.dispose();
     super.dispose();
-  }
-}
-
-// Placeholder for Medical History Screen
-class MedicalHistoryScreen extends StatelessWidget {
-  final Pet pet;
-
-  const MedicalHistoryScreen({super.key, required this.pet});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('${pet.name} - Medical History')),
-      body: const Center(child: Text('Medical History Screen - Coming Soon')),
-    );
   }
 }

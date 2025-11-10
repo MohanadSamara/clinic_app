@@ -11,6 +11,12 @@ class Appointment {
   final double? price;
   final int? doctorId;
   final String? doctorName;
+  final int? driverId;
+  final String? driverName;
+  final String? driverPhone;
+  final String? ownerName;
+  final String? ownerEmail;
+  final String? ownerPhone;
   final String urgencyLevel; // 'routine', 'urgent', 'emergency'
   final double? locationLat;
   final double? locationLng;
@@ -27,6 +33,12 @@ class Appointment {
     this.price,
     this.doctorId,
     this.doctorName,
+    this.driverId,
+    this.driverName,
+    this.driverPhone,
+    this.ownerName,
+    this.ownerEmail,
+    this.ownerPhone,
     this.urgencyLevel = 'routine',
     this.locationLat,
     this.locationLng,
@@ -43,6 +55,7 @@ class Appointment {
     'address': address,
     'price': price,
     'doctor_id': doctorId,
+    'driver_id': driverId,
     'urgency_level': urgencyLevel,
     'location_lat': locationLat,
     'location_lng': locationLng,
@@ -62,6 +75,12 @@ class Appointment {
         : (m['price'] as double?),
     doctorId: m['doctor_id'],
     doctorName: m['doctor_name'],
+    driverId: m['driver_id'],
+    driverName: m['driver_name'],
+    driverPhone: m['driver_phone'],
+    ownerName: m['owner_name'],
+    ownerEmail: m['owner_email'],
+    ownerPhone: m['owner_phone'],
     urgencyLevel: m['urgency_level'] ?? 'routine',
     locationLat: (m['location_lat'] as num?)?.toDouble(),
     locationLng: (m['location_lng'] as num?)?.toDouble(),
@@ -79,6 +98,12 @@ class Appointment {
     double? price,
     int? doctorId,
     String? doctorName,
+    int? driverId,
+    String? driverName,
+    String? driverPhone,
+    String? ownerName,
+    String? ownerEmail,
+    String? ownerPhone,
     String? urgencyLevel,
     double? locationLat,
     double? locationLng,
@@ -95,6 +120,12 @@ class Appointment {
       price: price ?? this.price,
       doctorId: doctorId ?? this.doctorId,
       doctorName: doctorName ?? this.doctorName,
+      driverId: driverId ?? this.driverId,
+      driverName: driverName ?? this.driverName,
+      driverPhone: driverPhone ?? this.driverPhone,
+      ownerName: ownerName ?? this.ownerName,
+      ownerEmail: ownerEmail ?? this.ownerEmail,
+      ownerPhone: ownerPhone ?? this.ownerPhone,
       urgencyLevel: urgencyLevel ?? this.urgencyLevel,
       locationLat: locationLat ?? this.locationLat,
       locationLng: locationLng ?? this.locationLng,
