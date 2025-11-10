@@ -7,9 +7,8 @@ The development container does not have any Git remotes configured by default. T
    `https://github.com/MohanadSamara/clinic_app`.
 2. Add the remote to this project:
    ```bash
-   git remote add origin https://github.com/<your-account>/<repository>.git
+   git remote add origin https://github.com/MohanadSamara/clinic_app.git
    ```
-   Replace `<your-account>` and `<repository>` with your GitHub details.
 3. Verify that the remote has been added:
    ```bash
    git remote -v
