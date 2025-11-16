@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import 'owner/owner_dashboard.dart';
 import 'doctor/doctor_dashboard.dart';
 import 'driver/driver_dashboard.dart';
+import 'admin/admin_dashboard.dart';
 import 'login_screen.dart';
 
 class RoleBasedHome extends StatelessWidget {
@@ -36,10 +37,7 @@ class RoleBasedHome extends StatelessWidget {
           case 'doctor':
             return const DoctorDashboard();
           case 'admin':
-            // TODO: Implement AdminDashboard when needed
-            return const Scaffold(
-              body: Center(child: Text('Admin Dashboard - Coming Soon')),
-            );
+            return const AdminDashboard();
           case 'driver':
             return const DriverDashboard();
           default:

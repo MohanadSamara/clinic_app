@@ -33,7 +33,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -57,6 +57,16 @@ class DBHelper {
     if (oldVersion < 5) {
       // Add new tables for service assignments and sessions
       await _createNewTablesV5(db);
+    }
+    if (oldVersion < 7) {
+      // Add promotional_price column to services table
+      try {
+        await db.execute(
+          'ALTER TABLE services ADD COLUMN promotional_price REAL',
+        );
+      } catch (e) {
+        debugPrint('Error adding promotional_price column: $e');
+      }
     }
     // Version 6 migration removed - simplified user table
   }
@@ -122,7 +132,8 @@ class DBHelper {
         description TEXT,
         price REAL,
         category TEXT,
-        is_active INTEGER
+        is_active INTEGER,
+        promotional_price REAL
       );
     ''');
 
@@ -200,6 +211,21 @@ class DBHelper {
 
     // Create new tables for version 5
     await _createNewTablesV5(db);
+
+    // Create compliance logs table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS compliance_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        inspection_type TEXT,
+        inspector_name TEXT,
+        inspection_date TEXT,
+        status TEXT,
+        findings TEXT,
+        corrective_actions TEXT,
+        next_inspection_date TEXT,
+        created_at TEXT
+      );
+    ''');
 
     // Insert default services after creating tables
     await _insertDefaultServices(db);
@@ -1124,5 +1150,31 @@ class DBHelper {
   Future<List<Map<String, dynamic>>> getAllDriverStatuses() async {
     final db = await instance.database;
     return await db.query('driver_status', orderBy: 'last_updated DESC');
+  }
+
+  // ---------- COMPLIANCE LOGS ----------
+  Future<int> insertComplianceLog(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('compliance_logs', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllComplianceLogs() async {
+    final db = await instance.database;
+    return await db.query('compliance_logs', orderBy: 'inspection_date DESC');
+  }
+
+  Future<int> updateComplianceLog(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update(
+      'compliance_logs',
+      data,
+      where: 'id=?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteComplianceLog(int id) async {
+    final db = await instance.database;
+    return await db.delete('compliance_logs', where: 'id=?', whereArgs: [id]);
   }
 }

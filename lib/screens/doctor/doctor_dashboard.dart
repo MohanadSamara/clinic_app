@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
 import '../../models/service.dart';
+import '../../components/modern_cards.dart';
 import 'appointment_management_screen.dart';
 import 'treatment_recording_screen.dart';
 import 'inventory_management_screen.dart';
@@ -34,6 +35,12 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.6),
+        elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
@@ -101,195 +108,253 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vet2U - Doctor'),
+        title: const Text('Vet2U'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             onPressed: () => authProvider.logout(),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back, Dr. ${user?.name ?? 'Doctor'}!',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            // Service Selection Section
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Select Service for Today',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    if (_selectedService != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: Colors.green),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Selected: ${_selectedService!.name}',
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      DropdownButtonFormField<Service>(
-                        decoration: const InputDecoration(
-                          labelText: 'Choose Service',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: null,
-                        items: serviceProvider.services
-                            .where((service) => service.isActive)
-                            .map(
-                              (service) => DropdownMenuItem(
-                                value: service,
-                                child: Text(service.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _isLoading
-                            ? null
-                            : (service) {
-                                if (service != null) {
-                                  _selectService(service);
-                                }
-                              },
-                      ),
-                      if (_isLoading) ...[
-                        const SizedBox(height: 8),
-                        const LinearProgressIndicator(),
-                      ],
-                    ],
+      body: CustomScrollView(
+        slivers: [
+          // Welcome Header
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).colorScheme.surface,
                   ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Quick Stats Row
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Today\'s Appts',
-                            value: '5', // TODO: Get from provider
-                            icon: Icons.calendar_today,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Completed Today',
-                            value: '3', // TODO: Get from provider
-                            icon: Icons.check_circle,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    'Welcome back,',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Main Action Grid
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        _DashboardCard(
-                          title: 'Appointments',
-                          icon: const Icon(
-                            Icons.calendar_today,
-                            color: Colors.white,
-                          ),
-                          color: Colors.blue,
-                          count: '5', // TODO: Get from provider
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const AppointmentManagementScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Treatment Records',
-                          icon: const Icon(
-                            Icons.medical_services,
-                            color: Colors.white,
-                          ),
-                          color: Colors.teal,
-                          count: '12', // TODO: Get from provider
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const TreatmentRecordingScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Low Stock Alerts',
-                          icon: const Icon(Icons.warning, color: Colors.white),
-                          color: Colors.red,
-                          count: '2', // TODO: Get from provider
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const InventoryManagementScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Emergency Queue',
-                          icon: const Icon(
-                            Icons.emergency,
-                            color: Colors.white,
-                          ),
-                          color: Colors.red,
-                          count: '1', // TODO: Get from provider
-                          onTap: () => _showEmergencyQueue(context),
-                        ),
-                      ],
+                  Text(
+                    'Dr. ${user?.name ?? 'Doctor'}',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Service Selection
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                color: Theme.of(context).colorScheme.surface,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Service for Today',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_selectedService != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green.shade700,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _selectedService!.name,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        DropdownButtonFormField<Service>(
+                          decoration: InputDecoration(
+                            labelText: 'Choose Service',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surface,
+                          ),
+                          value: null,
+                          items: serviceProvider.services
+                              .where((service) => service.isActive)
+                              .map(
+                                (service) => DropdownMenuItem(
+                                  value: service,
+                                  child: Text(service.name),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _isLoading
+                              ? null
+                              : (service) {
+                                  if (service != null) {
+                                    _selectService(service);
+                                  }
+                                },
+                        ),
+                        if (_isLoading) ...[
+                          const SizedBox(height: 12),
+                          const LinearProgressIndicator(),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Quick Stats
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ModernStatsCard(
+                      title: 'Today\'s Appointments',
+                      value: '5', // TODO: Get from provider
+                      icon: Icons.calendar_today,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ModernStatsCard(
+                      title: 'Completed',
+                      value: '3', // TODO: Get from provider
+                      icon: Icons.check_circle,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Quick Actions
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+
+          // Action Cards
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                ModernActionCard(
+                  title: 'Manage Appointments',
+                  subtitle: 'View and update patient schedules',
+                  icon: Icons.calendar_today,
+                  color: Colors.blue,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AppointmentManagementScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Record Treatments',
+                  subtitle: 'Document medical procedures',
+                  icon: Icons.medical_services,
+                  color: Colors.teal,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const TreatmentRecordingScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Inventory Management',
+                  subtitle: 'Check supplies and medications',
+                  icon: Icons.inventory,
+                  color: Colors.orange,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const InventoryManagementScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Emergency Cases',
+                  subtitle: 'Handle urgent situations',
+                  icon: Icons.emergency,
+                  color: Colors.red,
+                  onTap: () => _showEmergencyQueue(context),
+                ),
+                const SizedBox(height: 24),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -311,128 +376,6 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DashboardCard extends StatelessWidget {
-  final String title;
-  final Widget icon;
-  final Color color;
-  final String? count;
-  final VoidCallback onTap;
-
-  const _DashboardCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    this.count,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: icon,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              if (count != null) ...[
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    count!,
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DoctorProfileScreen extends StatelessWidget {
   const _DoctorProfileScreen();
 
@@ -442,33 +385,179 @@ class _DoctorProfileScreen extends StatelessWidget {
     final user = authProvider.user;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Doctor Profile')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(
-                Icons.medical_services,
-                size: 32,
-                color: Colors.white,
+      appBar: AppBar(
+        title: const Text('Profile'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          // Profile Header
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).colorScheme.surface,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      Icons.medical_services,
+                      size: 36,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Dr. ${user?.name ?? 'Doctor'}',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    user?.email ?? 'No email',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text('Name: Dr. ${user?.name ?? 'N/A'}'),
-            Text('Email: ${user?.email ?? 'N/A'}'),
-            Text('Phone: ${user?.phone ?? 'N/A'}'),
-            Text('Role: ${user?.role ?? 'doctor'}'),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => authProvider.logout(),
-              child: const Text('Logout'),
+          ),
+
+          // Profile Details
+          SliverPadding(
+            padding: const EdgeInsets.all(24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                ModernActionCard(
+                  title: 'Professional Information',
+                  subtitle: 'Update your credentials',
+                  icon: Icons.medical_services,
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: () {
+                    // TODO: Implement edit profile
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Edit profile coming soon')),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Phone: ${user?.phone ?? 'Not set'}',
+                  subtitle: 'Contact number',
+                  icon: Icons.phone,
+                  color: Theme.of(context).colorScheme.secondary,
+                  onTap: () {
+                    // TODO: Implement phone update
+                  },
+                  showArrow: false,
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Schedule Settings',
+                  subtitle: 'Working hours and availability',
+                  icon: Icons.schedule,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onTap: () {
+                    // TODO: Implement schedule settings
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Schedule settings coming soon'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Notifications',
+                  subtitle: 'Alert preferences',
+                  icon: Icons.notifications,
+                  color: Colors.purple,
+                  onTap: () {
+                    // TODO: Implement notification settings
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Notification settings coming soon'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.error.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.05),
+                  child: InkWell(
+                    onTap: () => authProvider.logout(),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.logout,
+                              color: Theme.of(context).colorScheme.error,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              'Sign Out',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.error.withOpacity(0.7),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

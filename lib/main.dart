@@ -12,6 +12,8 @@ import 'providers/theme_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/payment_provider.dart';
 import 'screens/role_based_home.dart';
+import 'theme/app_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,100 +56,14 @@ class MyApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [Locale('en'), Locale('ar')],
-            theme: ThemeData(
-              // Light theme
-              brightness: Brightness.light,
-              primaryColor: const Color(0xFF2E8B57), // Sea Green
-              colorScheme: const ColorScheme.light(
-                primary: Color(0xFF2E8B57),
-                secondary: Color(0xFF6B8E23), // Olive Drab
-                tertiary: Color(0xFFFF9800), // Orange
-                surface: Color(0xFFF5F5F5),
-                onSurface: Color(0xFF333333),
-              ),
-              scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF2E8B57),
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
-              cardTheme: const CardThemeData(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                color: Color(0xFFFFFFFF),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF2E8B57),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              textButtonTheme: TextButtonThemeData(
-                style: TextButton.styleFrom(foregroundColor: Color(0xFF2E8B57)),
-              ),
-              textTheme: const TextTheme(
-                bodyLarge: TextStyle(color: Color(0xFF333333)),
-                bodyMedium: TextStyle(color: Color(0xFF333333)),
-                bodySmall: TextStyle(color: Color(0xFF666666)),
-                headlineLarge: TextStyle(color: Color(0xFF333333)),
-                headlineMedium: TextStyle(color: Color(0xFF333333)),
-                headlineSmall: TextStyle(color: Color(0xFF333333)),
-                titleLarge: TextStyle(color: Color(0xFF333333)),
-                titleMedium: TextStyle(color: Color(0xFF333333)),
-                titleSmall: TextStyle(color: Color(0xFF333333)),
+            theme: AppTheme.lightTheme.copyWith(
+              textTheme: GoogleFonts.interTextTheme(
+                AppTheme.lightTheme.textTheme,
               ),
             ),
-            darkTheme: ThemeData(
-              // Dark theme
-              brightness: Brightness.dark,
-              primaryColor: const Color(0xFF4CAF50),
-              colorScheme: const ColorScheme.dark(
-                primary: Color(0xFF4CAF50),
-                secondary: Color(0xFF81C784),
-                tertiary: Color(0xFFFF9800), // Orange
-                surface: Color(0xFF121212),
-                onSurface: Color(0xFFE0E0E0),
-              ),
-              scaffoldBackgroundColor: const Color(0xFF121212),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF1E1E1E),
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
-              cardTheme: const CardThemeData(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                color: Color(0xFF2A2A2A),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF4CAF50),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              textButtonTheme: TextButtonThemeData(
-                style: TextButton.styleFrom(foregroundColor: Color(0xFF81C784)),
-              ),
-              textTheme: const TextTheme(
-                bodyLarge: TextStyle(color: Color(0xFFE0E0E0)),
-                bodyMedium: TextStyle(color: Color(0xFFE0E0E0)),
-                bodySmall: TextStyle(color: Color(0xFFB0B0B0)),
-                headlineLarge: TextStyle(color: Color(0xFFE0E0E0)),
-                headlineMedium: TextStyle(color: Color(0xFFE0E0E0)),
-                headlineSmall: TextStyle(color: Color(0xFFE0E0E0)),
-                titleLarge: TextStyle(color: Color(0xFFE0E0E0)),
-                titleMedium: TextStyle(color: Color(0xFFE0E0E0)),
-                titleSmall: TextStyle(color: Color(0xFFE0E0E0)),
+            darkTheme: AppTheme.darkTheme.copyWith(
+              textTheme: GoogleFonts.interTextTheme(
+                AppTheme.darkTheme.textTheme,
               ),
             ),
             themeMode: themeProvider.themeMode,

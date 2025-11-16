@@ -12,6 +12,7 @@ import '../../models/appointment.dart';
 import '../../models/service.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
+import '../select_location_screen.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -125,20 +126,56 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Book Appointment')),
+      appBar: AppBar(
+        title: const Text('Book Appointment'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+      ),
       body: Consumer<AppointmentProvider>(
         builder: (context, appointmentProvider, child) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Select Date',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // Header
+                Text(
+                  'Schedule a Visit',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
+                Text(
+                  'Book veterinary care for your pet',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Select Date',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
                   child: TableCalendar(
                     firstDay: DateTime.now(),
                     lastDay: DateTime.now().add(const Duration(days: 90)),
@@ -150,14 +187,32 @@ class _BookingScreenState extends State<BookingScreen> {
                         _selectedDate = selectedDay;
                       });
                     },
-                    calendarStyle: const CalendarStyle(
+                    calendarStyle: CalendarStyle(
                       selectedDecoration: BoxDecoration(
-                        color: Colors.green,
+                        color: Theme.of(context).colorScheme.primary,
                         shape: BoxShape.circle,
                       ),
                       todayDecoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.secondary.withOpacity(0.3),
                         shape: BoxShape.circle,
+                      ),
+                      defaultTextStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      weekendTextStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    headerStyle: HeaderStyle(
+                      titleTextStyle: Theme.of(context).textTheme.titleMedium!
+                          .copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                      formatButtonTextStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -459,10 +514,18 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _openMapForAddress() async {
-    // For now, just show a simple address input
-    // TODO: Implement location selection screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Location selection not implemented yet')),
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (context) => const SelectLocationScreen()),
     );
+
+    if (result != null) {
+      setState(() {
+        _addressController.text = result['address'] ?? '';
+        // Optionally store lat/lng if needed for other purposes
+        // _selectedLat = result['latitude'];
+        // _selectedLng = result['longitude'];
+      });
+    }
   }
 }

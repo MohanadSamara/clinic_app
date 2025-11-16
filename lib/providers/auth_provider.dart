@@ -29,7 +29,13 @@ class AuthProvider extends ChangeNotifier {
           userData.split(',').fold<Map<String, dynamic>>({}, (map, pair) {
             final parts = pair.split(':');
             if (parts.length == 2) {
-              map[parts[0]] = parts[1];
+              final key = parts[0];
+              final value = parts[1];
+              if (key == 'id') {
+                map[key] = int.tryParse(value);
+              } else {
+                map[key] = value;
+              }
             }
             return map;
           }),

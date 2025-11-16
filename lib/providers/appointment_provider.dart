@@ -173,6 +173,45 @@ class AppointmentProvider extends ChangeNotifier {
         .where((appointment) => appointment.doctorId == doctorId)
         .toList();
   }
+
+  Future<void> addService(Service service) async {
+    try {
+      final id = await DBHelper.instance.insertService(service.toMap());
+      final newService = service.copyWith(id: id);
+      _services.add(newService);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error adding service: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateService(Service service) async {
+    if (service.id == null) return;
+
+    try {
+      await DBHelper.instance.updateService(service.id!, service.toMap());
+      final index = _services.indexWhere((s) => s.id == service.id);
+      if (index != -1) {
+        _services[index] = service;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error updating service: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteService(int id) async {
+    try {
+      await DBHelper.instance.deleteService(id);
+      _services.removeWhere((s) => s.id == id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error deleting service: $e');
+      rethrow;
+    }
+  }
 }
 
 // Role-based permission checks

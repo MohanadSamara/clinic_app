@@ -5,7 +5,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/pet_provider.dart';
+import '../../providers/appointment_provider.dart';
 import '../../models/medical_record.dart';
+import '../../components/modern_cards.dart';
 import 'pet_management_screen.dart';
 import 'booking_screen.dart';
 import 'appointments_screen.dart';
@@ -33,37 +35,29 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_selectedIndex],
-      bottomNavigationBar: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: themeProvider.isDarkMode
-                ? Theme.of(context).colorScheme.surface
-                : Theme.of(context).colorScheme.surface,
-            selectedItemColor: Theme.of(context).colorScheme.primary,
-            unselectedItemColor: Theme.of(
-              context,
-            ).colorScheme.onSurface.withOpacity(0.6),
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Pets'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_today),
-                label: 'Book',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.schedule),
-                label: 'Appointments',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
-          );
-        },
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.6),
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Pets'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Book',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.schedule),
+            label: 'Appointments',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
       ),
     );
   }
@@ -79,13 +73,17 @@ class _OwnerHomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vet2U - Pet Owner'),
+        title: const Text('Vet2U'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return IconButton(
                 icon: Icon(
                   themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 onPressed: () => themeProvider.toggleTheme(),
                 tooltip: themeProvider.isDarkMode
@@ -95,119 +93,154 @@ class _OwnerHomeScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             onPressed: () => authProvider.logout(),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back, ${user?.name ?? 'Pet Owner'}!',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+      body: CustomScrollView(
+        slivers: [
+          // Welcome Header
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).colorScheme.surface,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Quick Stats Row
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Active Pets',
-                            value: '3', // TODO: Get from provider
-                            icon: Icons.pets,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Upcoming Appts',
-                            value: '2', // TODO: Get from provider
-                            icon: Icons.schedule,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    'Welcome back,',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Main Action Grid
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        _DashboardCard(
-                          title: 'My Pets',
-                          icon: Icons.pets,
-                          color: Theme.of(context).colorScheme.secondary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const PetManagementScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Book Appointment',
-                          icon: Icons.calendar_today,
-                          color: Theme.of(context).colorScheme.primary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const BookingScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Track Drivers',
-                          icon: Icons.location_on,
-                          color: Colors.purple,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const DriverTrackingScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Medical History',
-                          icon: Icons.medical_services,
-                          color: Theme.of(context).colorScheme.tertiary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const _MedicalHistoryScreen(),
-                            ),
-                          ),
-                        ),
-                        _DashboardCard(
-                          title: 'Emergency',
-                          icon: Icons.emergency,
-                          color: Colors.red,
-                          onTap: () => _showEmergencyDialog(context),
-                        ),
-                      ],
+                  Text(
+                    user?.name ?? 'Pet Owner',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Quick Stats
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ModernStatsCard(
+                      title: 'Active Pets',
+                      value: '3', // TODO: Get from provider
+                      icon: Icons.pets,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ModernStatsCard(
+                      title: 'Upcoming',
+                      value: '2', // TODO: Get from provider
+                      icon: Icons.schedule,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Quick Actions
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+
+          // Action Cards
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                ModernActionCard(
+                  title: 'Book Appointment',
+                  subtitle: 'Schedule veterinary care',
+                  icon: Icons.calendar_today,
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const BookingScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'My Pets',
+                  subtitle: 'Manage pet profiles',
+                  icon: Icons.pets,
+                  color: Theme.of(context).colorScheme.secondary,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PetManagementScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Track Service',
+                  subtitle: 'Follow your vet visit',
+                  icon: Icons.location_on,
+                  color: Colors.purple,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const DriverTrackingScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Medical History',
+                  subtitle: 'View past treatments',
+                  icon: Icons.medical_services,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const _MedicalHistoryScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernEmergencyCard(onTap: () => _showEmergencyDialog(context)),
+                const SizedBox(height: 24),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -238,108 +271,6 @@ class _OwnerHomeScreen extends StatelessWidget {
             child: const Text('Request Emergency'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DashboardCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _DashboardCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: Theme.of(context).brightness == Brightness.dark ? 6 : 4,
-      color: Theme.of(context).cardTheme.color,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48, color: color),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -475,55 +406,165 @@ class _OwnerProfileScreen extends StatelessWidget {
     final user = authProvider.user;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Text(
-                user?.name?.substring(0, 1).toUpperCase() ?? 'U',
-                style: TextStyle(
-                  fontSize: 32,
-                  color: Theme.of(context).colorScheme.onPrimary,
+      appBar: AppBar(
+        title: const Text('Profile'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          // Profile Header
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).colorScheme.surface,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Name: ${user?.name ?? 'N/A'}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Text(
+                      user?.name?.substring(0, 1).toUpperCase() ?? 'U',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    user?.name ?? 'Pet Owner',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    user?.email ?? 'No email',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              'Email: ${user?.email ?? 'N/A'}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+          ),
+
+          // Profile Details
+          SliverPadding(
+            padding: const EdgeInsets.all(24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                ModernActionCard(
+                  title: 'Personal Information',
+                  subtitle: 'Update your details',
+                  icon: Icons.person,
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: () {
+                    // TODO: Implement edit profile
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Edit profile coming soon')),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Phone: ${user?.phone ?? 'Not set'}',
+                  subtitle: 'Contact number',
+                  icon: Icons.phone,
+                  color: Theme.of(context).colorScheme.secondary,
+                  onTap: () {
+                    // TODO: Implement phone update
+                  },
+                  showArrow: false,
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Account Settings',
+                  subtitle: 'Notifications, privacy',
+                  icon: Icons.settings,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onTap: () {
+                    // TODO: Implement settings
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Settings coming soon')),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.error.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.05),
+                  child: InkWell(
+                    onTap: () => authProvider.logout(),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.logout,
+                              color: Theme.of(context).colorScheme.error,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              'Sign Out',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.error.withOpacity(0.7),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
             ),
-            Text(
-              'Phone: ${user?.phone ?? 'N/A'}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            Text(
-              'Role: ${user?.role ?? 'N/A'}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => authProvider.logout(),
-              child: const Text('Logout'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

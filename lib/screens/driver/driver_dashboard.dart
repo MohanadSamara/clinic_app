@@ -9,6 +9,7 @@ import '../../services/location_service.dart';
 import '../../models/appointment.dart';
 import '../../models/driver_status.dart';
 import '../../db/db_helper.dart';
+import '../../components/modern_cards.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -466,14 +467,23 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Driver Dashboard'),
+        title: const Text('Vet2U Driver'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(
+              Icons.refresh,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             onPressed: _loadDriverData,
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],
@@ -724,35 +734,63 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
             // Status Card
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              color: Theme.of(context).colorScheme.surface,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Driver Status',
-                      style: TextStyle(
-                        fontSize: 18,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _currentStatus?.status ?? 'offline',
-                      style: TextStyle(
-                        fontSize: 16,
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
                         color: _getStatusColor(
                           _currentStatus?.status ?? 'offline',
+                        ).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _getStatusColor(
+                            _currentStatus?.status ?? 'offline',
+                          ).withOpacity(0.3),
+                          width: 1,
                         ),
-                        fontWeight: FontWeight.w500,
+                      ),
+                      child: Text(
+                        (_currentStatus?.status ?? 'offline').toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _getStatusColor(
+                            _currentStatus?.status ?? 'offline',
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Status updates automatically based on location and activity.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                         fontStyle: FontStyle.italic,
                       ),
                       textAlign: TextAlign.center,
@@ -904,11 +942,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
             const SizedBox(height: 24),
 
             // Quick Actions
-            const Text(
-              'Quick Actions',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
 
             GridView.count(
               crossAxisCount: 2,
@@ -917,25 +960,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               children: [
-                _buildQuickActionCard(
-                  'Vehicle Check',
-                  Icons.directions_car,
-                  () => _showVehicleCheckDialog(),
+                ModernGridCard(
+                  title: 'Vehicle Check',
+                  icon: Icons.directions_car,
+                  color: Colors.blue,
+                  onTap: () => _showVehicleCheckDialog(),
                 ),
-                _buildQuickActionCard(
-                  'Route Navigation',
-                  Icons.navigation,
-                  () => _openNavigation(),
+                ModernGridCard(
+                  title: 'Navigation',
+                  icon: Icons.navigation,
+                  color: Colors.green,
+                  onTap: () => _openNavigation(),
                 ),
-                _buildQuickActionCard(
-                  'Emergency',
-                  Icons.emergency,
-                  () => _handleEmergency(),
+                ModernGridCard(
+                  title: 'Emergency',
+                  icon: Icons.emergency,
+                  color: Colors.red,
+                  onTap: () => _handleEmergency(),
                 ),
-                _buildQuickActionCard(
-                  'Contact Support',
-                  Icons.support_agent,
-                  () => _contactSupport(),
+                ModernGridCard(
+                  title: 'Support',
+                  icon: Icons.support_agent,
+                  color: Colors.purple,
+                  onTap: () => _contactSupport(),
                 ),
               ],
             ),
@@ -958,34 +1005,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
       default:
         return Colors.grey;
     }
-  }
-
-  Widget _buildQuickActionCard(
-    String title,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 32, color: Theme.of(context).primaryColor),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   void _showVehicleCheckDialog() {

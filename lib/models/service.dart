@@ -6,6 +6,7 @@ class Service {
   final double price;
   final String category; // e.g., 'checkup', 'vaccination', 'emergency'
   final bool isActive;
+  final double? promotionalPrice; // Optional promotional price
 
   Service({
     this.id,
@@ -14,6 +15,7 @@ class Service {
     required this.price,
     required this.category,
     this.isActive = true,
+    this.promotionalPrice,
   });
 
   Map<String, dynamic> toMap() => {
@@ -23,6 +25,7 @@ class Service {
     'price': price,
     'category': category,
     'is_active': isActive ? 1 : 0,
+    if (promotionalPrice != null) 'promotional_price': promotionalPrice,
   };
 
   factory Service.fromMap(Map<String, dynamic> m) => Service(
@@ -32,6 +35,9 @@ class Service {
     price: (m['price'] as num).toDouble(),
     category: m['category'] ?? '',
     isActive: m['is_active'] == 1,
+    promotionalPrice: m['promotional_price'] != null
+        ? (m['promotional_price'] as num).toDouble()
+        : null,
   );
 
   Service copyWith({
@@ -41,6 +47,7 @@ class Service {
     double? price,
     String? category,
     bool? isActive,
+    double? promotionalPrice,
   }) {
     return Service(
       id: id ?? this.id,
@@ -49,6 +56,7 @@ class Service {
       price: price ?? this.price,
       category: category ?? this.category,
       isActive: isActive ?? this.isActive,
+      promotionalPrice: promotionalPrice ?? this.promotionalPrice,
     );
   }
 }
