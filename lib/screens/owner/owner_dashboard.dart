@@ -9,6 +9,7 @@ import '../../models/medical_record.dart';
 import 'pet_management_screen.dart';
 import 'booking_screen.dart';
 import 'appointments_screen.dart';
+import 'driver_tracking_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -168,6 +169,17 @@ class _OwnerHomeScreen extends StatelessWidget {
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => const BookingScreen(),
+                            ),
+                          ),
+                        ),
+                        _DashboardCard(
+                          title: 'Track Drivers',
+                          icon: Icons.location_on,
+                          color: Colors.purple,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const DriverTrackingScreen(),
                             ),
                           ),
                         ),

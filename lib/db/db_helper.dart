@@ -1120,4 +1120,9 @@ class DBHelper {
     if (res.isNotEmpty) return res.first;
     return null;
   }
+
+  Future<List<Map<String, dynamic>>> getAllDriverStatuses() async {
+    final db = await instance.database;
+    return await db.query('driver_status', orderBy: 'last_updated DESC');
+  }
 }
