@@ -6,6 +6,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/appointment_provider.dart';
+import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
 import '../../components/modern_cards.dart';
 import 'pet_management_screen.dart';
@@ -63,13 +64,57 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   }
 }
 
-class _OwnerHomeScreen extends StatelessWidget {
+class _OwnerHomeScreen extends StatefulWidget {
   const _OwnerHomeScreen();
+
+  @override
+  State<_OwnerHomeScreen> createState() => _OwnerHomeScreenState();
+}
+
+class _OwnerHomeScreenState extends State<_OwnerHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  Future<void> _loadData() async {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.id;
+    if (userId == null) return;
+
+    await Future.wait([
+      context.read<PetProvider>().loadPets(ownerId: userId),
+      context.read<AppointmentProvider>().loadAppointments(ownerId: userId),
+    ]);
+  }
+
+  int _calculateUpcomingAppointments(List<Appointment> appointments) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return appointments.where((appointment) {
+      final parsedDate = DateTime.tryParse(appointment.scheduledAt);
+      if (parsedDate == null) return false;
+      final localDate = parsedDate.toLocal();
+      final appointmentDay =
+          DateTime(localDate.year, localDate.month, localDate.day);
+      final isActiveStatus = appointment.status != 'completed' &&
+          appointment.status != 'cancelled' &&
+          appointment.status != 'canceled';
+      final isFutureOrToday = !appointmentDay.isBefore(today);
+      return isActiveStatus && isFutureOrToday;
+    }).length;
+  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
+    final petProvider = context.watch<PetProvider>();
+    final appointmentProvider = context.watch<AppointmentProvider>();
+    final activePets = petProvider.pets.length;
+    final upcomingAppointments =
+        _calculateUpcomingAppointments(appointmentProvider.appointments);
 
     return Scaffold(
       appBar: AppBar(
@@ -149,7 +194,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                   Expanded(
                     child: ModernStatsCard(
                       title: 'Active Pets',
-                      value: '3', // TODO: Get from provider
+                      value: '$activePets',
                       icon: Icons.pets,
                       color: Theme.of(context).colorScheme.secondary,
                     ),
@@ -158,7 +203,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                   Expanded(
                     child: ModernStatsCard(
                       title: 'Upcoming',
-                      value: '2', // TODO: Get from provider
+                      value: '$upcomingAppointments',
                       icon: Icons.schedule,
                       color: Theme.of(context).colorScheme.primary,
                     ),
