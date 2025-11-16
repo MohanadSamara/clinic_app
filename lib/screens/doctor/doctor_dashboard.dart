@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
+import '../../providers/appointment_provider.dart';
+import '../../models/appointment.dart';
 import '../../models/service.dart';
 import '../../components/modern_cards.dart';
 import 'appointment_management_screen.dart';
@@ -73,6 +75,28 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
   Service? _selectedService;
   bool _isLoading = false;
 
+  int _countTodayAppointments(List<Appointment> appointments) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return appointments.where((appointment) {
+      final parsedDate = DateTime.tryParse(appointment.scheduledAt);
+      if (parsedDate == null) return false;
+      final localDate = parsedDate.toLocal();
+      final appointmentDay =
+          DateTime(localDate.year, localDate.month, localDate.day);
+      final isActiveStatus = appointment.status != 'completed' &&
+          appointment.status != 'cancelled' &&
+          appointment.status != 'canceled';
+      return appointmentDay == today && isActiveStatus;
+    }).length;
+  }
+
+  int _countCompletedAppointments(List<Appointment> appointments) {
+    return appointments
+        .where((appointment) => appointment.status == 'completed')
+        .length;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -82,12 +106,16 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
   }
 
   Future<void> _loadData() async {
-    final serviceProvider = Provider.of<ServiceProvider>(
-      context,
-      listen: false,
-    );
+    final serviceProvider = context.read<ServiceProvider>();
+    final appointmentProvider = context.read<AppointmentProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final doctorId = authProvider.user?.id;
 
-    await serviceProvider.loadServices();
+    await Future.wait([
+      serviceProvider.loadServices(),
+      if (doctorId != null)
+        appointmentProvider.loadAppointments(doctorId: doctorId),
+    ]);
   }
 
   Future<void> _selectService(Service service) async {
@@ -105,6 +133,13 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
     final serviceProvider = Provider.of<ServiceProvider>(context);
+    final appointmentProvider = context.watch<AppointmentProvider>();
+    final todayAppointments = _countTodayAppointments(
+      appointmentProvider.appointments,
+    );
+    final completedAppointments = _countCompletedAppointments(
+      appointmentProvider.appointments,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -269,7 +304,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   Expanded(
                     child: ModernStatsCard(
                       title: 'Today\'s Appointments',
-                      value: '5', // TODO: Get from provider
+                      value: '$todayAppointments',
                       icon: Icons.calendar_today,
                       color: Colors.blue,
                     ),
@@ -278,7 +313,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   Expanded(
                     child: ModernStatsCard(
                       title: 'Completed',
-                      value: '3', // TODO: Get from provider
+                      value: '$completedAppointments',
                       icon: Icons.check_circle,
                       color: Colors.green,
                     ),
