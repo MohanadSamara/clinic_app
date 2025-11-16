@@ -107,6 +107,7 @@ class DBHelper {
         address TEXT,
         price REAL,
         doctor_id INTEGER,
+        driver_id INTEGER,
         urgency_level TEXT,
         location_lat REAL,
         location_lng REAL
@@ -178,6 +179,19 @@ class DBHelper {
         status TEXT,
         transaction_id TEXT,
         created_at TEXT
+      );
+    ''');
+
+    // Driver status table
+    await db.execute('''
+      CREATE TABLE driver_status (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver_id INTEGER,
+        latitude REAL,
+        longitude REAL,
+        status TEXT,
+        current_appointment_id INTEGER,
+        last_updated TEXT
       );
     ''');
 
@@ -507,6 +521,7 @@ class DBHelper {
   Future<List<Map<String, dynamic>>> getAppointments({
     int? ownerId,
     int? doctorId,
+    int? driverId,
     String? status,
     DateTime? date,
     bool? hasLocation,
@@ -524,6 +539,12 @@ class DBHelper {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'doctor_id=?';
       whereArgs.add(doctorId);
+    }
+
+    if (driverId != null) {
+      if (whereClause.isNotEmpty) whereClause += ' AND ';
+      whereClause += 'driver_id=?';
+      whereArgs.add(driverId);
     }
 
     if (status != null) {
@@ -1077,6 +1098,25 @@ class DBHelper {
   Future<Map<String, dynamic>?> getUserById(int id) async {
     final db = await instance.database;
     final res = await db.query('users', where: 'id=?', whereArgs: [id]);
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  // ---------- DRIVER STATUS ----------
+  Future<int> insertDriverStatus(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('driver_status', data);
+  }
+
+  Future<Map<String, dynamic>?> getDriverStatus(int driverId) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'driver_status',
+      where: 'driver_id = ?',
+      whereArgs: [driverId],
+      orderBy: 'last_updated DESC',
+      limit: 1,
+    );
     if (res.isNotEmpty) return res.first;
     return null;
   }

@@ -1048,13 +1048,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
       url = 'https://www.google.com/maps/@$startLat,$startLng,15z';
     }
 
-    if (await canLaunchUrl(Uri.parse(url))) {
+    try {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
+    } catch (e) {
       // Fallback for web or if Google Maps not available
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not open maps. URL: $url')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not open maps: $e')));
+      }
     }
   }
 
