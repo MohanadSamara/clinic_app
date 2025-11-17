@@ -33,7 +33,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -67,6 +67,43 @@ class DBHelper {
       } catch (e) {
         debugPrint('Error adding promotional_price column: $e');
       }
+    }
+    if (oldVersion < 8) {
+      // Add routes and vehicle_checks tables
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS routes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          driver_id INTEGER,
+          appointment_id INTEGER,
+          start_lat REAL,
+          start_lng REAL,
+          end_lat REAL,
+          end_lng REAL,
+          waypoints TEXT,
+          distance REAL,
+          duration INTEGER,
+          status TEXT,
+          created_at TEXT,
+          FOREIGN KEY (driver_id) REFERENCES users (id),
+          FOREIGN KEY (appointment_id) REFERENCES appointments (id)
+        );
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS vehicle_checks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          driver_id INTEGER,
+          check_date TEXT,
+          fuel_level TEXT,
+          tire_condition TEXT,
+          lights_ok INTEGER,
+          medical_equipment_ok INTEGER,
+          notes TEXT,
+          photos TEXT,
+          created_at TEXT,
+          FOREIGN KEY (driver_id) REFERENCES users (id)
+        );
+      ''');
     }
     // Version 6 migration removed - simplified user table
   }
@@ -206,6 +243,43 @@ class DBHelper {
       );
     ''');
 
+    // Routes table
+    await db.execute('''
+      CREATE TABLE routes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver_id INTEGER,
+        appointment_id INTEGER,
+        start_lat REAL,
+        start_lng REAL,
+        end_lat REAL,
+        end_lng REAL,
+        waypoints TEXT,
+        distance REAL,
+        duration INTEGER,
+        status TEXT,
+        created_at TEXT,
+        FOREIGN KEY (driver_id) REFERENCES users (id),
+        FOREIGN KEY (appointment_id) REFERENCES appointments (id)
+      );
+    ''');
+
+    // Vehicle checks table
+    await db.execute('''
+      CREATE TABLE vehicle_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver_id INTEGER,
+        check_date TEXT,
+        fuel_level TEXT,
+        tire_condition TEXT,
+        lights_ok INTEGER,
+        medical_equipment_ok INTEGER,
+        notes TEXT,
+        photos TEXT,
+        created_at TEXT,
+        FOREIGN KEY (driver_id) REFERENCES users (id)
+      );
+    ''');
+
     // Create new tables for version 3
     await _createNewTablesV3(db);
 
@@ -327,137 +401,6 @@ class DBHelper {
 
     for (final service in defaultServices) {
       await db.insert('services', service);
-    }
-
-    // Insert sample users and appointments for testing
-    await _insertSampleData(db);
-  }
-
-  Future _insertSampleData(Database db) async {
-    try {
-      // Insert sample users
-      final users = [
-        {
-          'name': 'Dr. Ahmed Hassan',
-          'email': 'doctor@example.com',
-          'password': '123456',
-          'phone': '+96212345678',
-          'role': 'doctor',
-        },
-        {
-          'name': 'John Smith',
-          'email': 'owner@example.com',
-          'password': '123456',
-          'phone': '+96287654321',
-          'role': 'owner',
-        },
-      ];
-
-      for (final user in users) {
-        await db.insert(
-          'users',
-          user,
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-
-      // Get user IDs
-      final doctorResult = await db.query(
-        'users',
-        where: 'email=?',
-        whereArgs: ['doctor@example.com'],
-      );
-      final ownerResult = await db.query(
-        'users',
-        where: 'email=?',
-        whereArgs: ['owner@example.com'],
-      );
-
-      if (doctorResult.isNotEmpty && ownerResult.isNotEmpty) {
-        final doctorId = doctorResult.first['id'];
-        final ownerId = ownerResult.first['id'];
-
-        // Insert sample pet
-        final petId = await db.insert('pets', {
-          'owner_id': ownerId,
-          'name': 'Max',
-          'species': 'Dog',
-          'breed': 'Golden Retriever',
-          'dob': '2020-05-15',
-          'notes': 'Friendly and energetic',
-        });
-
-        // Insert sample appointments assigned to doctor
-        final appointments = [
-          {
-            'owner_id': ownerId,
-            'pet_id': petId,
-            'doctor_id': doctorId,
-            'service_type': 'Checkup',
-            'description': 'Regular health checkup',
-            'scheduled_at': DateTime.now()
-                .add(const Duration(days: 1))
-                .toIso8601String(),
-            'status': 'confirmed',
-            'address': '123 Main St, Amman',
-            'price': 30.0,
-            'urgency_level': 'routine',
-          },
-          {
-            'owner_id': ownerId,
-            'pet_id': petId,
-            'doctor_id': doctorId,
-            'service_type': 'Vaccination',
-            'description': 'Annual vaccination',
-            'scheduled_at': DateTime.now()
-                .add(const Duration(days: 2))
-                .toIso8601String(),
-            'status': 'pending',
-            'address': '123 Main St, Amman',
-            'price': 50.0,
-            'urgency_level': 'routine',
-          },
-          {
-            'owner_id': ownerId,
-            'pet_id': petId,
-            'doctor_id': doctorId,
-            'service_type': 'Dental Care',
-            'description': 'Teeth cleaning',
-            'scheduled_at': DateTime.now()
-                .subtract(const Duration(days: 1))
-                .toIso8601String(),
-            'status': 'completed',
-            'address': '123 Main St, Amman',
-            'price': 80.0,
-            'urgency_level': 'routine',
-          },
-        ];
-
-        for (final appointment in appointments) {
-          await db.insert(
-            'appointments',
-            appointment,
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
-        }
-
-        // Insert sample doctor record for all services
-        final services = await db.query('services');
-        for (final service in services) {
-          final serviceId = service['id'];
-          await db.insert('doctors', {
-            'user_id': doctorId,
-            'assigned_service_id': serviceId,
-            'license_number': 'DOC123456',
-            'specialization': 'General Veterinary',
-            'experience_years': 5,
-            'is_available': 1,
-            'created_at': DateTime.now().toIso8601String(),
-          }, conflictAlgorithm: ConflictAlgorithm.ignore);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error inserting sample data: $e');
     }
   }
 
@@ -1176,5 +1119,95 @@ class DBHelper {
   Future<int> deleteComplianceLog(int id) async {
     final db = await instance.database;
     return await db.delete('compliance_logs', where: 'id=?', whereArgs: [id]);
+  }
+
+  // ---------- DATA EXPORT/IMPORT ----------
+  Future<Map<String, dynamic>> exportData() async {
+    final db = await instance.database;
+    final data = <String, dynamic>{};
+
+    // Get all existing tables
+    final tablesResult = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+    );
+    final existingTables = tablesResult
+        .map((row) => row['name'] as String)
+        .toList();
+
+    for (final table in existingTables) {
+      try {
+        final rows = await db.query(table);
+        data[table] = rows;
+      } catch (e) {
+        debugPrint('Error exporting table $table: $e');
+      }
+    }
+
+    return data;
+  }
+
+  Future<void> importData(Map<String, dynamic> data) async {
+    final db = await instance.database;
+
+    // Clear all tables in reverse order to handle foreign keys
+    final tables = [
+      'compliance_logs',
+      'vehicle_checks',
+      'routes',
+      'service_requests',
+      'vaccination_records',
+      'documents',
+      'driver_status',
+      'payments',
+      'notifications',
+      'inventory',
+      'medical_records',
+      'services',
+      'appointments',
+      'pets',
+      'doctors',
+      'users',
+    ];
+
+    for (final table in tables) {
+      await db.delete(table);
+    }
+
+    // Import data in correct order
+    final importOrder = [
+      'users',
+      'doctors',
+      'pets',
+      'appointments',
+      'services',
+      'medical_records',
+      'inventory',
+      'notifications',
+      'payments',
+      'driver_status',
+      'documents',
+      'vaccination_records',
+      'service_requests',
+      'routes',
+      'vehicle_checks',
+      'compliance_logs',
+    ];
+
+    for (final table in importOrder) {
+      if (data.containsKey(table)) {
+        final rows = data[table] as List<dynamic>;
+        for (final row in rows) {
+          try {
+            await db.insert(
+              table,
+              row as Map<String, dynamic>,
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
+          } catch (e) {
+            debugPrint('Error importing row into $table: $e');
+          }
+        }
+      }
+    }
   }
 }

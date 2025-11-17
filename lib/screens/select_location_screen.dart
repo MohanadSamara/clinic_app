@@ -42,8 +42,21 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
   Future<void> _initializeLocation() async {
     try {
-      await _locationService.initialize();
-      final position = await _locationService.getCurrentLocation();
+      // Add timeout to prevent hanging
+      await _locationService.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Location initialization timed out');
+        },
+      );
+
+      final position = await _locationService.getCurrentLocation().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('Location request timed out');
+        },
+      );
+
       if (mounted) {
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
@@ -54,12 +67,26 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // Use default location (Amman) as fallback
         setState(() {
+          _currentLocation = const LatLng(
+            31.963158,
+            35.930359,
+          ); // Amman, Jordan
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
+        _updateMarkers();
+        _moveMapTo(_currentLocation);
+
+        // Show informative message instead of error
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Using default location. You can still select a location on the map.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -208,7 +235,12 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
   void _useCurrentLocation() async {
     try {
-      final position = await _locationService.getCurrentLocation();
+      final position = await _locationService.getCurrentLocation().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('Location request timed out');
+        },
+      );
       final latLng = LatLng(position.latitude, position.longitude);
       setState(() {
         _selectedLocation = latLng;
@@ -220,7 +252,12 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting current location: $e')),
+          SnackBar(
+            content: Text(
+              'Error getting current location: ${e.toString().contains('timeout') ? 'Request timed out' : e}',
+            ),
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     }

@@ -5,6 +5,7 @@ import 'user_management_screen.dart';
 import 'service_management_screen.dart';
 import 'reporting_screen.dart';
 import 'compliance_screen.dart';
+import 'data_management_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -84,6 +85,17 @@ class AdminDashboard extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const ComplianceScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFunctionCard(
+                    context,
+                    'Data Backup & Restore',
+                    Icons.backup,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DataManagementScreen(),
                       ),
                     ),
                   ),

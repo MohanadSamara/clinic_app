@@ -32,6 +32,19 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.user?.id;
+      if (userId != null) {
+        context.read<PetProvider>().loadPets(ownerId: userId);
+        context.read<AppointmentProvider>().loadAppointments(ownerId: userId);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_selectedIndex],
@@ -144,26 +157,43 @@ class _OwnerHomeScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ModernStatsCard(
-                      title: 'Active Pets',
-                      value: '3', // TODO: Get from provider
-                      icon: Icons.pets,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ModernStatsCard(
-                      title: 'Upcoming',
-                      value: '2', // TODO: Get from provider
-                      icon: Icons.schedule,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
+              child: Consumer2<PetProvider, AppointmentProvider>(
+                builder: (context, petProvider, appointmentProvider, _) {
+                  final petCount = petProvider.pets.length;
+                  final ownerId = user?.id;
+                  final upcomingAppointments = ownerId == null
+                      ? 0
+                      : appointmentProvider.appointments
+                          .where((apt) => apt.ownerId == ownerId)
+                          .where(
+                            (apt) =>
+                                apt.status != 'completed' &&
+                                apt.status != 'cancelled',
+                          )
+                          .length;
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ModernStatsCard(
+                          title: 'Active Pets',
+                          value: petCount.toString(),
+                          icon: Icons.pets,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ModernStatsCard(
+                          title: 'Upcoming',
+                          value: upcomingAppointments.toString(),
+                          icon: Icons.schedule,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),

@@ -31,6 +31,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   List<Marker> _markers = [];
   List<LatLng> _actualRoutePoints = [];
   List<LatLng> _plannedRoutePoints = [];
+  List<Polyline> _appointmentPolylines = [];
   DateTime? _lastStatusUpdate;
   static const Duration _statusUpdateThrottle = Duration(seconds: 30);
   final Map<String, String> _addressCache = {};
@@ -92,15 +93,31 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final authProvider = context.read<AuthProvider>();
     try {
       final dbHelper = DBHelper.instance;
-      // Get appointments assigned to this driver
-      final assignedAppointments = await dbHelper.getAppointments(
+      // Get appointments assigned to this driver, or all appointments with locations if none assigned
+      var assignedAppointments = await dbHelper.getAppointments(
         driverId: authProvider.user!.id!,
       );
+
+      // If no assigned appointments, load all appointments with locations
+      if (assignedAppointments.isEmpty) {
+        assignedAppointments = await dbHelper.getAppointments(
+          hasLocation: true,
+        );
+      }
 
       if (mounted && !_isDisposed) {
         setState(() {
           _assignedAppointments =
-              assignedAppointments.map((a) => Appointment.fromMap(a)).toList()
+              assignedAppointments
+                  .map((a) => Appointment.fromMap(a))
+                  .where(
+                    (apt) =>
+                        apt.status != 'completed' &&
+                        apt.status != 'cancelled' &&
+                        apt.locationLat != null &&
+                        apt.locationLng != null,
+                  )
+                  .toList()
                 ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
           _updateMarkers();
         });
@@ -278,6 +295,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     _markers.clear();
     _actualRoutePoints.clear();
     _plannedRoutePoints.clear();
+    _appointmentPolylines.clear();
 
     if (_driverLat != null && _driverLng != null) {
       _markers.add(
@@ -323,7 +341,48 @@ class _DriverDashboardState extends State<DriverDashboard> {
       );
     }
 
-    // Add navigation route to next appointment only
+    // Add markers for all appointments
+    for (final appointment in _assignedAppointments) {
+      if (appointment.locationLat != null && appointment.locationLng != null) {
+        final isNext = appointment == _assignedAppointments.first;
+        _markers.add(
+          Marker(
+            point: LatLng(appointment.locationLat!, appointment.locationLng!),
+            child: GestureDetector(
+              onTap: () => _showAppointmentInfo(appointment),
+              child: Container(
+                width: isNext ? 40 : 32,
+                height: isNext ? 40 : 32,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isNext ? Colors.red : Colors.orange,
+                    width: isNext ? 3 : 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isNext ? Colors.red : Colors.orange).withOpacity(
+                        0.3,
+                      ),
+                      blurRadius: isNext ? 6 : 4,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.location_on,
+                  color: isNext ? Colors.red : Colors.orange,
+                  size: isNext ? 24 : 20,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Add navigation route to next appointment only if driver location available
     if (_assignedAppointments.isNotEmpty &&
         _driverLat != null &&
         _driverLng != null) {
@@ -335,75 +394,31 @@ class _DriverDashboardState extends State<DriverDashboard> {
         _plannedRoutePoints.add(
           LatLng(nextAppointment.locationLat!, nextAppointment.locationLng!),
         );
-
-        // Add marker for next appointment only
-        _markers.add(
-          Marker(
-            point: LatLng(
-              nextAppointment.locationLat!,
-              nextAppointment.locationLng!,
-            ),
-            child: GestureDetector(
-              onTap: () => _showAppointmentInfo(nextAppointment),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withOpacity(0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
-        );
       }
     }
 
-    // Add markers for other appointments (limit to 5 for performance)
-    final maxOtherMarkers = 5;
-    int markerCount = 0;
-    for (final appointment in _assignedAppointments.skip(1)) {
-      if (markerCount >= maxOtherMarkers) break;
-      if (appointment.locationLat != null && appointment.locationLng != null) {
-        _markers.add(
-          Marker(
-            point: LatLng(appointment.locationLat!, appointment.locationLng!),
-            child: GestureDetector(
-              onTap: () => _showAppointmentInfo(appointment),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.orange, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.location_on, color: Colors.orange, size: 20),
-              ),
+    // Add polylines connecting appointments in sequence
+    if (_assignedAppointments.length > 1) {
+      for (int i = 0; i < _assignedAppointments.length - 1; i++) {
+        final apt1 = _assignedAppointments[i];
+        final apt2 = _assignedAppointments[i + 1];
+        if (apt1.locationLat != null &&
+            apt1.locationLng != null &&
+            apt2.locationLat != null &&
+            apt2.locationLng != null) {
+          _appointmentPolylines.add(
+            Polyline(
+              points: [
+                LatLng(apt1.locationLat!, apt1.locationLng!),
+                LatLng(apt2.locationLat!, apt2.locationLng!),
+              ],
+              color: Colors.purple.shade600,
+              strokeWidth: 3.0,
+              borderColor: Colors.white,
+              borderStrokeWidth: 1.0,
             ),
-          ),
-        );
-        markerCount++;
+          );
+        }
       }
     }
   }
@@ -537,96 +552,96 @@ class _DriverDashboardState extends State<DriverDashboard> {
             const SizedBox(height: 16),
 
             // Map View
-            if (_driverLat != null && _driverLng != null) ...[
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Live Map',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Live Map',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
+                ),
+                if (_driverLat != null && _driverLng != null)
                   IconButton(
                     icon: const Icon(Icons.my_location),
                     onPressed: _centerOnCurrentLocation,
                     tooltip: 'Center on my location',
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _loadCurrentLocation,
-                    tooltip: 'Refresh location',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Card(
-                elevation: 4,
-                child: SizedBox(
-                  height: 400,
-                  child: Stack(
-                    children: [
-                      FlutterMap(
-                        mapController: _mapController,
-                        options: MapOptions(
-                          initialCenter: LatLng(_driverLat!, _driverLng!),
-                          initialZoom: 13.0,
-                          onTap: (_, __) {}, // Enable tap interactions
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.clinic_app',
-                          ),
-                          PolylineLayer(
-                            polylines: [
-                              // Actual route path (driver's movement)
-                              if (_actualRoutePoints.isNotEmpty)
-                                Polyline(
-                                  points: _actualRoutePoints,
-                                  color: Colors.grey.shade600,
-                                  strokeWidth: 4.0,
-                                  borderColor: Colors.white,
-                                  borderStrokeWidth: 1.0,
-                                ),
-                              // Planned route to next appointment
-                              if (_plannedRoutePoints.isNotEmpty)
-                                Polyline(
-                                  points: _plannedRoutePoints,
-                                  color: Colors.blue.shade700,
-                                  strokeWidth: 6.0,
-                                  borderColor: Colors.white,
-                                  borderStrokeWidth: 2.0,
-                                ),
-                            ],
-                          ),
-                          MarkerLayer(markers: _markers),
-                        ],
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _loadCurrentLocation,
+                  tooltip: 'Refresh location',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Card(
+              elevation: 4,
+              child: SizedBox(
+                height: 400,
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _getMapCenter(),
+                        initialZoom: 13.0,
+                        onTap: (_, __) {}, // Enable tap interactions
                       ),
-                      // Map Legend
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.clinic_app',
+                        ),
+                        PolylineLayer(
+                          polylines: [
+                            // Actual route path (driver's movement)
+                            if (_actualRoutePoints.isNotEmpty)
+                              Polyline(
+                                points: _actualRoutePoints,
+                                color: Colors.grey.shade600,
+                                strokeWidth: 4.0,
+                                borderColor: Colors.white,
+                                borderStrokeWidth: 1.0,
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                            // Planned route to next appointment
+                            if (_plannedRoutePoints.isNotEmpty)
+                              Polyline(
+                                points: _plannedRoutePoints,
+                                color: Colors.blue.shade700,
+                                strokeWidth: 6.0,
+                                borderColor: Colors.white,
+                                borderStrokeWidth: 2.0,
+                              ),
+                            // Appointment sequence polylines
+                            ..._appointmentPolylines,
+                          ],
+                        ),
+                        MarkerLayer(markers: _markers),
+                      ],
+                    ),
+                    // Map Legend
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_driverLat != null && _driverLng != null)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -648,89 +663,60 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   ),
                                 ],
                               ),
+                            if (_driverLat != null && _driverLng != null)
                               const SizedBox(height: 4),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
                                   ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'Next Stop',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Next Stop',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.orange,
-                                      shape: BoxShape.circle,
-                                    ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
                                   ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'Other Stops',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Other Stops',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-            ] else ...[
-              Card(
-                child: Container(
-                  height: 200,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.location_off,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Location not available',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _loadCurrentLocation,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
+            const SizedBox(height: 16),
 
             // Status Card
             Card(
@@ -1166,6 +1152,40 @@ class _DriverDashboardState extends State<DriverDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  LatLng _getMapCenter() {
+    final allLocations = <LatLng>[];
+
+    // Add driver location if available
+    if (_driverLat != null && _driverLng != null) {
+      allLocations.add(LatLng(_driverLat!, _driverLng!));
+    }
+
+    // Add appointment locations
+    for (final appointment in _assignedAppointments) {
+      if (appointment.locationLat != null && appointment.locationLng != null) {
+        allLocations.add(
+          LatLng(appointment.locationLat!, appointment.locationLng!),
+        );
+      }
+    }
+
+    if (allLocations.isEmpty) {
+      return const LatLng(31.963158, 35.930359); // Default to Amman, Jordan
+    }
+
+    // Calculate center of all locations
+    double totalLat = 0;
+    double totalLng = 0;
+    for (final location in allLocations) {
+      totalLat += location.latitude;
+      totalLng += location.longitude;
+    }
+    return LatLng(
+      totalLat / allLocations.length,
+      totalLng / allLocations.length,
     );
   }
 

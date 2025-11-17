@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../db/db_helper.dart';
 import '../../models/driver_status.dart';
+import '../../models/appointment.dart';
 
 class DriverTrackingScreen extends StatefulWidget {
   const DriverTrackingScreen({super.key});
@@ -14,6 +15,7 @@ class DriverTrackingScreen extends StatefulWidget {
 
 class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   List<DriverStatus> _driverStatuses = [];
+  List<Appointment> _appointments = [];
   bool _isLoading = true;
   final MapController _mapController = MapController();
 
@@ -34,11 +36,22 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     try {
       final dbHelper = DBHelper.instance;
       final driverStatusesData = await dbHelper.getAllDriverStatuses();
+      final appointmentsData = await dbHelper.getAppointments(
+        hasLocation: true,
+      );
 
       if (mounted) {
         setState(() {
           _driverStatuses = driverStatusesData
               .map((data) => DriverStatus.fromMap(data))
+              .toList();
+          _appointments = appointmentsData
+              .map((data) => Appointment.fromMap(data))
+              .where(
+                (appointment) =>
+                    appointment.locationLat != null &&
+                    appointment.locationLng != null,
+              )
               .toList();
           _isLoading = false;
         });
@@ -128,6 +141,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         userAgentPackageName: 'com.example.clinic_app',
                       ),
                       MarkerLayer(markers: _buildDriverMarkers()),
+                      PolylineLayer(polylines: _buildPolylines()),
                     ],
                   ),
                 ),
@@ -228,56 +242,116 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   }
 
   LatLng _getMapCenter() {
-    if (_driverStatuses.isEmpty) {
+    final allLocations = <LatLng>[];
+
+    // Add driver locations
+    for (final driver in _driverStatuses) {
+      allLocations.add(LatLng(driver.latitude, driver.longitude));
+    }
+
+    // Add appointment locations
+    for (final appointment in _appointments) {
+      if (appointment.locationLat != null && appointment.locationLng != null) {
+        allLocations.add(
+          LatLng(appointment.locationLat!, appointment.locationLng!),
+        );
+      }
+    }
+
+    if (allLocations.isEmpty) {
       return const LatLng(31.963158, 35.930359); // Default to Amman, Jordan
     }
 
-    // Calculate center of all driver locations
+    // Calculate center of all locations
     double totalLat = 0;
     double totalLng = 0;
-    for (final driver in _driverStatuses) {
-      totalLat += driver.latitude;
-      totalLng += driver.longitude;
+    for (final location in allLocations) {
+      totalLat += location.latitude;
+      totalLng += location.longitude;
     }
     return LatLng(
-      totalLat / _driverStatuses.length,
-      totalLng / _driverStatuses.length,
+      totalLat / allLocations.length,
+      totalLng / allLocations.length,
     );
   }
 
   List<Marker> _buildDriverMarkers() {
-    return _driverStatuses.map((driverStatus) {
-      return Marker(
-        point: LatLng(driverStatus.latitude, driverStatus.longitude),
-        child: GestureDetector(
-          onTap: () => _showDriverInfo(driverStatus),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: _getStatusColor(driverStatus.status),
-                width: 3,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _getStatusColor(driverStatus.status).withOpacity(0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+    final markers = <Marker>[];
+
+    // Add driver markers
+    for (final driverStatus in _driverStatuses) {
+      markers.add(
+        Marker(
+          point: LatLng(driverStatus.latitude, driverStatus.longitude),
+          child: GestureDetector(
+            onTap: () => _showDriverInfo(driverStatus),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _getStatusColor(driverStatus.status),
+                  width: 3,
                 ),
-              ],
-            ),
-            child: Icon(
-              Icons.directions_car,
-              color: _getStatusColor(driverStatus.status),
-              size: 20,
+                boxShadow: [
+                  BoxShadow(
+                    color: _getStatusColor(
+                      driverStatus.status,
+                    ).withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.directions_car,
+                color: _getStatusColor(driverStatus.status),
+                size: 20,
+              ),
             ),
           ),
         ),
       );
-    }).toList();
+    }
+
+    // Add owner location markers
+    for (final appointment in _appointments) {
+      if (appointment.locationLat != null && appointment.locationLng != null) {
+        markers.add(
+          Marker(
+            point: LatLng(appointment.locationLat!, appointment.locationLng!),
+            child: GestureDetector(
+              onTap: () => _showAppointmentInfo(appointment),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.red,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return markers;
   }
 
   void _showDriverInfo(DriverStatus driverStatus) {
@@ -308,5 +382,78 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
         ],
       ),
     );
+  }
+
+  void _showAppointmentInfo(Appointment appointment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Appointment #${appointment.id}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Service: ${appointment.serviceType}'),
+            Text('Status: ${appointment.status}'),
+            Text('Scheduled: ${appointment.scheduledAt}'),
+            if (appointment.address != null)
+              Text('Address: ${appointment.address}'),
+            if (appointment.locationLat != null &&
+                appointment.locationLng != null)
+              Text(
+                'Location: ${appointment.locationLat!.toStringAsFixed(4)}, ${appointment.locationLng!.toStringAsFixed(4)}',
+              ),
+            if (appointment.doctorName != null)
+              Text('Doctor: ${appointment.doctorName}'),
+            if (appointment.driverId != null)
+              Text('Assigned Driver: ${appointment.driverId}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Polyline> _buildPolylines() {
+    final polylines = <Polyline>[];
+
+    // Create polylines connecting drivers to their assigned appointments
+    for (final driver in _driverStatuses) {
+      if (driver.currentAppointmentId != null) {
+        final appointment = _appointments.firstWhere(
+          (appt) => appt.id == driver.currentAppointmentId,
+          orElse: () => Appointment(
+            id: null,
+            serviceType: '',
+            status: '',
+            scheduledAt: '',
+            ownerId: 0,
+            petId: 0,
+          ),
+        );
+
+        if (appointment.id != null &&
+            appointment.locationLat != null &&
+            appointment.locationLng != null) {
+          polylines.add(
+            Polyline(
+              points: [
+                LatLng(driver.latitude, driver.longitude),
+                LatLng(appointment.locationLat!, appointment.locationLng!),
+              ],
+              color: _getStatusColor(driver.status),
+              strokeWidth: 4.0,
+            ),
+          );
+        }
+      }
+    }
+
+    return polylines;
   }
 }

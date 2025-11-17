@@ -176,43 +176,47 @@ class _BookingScreenState extends State<BookingScreen> {
                       width: 1,
                     ),
                   ),
-                  child: TableCalendar(
-                    firstDay: DateTime.now(),
-                    lastDay: DateTime.now().add(const Duration(days: 90)),
-                    focusedDay: _selectedDate,
-                    selectedDayPredicate: (day) =>
-                        isSameDay(_selectedDate, day),
-                    onDaySelected: (selectedDay, focusedDay) {
-                      setState(() {
-                        _selectedDate = selectedDay;
-                      });
-                    },
-                    calendarStyle: CalendarStyle(
-                      selectedDecoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
+                  child: SizedBox(
+                    height:
+                        400, // Constrain the calendar height to prevent overflow
+                    child: TableCalendar(
+                      firstDay: DateTime.now(),
+                      lastDay: DateTime.now().add(const Duration(days: 90)),
+                      focusedDay: _selectedDate,
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDate, day),
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() {
+                          _selectedDate = selectedDay;
+                        });
+                      },
+                      calendarStyle: CalendarStyle(
+                        selectedDecoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        todayDecoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondary.withOpacity(0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        defaultTextStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        weekendTextStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                      todayDecoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.secondary.withOpacity(0.3),
-                        shape: BoxShape.circle,
-                      ),
-                      defaultTextStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      weekendTextStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    headerStyle: HeaderStyle(
-                      titleTextStyle: Theme.of(context).textTheme.titleMedium!
-                          .copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                      formatButtonTextStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                      headerStyle: HeaderStyle(
+                        titleTextStyle: Theme.of(context).textTheme.titleMedium!
+                            .copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                        formatButtonTextStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -451,6 +455,15 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
+    if (_lat == null || _lng == null || _addressController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a location for the appointment'),
+        ),
+      );
+      return;
+    }
+
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user?.id == null) {
       ScaffoldMessenger.of(
@@ -486,8 +499,8 @@ class _BookingScreenState extends State<BookingScreen> {
       address: _addressController.text,
       price: _selectedService!.price,
       urgencyLevel: _urgencyLevel,
-      locationLat: _shareLocation ? _lat : null,
-      locationLng: _shareLocation ? _lng : null,
+      locationLat: _lat,
+      locationLng: _lng,
     );
 
     final success = await context.read<AppointmentProvider>().bookAppointment(
@@ -521,10 +534,10 @@ class _BookingScreenState extends State<BookingScreen> {
 
     if (result != null) {
       setState(() {
-        _addressController.text = result['address'] ?? '';
-        // Optionally store lat/lng if needed for other purposes
-        // _selectedLat = result['latitude'];
-        // _selectedLng = result['longitude'];
+        _addressController.text =
+            '${result['address'] ?? ''} (${result['latitude']?.toStringAsFixed(5)}, ${result['longitude']?.toStringAsFixed(5)})';
+        _lat = result['latitude'];
+        _lng = result['longitude'];
       });
     }
   }

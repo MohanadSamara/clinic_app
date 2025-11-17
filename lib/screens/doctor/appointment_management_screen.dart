@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
+import '../select_location_screen.dart';
 
 class AppointmentManagementScreen extends StatefulWidget {
   const AppointmentManagementScreen({super.key});
@@ -152,6 +153,7 @@ class _AppointmentManagementScreenState
               onReschedule: () => _rescheduleAppointment(appointment),
               onReject: () => _rejectAppointment(appointment),
               onComplete: () => _completeAppointment(appointment),
+              onUpdateLocation: () => _updateAppointmentLocation(appointment),
             );
           },
         );
@@ -190,6 +192,49 @@ class _AppointmentManagementScreenState
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Appointment rejected')));
+    }
+  }
+
+  void _updateAppointmentLocation(Appointment appointment) async {
+    // Navigate to select location screen
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SelectLocationScreen()),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      final lat = result['latitude'] as double?;
+      final lng = result['longitude'] as double?;
+      final address = result['address'] as String?;
+
+      if (lat != null && lng != null) {
+        final updatedAppointment = appointment.copyWith(
+          locationLat: lat,
+          locationLng: lng,
+          address: address,
+        );
+
+        final success = await context
+            .read<AppointmentProvider>()
+            .updateAppointment(updatedAppointment);
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location updated successfully')),
+          );
+          // Reload appointments
+          final authProvider = context.read<AuthProvider>();
+          if (authProvider.user?.id != null) {
+            context.read<AppointmentProvider>().loadAppointments(
+              doctorId: authProvider.user!.id!,
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to update location')),
+          );
+        }
+      }
     }
   }
 
@@ -364,6 +409,7 @@ class _AppointmentCard extends StatelessWidget {
   final VoidCallback onReschedule;
   final VoidCallback onReject;
   final VoidCallback onComplete;
+  final VoidCallback onUpdateLocation;
 
   const _AppointmentCard({
     required this.appointment,
@@ -371,8 +417,8 @@ class _AppointmentCard extends StatelessWidget {
     required this.onReschedule,
     required this.onReject,
     required this.onComplete,
+    required this.onUpdateLocation,
   });
-
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(appointment.status);
@@ -451,6 +497,13 @@ class _AppointmentCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (appointment.locationLat == null ||
+                    appointment.locationLng == null) ...[
+                  TextButton(
+                    onPressed: onUpdateLocation,
+                    child: const Text('Set Location'),
+                  ),
+                ],
                 if (appointment.status == 'pending') ...[
                   TextButton(onPressed: onAccept, child: const Text('Accept')),
                   TextButton(

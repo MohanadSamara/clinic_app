@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
+import '../../providers/appointment_provider.dart';
 import '../../models/service.dart';
+import '../../models/appointment.dart';
 import '../../components/modern_cards.dart';
 import 'appointment_management_screen.dart';
 import 'treatment_recording_screen.dart';
@@ -86,8 +88,14 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
       context,
       listen: false,
     );
+    final authProvider = context.read<AuthProvider>();
+    final appointmentProvider = context.read<AppointmentProvider>();
+    final doctorId = authProvider.user?.id;
 
     await serviceProvider.loadServices();
+    if (doctorId != null) {
+      await appointmentProvider.loadAppointments(doctorId: doctorId);
+    }
   }
 
   Future<void> _selectService(Service service) async {
@@ -105,6 +113,23 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
     final serviceProvider = Provider.of<ServiceProvider>(context);
+    final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final doctorId = user?.id;
+    final doctorAppointments = doctorId == null
+        ? <Appointment>[]
+        : appointmentProvider.appointments
+            .where((apt) => apt.doctorId == doctorId)
+            .toList();
+    final today = DateTime.now();
+    final todaysAppointments = doctorAppointments.where((apt) {
+      final scheduled = DateTime.tryParse(apt.scheduledAt);
+      if (scheduled == null) return false;
+      return scheduled.year == today.year &&
+          scheduled.month == today.month &&
+          scheduled.day == today.day;
+    }).length;
+    final completedAppointments =
+        doctorAppointments.where((apt) => apt.status == 'completed').length;
 
     return Scaffold(
       appBar: AppBar(
@@ -269,7 +294,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   Expanded(
                     child: ModernStatsCard(
                       title: 'Today\'s Appointments',
-                      value: '5', // TODO: Get from provider
+                      value: todaysAppointments.toString(),
                       icon: Icons.calendar_today,
                       color: Colors.blue,
                     ),
@@ -278,7 +303,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   Expanded(
                     child: ModernStatsCard(
                       title: 'Completed',
-                      value: '3', // TODO: Get from provider
+                      value: completedAppointments.toString(),
                       icon: Icons.check_circle,
                       color: Colors.green,
                     ),

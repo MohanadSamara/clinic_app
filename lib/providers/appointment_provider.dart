@@ -75,9 +75,16 @@ class AppointmentProvider extends ChangeNotifier {
         notifyListeners();
       }
 
+      // Auto-assign driver when appointment is confirmed
+      if (status == 'confirmed') {
+        final availableDriverId = await _getAvailableDriver();
+        if (availableDriverId != null) {
+          await assignDriverToAppointment(id, availableDriverId);
+        }
+      }
+
       // If doctor completes appointment, mark as completed
       if (status == 'completed') {
-        final appointment = _appointments[index];
         // Appointment is now completed by doctor
       }
 
@@ -138,6 +145,51 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> assignDriverToAppointment(
+    int appointmentId,
+    int driverId,
+  ) async {
+    try {
+      await DBHelper.instance.updateAppointment(appointmentId, {
+        'driver_id': driverId,
+      });
+      final index = _appointments.indexWhere((a) => a.id == appointmentId);
+      if (index != -1) {
+        _appointments[index] = _appointments[index].copyWith(
+          driverId: driverId,
+        );
+        notifyListeners();
+      }
+
+      // Send notification to driver about assignment
+      await _sendNotificationToDriver(
+        driverId,
+        appointmentId,
+        'New appointment assigned',
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error assigning driver: $e');
+      return false;
+    }
+  }
+
+  Future<int?> _getAvailableDriver() async {
+    try {
+      final drivers = await DBHelper.instance.getAllUsers(role: 'driver');
+      if (drivers.isNotEmpty) {
+        // For now, return the first available driver
+        // In a real app, you might check driver status or workload
+        return drivers.first['id'] as int;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting available driver: $e');
+      return null;
+    }
+  }
+
   Future<void> _sendNotificationToDoctor(
     int doctorId,
     int appointmentId,
@@ -155,6 +207,26 @@ class AppointmentProvider extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint('Error sending notification to doctor: $e');
+    }
+  }
+
+  Future<void> _sendNotificationToDriver(
+    int driverId,
+    int appointmentId,
+    String message,
+  ) async {
+    try {
+      await DBHelper.instance.insertNotification({
+        'user_id': driverId,
+        'title': 'Appointment Update',
+        'message': message,
+        'type': 'appointment',
+        'is_read': 0,
+        'created_at': DateTime.now().toIso8601String(),
+        'data': '{"appointment_id": $appointmentId}',
+      });
+    } catch (e) {
+      debugPrint('Error sending notification to driver: $e');
     }
   }
 
