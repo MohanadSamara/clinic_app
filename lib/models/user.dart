@@ -1,5 +1,4 @@
 // lib/models/user.dart
-import 'dart:convert';
 
 class User {
   final int? id;
@@ -8,6 +7,8 @@ class User {
   final String password; // Will be hashed in production
   final String? phone;
   final String role;
+  final String? provider; // e.g., 'google', 'facebook', 'email'
+  final String? providerId; // ID from social provider
 
   User({
     this.id,
@@ -16,6 +17,8 @@ class User {
     required this.password,
     this.phone,
     this.role = 'owner',
+    this.provider,
+    this.providerId,
   });
 
   Map<String, dynamic> toMap() => {
@@ -25,6 +28,8 @@ class User {
     'password': password,
     'phone': phone,
     'role': role,
+    'provider': provider,
+    'providerId': providerId,
   };
 
   factory User.fromMap(Map<String, dynamic> m) => User(
@@ -34,6 +39,8 @@ class User {
     password: m['password'] ?? '',
     phone: m['phone'],
     role: m['role'] ?? 'owner',
+    provider: m['provider'],
+    providerId: m['providerId'],
   );
 
   User copyWith({
@@ -43,6 +50,8 @@ class User {
     String? password,
     String? phone,
     String? role,
+    String? provider,
+    String? providerId,
   }) {
     return User(
       id: id ?? this.id,
@@ -51,6 +60,8 @@ class User {
       password: password ?? this.password,
       phone: phone ?? this.phone,
       role: role ?? this.role,
+      provider: provider ?? this.provider,
+      providerId: providerId ?? this.providerId,
     );
   }
 }

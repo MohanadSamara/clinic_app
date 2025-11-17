@@ -263,6 +263,33 @@ class _PetCard extends StatelessWidget {
                         '${pet.species}${pet.breed != null ? ' - ${pet.breed}' : ''}',
                       ),
                       Text(pet.ageDisplay),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'ID: ${pet.serialNumber}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
                       if (pet.medicalHistorySummary != null &&
                           pet.medicalHistorySummary!.isNotEmpty)
                         Text(
@@ -444,22 +471,42 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                 return;
               }
 
-              final pet = Pet(
-                id: widget.pet?.id,
-                ownerId: user.id!,
-                name: _nameController.text,
-                species: _speciesController.text,
-                breed: _breedController.text.isEmpty
-                    ? null
-                    : _breedController.text,
-                dob: _dobController.text.isEmpty ? null : _dobController.text,
-                notes: _notesController.text.isEmpty
-                    ? null
-                    : _notesController.text,
-                medicalHistorySummary: _medicalHistoryController.text.isEmpty
-                    ? null
-                    : _medicalHistoryController.text,
-              );
+              final pet = widget.pet == null
+                  ? Pet.create(
+                      ownerId: user.id!,
+                      name: _nameController.text,
+                      species: _speciesController.text,
+                      breed: _breedController.text.isEmpty
+                          ? null
+                          : _breedController.text,
+                      dob: _dobController.text.isEmpty
+                          ? null
+                          : _dobController.text,
+                      notes: _notesController.text.isEmpty
+                          ? null
+                          : _notesController.text,
+                      medicalHistorySummary:
+                          _medicalHistoryController.text.isEmpty
+                          ? null
+                          : _medicalHistoryController.text,
+                    )
+                  : widget.pet!.copyWith(
+                      name: _nameController.text,
+                      species: _speciesController.text,
+                      breed: _breedController.text.isEmpty
+                          ? null
+                          : _breedController.text,
+                      dob: _dobController.text.isEmpty
+                          ? null
+                          : _dobController.text,
+                      notes: _notesController.text.isEmpty
+                          ? null
+                          : _notesController.text,
+                      medicalHistorySummary:
+                          _medicalHistoryController.text.isEmpty
+                          ? null
+                          : _medicalHistoryController.text,
+                    );
 
               final success = widget.pet == null
                   ? await context.read<PetProvider>().addPet(pet)
@@ -471,9 +518,12 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                   SnackBar(
                     content: Text(
                       widget.pet == null
-                          ? 'Pet added successfully'
+                          ? 'Pet added successfully! Serial Number: ${pet.serialNumber}'
                           : 'Pet updated successfully',
                     ),
+                    duration: widget.pet == null
+                        ? const Duration(seconds: 5)
+                        : const Duration(seconds: 2),
                   ),
                 );
               }

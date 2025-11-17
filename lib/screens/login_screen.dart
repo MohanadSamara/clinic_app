@@ -73,6 +73,41 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
             ),
+            const SizedBox(height: 24),
+            const Text('Or continue with'),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _googleSignIn,
+                    icon: const Icon(Icons.g_mobiledata, color: Colors.white),
+                    label: const Text('Google'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _facebookSignIn,
+                    icon: const Icon(Icons.facebook, color: Colors.white),
+                    label: const Text('Facebook'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: () => Navigator.push(
@@ -103,6 +138,48 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       await auth.login(email: _email.text.trim(), password: _password.text);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+        );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _googleSignIn() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    setState(() => _loading = true);
+    try {
+      await auth.signInWithGoogle();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+        );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _facebookSignIn() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    setState(() => _loading = true);
+    try {
+      await auth.signInWithFacebook();
       if (mounted) {
         Navigator.pushReplacement(
           context,

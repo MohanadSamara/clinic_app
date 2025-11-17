@@ -33,7 +33,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 8,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -105,6 +105,25 @@ class DBHelper {
         );
       ''');
     }
+    if (oldVersion < 9) {
+      // Add serial_number column to pets table
+      try {
+        await db.execute('ALTER TABLE pets ADD COLUMN serial_number TEXT');
+        debugPrint('Added serial_number column to pets table');
+      } catch (e) {
+        debugPrint('Error adding serial_number column: $e');
+      }
+    }
+    if (oldVersion < 10) {
+      // Add provider and providerId columns to users table for social auth
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN provider TEXT');
+        await db.execute('ALTER TABLE users ADD COLUMN providerId TEXT');
+        debugPrint('Added provider and providerId columns to users table');
+      } catch (e) {
+        debugPrint('Error adding social auth columns: $e');
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -137,7 +156,8 @@ class DBHelper {
         notes TEXT,
         medical_history_summary TEXT,
         vaccination_status TEXT,
-        photo_path TEXT
+        photo_path TEXT,
+        serial_number TEXT UNIQUE
       );
     ''');
 
@@ -479,6 +499,19 @@ class DBHelper {
   Future<int> deletePet(int id) async {
     final db = await instance.database;
     return await db.delete('pets', where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<Map<String, dynamic>?> getPetBySerialNumber(
+    String serialNumber,
+  ) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'pets',
+      where: 'serial_number=?',
+      whereArgs: [serialNumber],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
   }
 
   // ---------- APPOINTMENTS ----------

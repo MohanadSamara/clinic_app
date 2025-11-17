@@ -108,4 +108,16 @@ class PetProvider extends ChangeNotifier {
   List<MedicalRecord> getMedicalRecordsByPet(int petId) {
     return _medicalRecords.where((record) => record.petId == petId).toList();
   }
+
+  Future<Pet?> getPetBySerialNumber(String serialNumber) async {
+    try {
+      final data = await DBHelper.instance.getPetBySerialNumber(serialNumber);
+      if (data != null) {
+        return Pet.fromMap(data);
+      }
+    } catch (e) {
+      debugPrint('Error getting pet by serial number: $e');
+    }
+    return null;
+  }
 }

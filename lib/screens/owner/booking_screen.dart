@@ -683,10 +683,108 @@ class _BookingScreenState extends State<BookingScreen> {
                           },
                         ),
                         const SizedBox(height: 24),
-                        // Description and Address Section
+                        // Location Selection Section (Always Required)
                         TweenAnimationBuilder<double>(
                           tween: Tween<double>(begin: 0.0, end: 1.0),
                           duration: const Duration(milliseconds: 1300),
+                          builder: (context, locationValue, child) {
+                            return Opacity(
+                              opacity: locationValue,
+                              child: Transform.translate(
+                                offset: Offset(-30 * (1 - locationValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Appointment Location *',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Select the location where the vet service will be provided. This helps the driver navigate to your location.',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: _addressController.text.isEmpty
+                                              ? Colors.red.withOpacity(0.5)
+                                              : Theme.of(context)
+                                                    .colorScheme
+                                                    .outline
+                                                    .withOpacity(0.3),
+                                          width: _addressController.text.isEmpty
+                                              ? 2
+                                              : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: TextField(
+                                        controller: _addressController,
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              _addressController.text.isEmpty
+                                              ? 'Click the map icon to select location *'
+                                              : 'Selected Location',
+                                          border: InputBorder.none,
+                                          contentPadding: const EdgeInsets.all(
+                                            16,
+                                          ),
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              Icons.map,
+                                              color:
+                                                  _addressController
+                                                      .text
+                                                      .isEmpty
+                                                  ? Colors.red
+                                                  : Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary,
+                                            ),
+                                            onPressed: () =>
+                                                _openMapForAddress(),
+                                          ),
+                                        ),
+                                        readOnly: true,
+                                        maxLines: 2,
+                                      ),
+                                    ),
+                                    if (_addressController.text.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          'Location is required for the driver to find you',
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Description Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1400),
                           builder: (context, detailsValue, child) {
                             return Opacity(
                               opacity: detailsValue,
@@ -703,20 +801,6 @@ class _BookingScreenState extends State<BookingScreen> {
                                       ),
                                       maxLines: 3,
                                     ),
-                                    const SizedBox(height: 16),
-                                    TextField(
-                                      controller: _addressController,
-                                      decoration: InputDecoration(
-                                        labelText: 'Address',
-                                        border: const OutlineInputBorder(),
-                                        suffixIcon: IconButton(
-                                          icon: const Icon(Icons.map),
-                                          onPressed: () => _openMapForAddress(),
-                                        ),
-                                      ),
-                                      readOnly:
-                                          true, // Make it read-only since we'll use map
-                                    ),
                                   ],
                                 ),
                               ),
@@ -727,7 +811,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         // Book Button Section
                         TweenAnimationBuilder<double>(
                           tween: Tween<double>(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 1400),
+                          duration: const Duration(milliseconds: 1500),
                           builder: (context, buttonValue, child) {
                             return Opacity(
                               opacity: buttonValue,

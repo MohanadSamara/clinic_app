@@ -13,6 +13,7 @@ class Pet {
   final String? medicalHistorySummary;
   final Map<String, dynamic>? vaccinationStatus; // JSON object
   final String? photoPath;
+  final String serialNumber; // Unique identifier for pet tracking
 
   Pet({
     this.id,
@@ -25,6 +26,7 @@ class Pet {
     this.medicalHistorySummary,
     this.vaccinationStatus,
     this.photoPath,
+    required this.serialNumber,
   });
 
   Map<String, dynamic> toMap() => {
@@ -40,6 +42,7 @@ class Pet {
         ? jsonEncode(vaccinationStatus)
         : null,
     'photo_path': photoPath,
+    'serial_number': serialNumber,
   };
 
   factory Pet.fromMap(Map<String, dynamic> m) => Pet(
@@ -55,6 +58,7 @@ class Pet {
         ? jsonDecode(m['vaccination_status'])
         : null,
     photoPath: m['photo_path'],
+    serialNumber: m['serial_number'] ?? _generateSerialNumber(),
   );
 
   int? get ageInYears {
@@ -92,6 +96,7 @@ class Pet {
     String? medicalHistorySummary,
     Map<String, dynamic>? vaccinationStatus,
     String? photoPath,
+    String? serialNumber,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -105,6 +110,40 @@ class Pet {
           medicalHistorySummary ?? this.medicalHistorySummary,
       vaccinationStatus: vaccinationStatus ?? this.vaccinationStatus,
       photoPath: photoPath ?? this.photoPath,
+      serialNumber: serialNumber ?? this.serialNumber,
+    );
+  }
+
+  // Generate a unique serial number for new pets
+  static String _generateSerialNumber() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = timestamp % 10000; // Last 4 digits for uniqueness
+    return 'PET-${timestamp.toString().substring(8)}-${random.toString().padLeft(4, '0')}';
+  }
+
+  // Factory method to create a new pet with auto-generated serial number
+  factory Pet.create({
+    required int ownerId,
+    required String name,
+    required String species,
+    String? breed,
+    String? dob,
+    String? notes,
+    String? medicalHistorySummary,
+    Map<String, dynamic>? vaccinationStatus,
+    String? photoPath,
+  }) {
+    return Pet(
+      ownerId: ownerId,
+      name: name,
+      species: species,
+      breed: breed,
+      dob: dob,
+      notes: notes,
+      medicalHistorySummary: medicalHistorySummary,
+      vaccinationStatus: vaccinationStatus,
+      photoPath: photoPath,
+      serialNumber: _generateSerialNumber(),
     );
   }
 }

@@ -1,8 +1,13 @@
 // lib/providers/auth_provider.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import '../db/db_helper.dart';
 import '../models/user.dart';
+import '../firebase_options.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -22,6 +27,11 @@ class AuthProvider extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
+      // Initialize Firebase
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
       final prefs = await SharedPreferences.getInstance();
       final userData = prefs.getString(_userKey);
       if (userData != null) {
@@ -138,12 +148,133 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _isLoading = false;
 
+    // Sign out from Firebase
+    await firebase_auth.FirebaseAuth.instance.signOut();
+
     // Clear shared preferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
     await prefs.remove(_tokenKey);
 
     notifyListeners();
+  }
+
+  // Social Authentication Methods
+  Future<void> signInWithGoogle() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        throw Exception('Google sign in cancelled');
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final credential = firebase_auth.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final firebase_auth.UserCredential userCredential = await firebase_auth
+          .FirebaseAuth
+          .instance
+          .signInWithCredential(credential);
+
+      await _handleSocialLogin(
+        firebaseUser: userCredential.user!,
+        provider: 'google',
+        providerId: userCredential.user!.uid,
+      );
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> signInWithFacebook() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final LoginResult result = await FacebookAuth.instance.login();
+      if (result.status != LoginStatus.success) {
+        throw Exception('Facebook sign in failed: ${result.message}');
+      }
+
+      final credential = firebase_auth.FacebookAuthProvider.credential(
+        result.accessToken!.tokenString,
+      );
+
+      final firebase_auth.UserCredential userCredential = await firebase_auth
+          .FirebaseAuth
+          .instance
+          .signInWithCredential(credential);
+
+      await _handleSocialLogin(
+        firebaseUser: userCredential.user!,
+        provider: 'facebook',
+        providerId: userCredential.user!.uid,
+      );
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> _handleSocialLogin({
+    required firebase_auth.User firebaseUser,
+    required String provider,
+    required String providerId,
+  }) async {
+    try {
+      // Check if user already exists in local DB
+      final existingUser = await DBHelper.instance.getUserByEmail(
+        firebaseUser.email!,
+      );
+      User localUser;
+
+      if (existingUser != null) {
+        // Update existing user with social auth info
+        localUser = User.fromMap(existingUser);
+        if (localUser.provider == null) {
+          // Update user to include social auth
+          await DBHelper.instance.updateUser(localUser.id!, {
+            'provider': provider,
+            'providerId': providerId,
+          });
+          localUser = localUser.copyWith(
+            provider: provider,
+            providerId: providerId,
+          );
+        }
+      } else {
+        // Create new user from social auth
+        localUser = User(
+          name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
+          email: firebaseUser.email!,
+          password: '', // Social users don't have passwords
+          provider: provider,
+          providerId: providerId,
+        );
+
+        final id = await DBHelper.instance.insertUser(localUser.toMap());
+        localUser = User.fromMap(localUser.toMap()..['id'] = id);
+      }
+
+      _user = localUser;
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> updateProfile({
