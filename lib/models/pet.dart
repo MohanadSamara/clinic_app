@@ -57,6 +57,30 @@ class Pet {
     photoPath: m['photo_path'],
   );
 
+  int? get ageInYears {
+    if (dob == null) return null;
+    try {
+      final birthDate = DateTime.parse(dob!);
+      final now = DateTime.now();
+      int age = now.year - birthDate.year;
+      if (now.month < birthDate.month ||
+          (now.month == birthDate.month && now.day < birthDate.day)) {
+        age--;
+      }
+      return age;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String get ageDisplay {
+    final age = ageInYears;
+    if (age == null) return 'Age unknown';
+    if (age == 0) return 'Less than 1 year';
+    if (age == 1) return '1 year old';
+    return '$age years old';
+  }
+
   Pet copyWith({
     int? id,
     int? ownerId,

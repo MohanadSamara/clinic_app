@@ -29,6 +29,27 @@ class MedicalProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadMedicalRecordsByPet(int petId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await DBHelper.instance.getMedicalRecordsByPet(petId);
+      _medicalRecords = data
+          .map((item) => MedicalRecord.fromMap(item))
+          .toList();
+    } catch (e) {
+      debugPrint('Error loading medical records by pet: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  List<MedicalRecord> getMedicalRecordsByPet(int petId) {
+    return _medicalRecords.where((record) => record.petId == petId).toList();
+  }
+
   Future<bool> addMedicalRecord(MedicalRecord record) async {
     try {
       final id = await DBHelper.instance.insertMedicalRecord(record.toMap());

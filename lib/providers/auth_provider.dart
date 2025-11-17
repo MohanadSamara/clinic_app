@@ -149,7 +149,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> updateProfile({
     String? name,
     String? phone,
-    String? password,
+    String? currentPassword,
+    String? newPassword,
   }) async {
     if (_user == null) throw Exception('Not authenticated');
 
@@ -159,10 +160,25 @@ class AuthProvider extends ChangeNotifier {
         updates['name'] = name.trim();
       }
       if (phone != null) {
-        updates['phone'] = phone.trim();
+        updates['phone'] = phone.trim().isEmpty ? null : phone.trim();
       }
-      if (password != null && password.length >= 6) {
-        updates['password'] = password; // In production, hash this
+
+      // Handle password change
+      if (newPassword != null && newPassword.isNotEmpty) {
+        if (newPassword.length < 6) {
+          throw Exception('New password must be at least 6 characters');
+        }
+
+        // Verify current password if provided
+        if (currentPassword != null && currentPassword.isNotEmpty) {
+          final isValidPassword = await DBHelper.instance
+              .getUserByEmailAndPassword(_user!.email, currentPassword);
+          if (isValidPassword == null) {
+            throw Exception('Current password is incorrect');
+          }
+        }
+
+        updates['password'] = newPassword; // In production, hash this
       }
 
       if (updates.isNotEmpty) {

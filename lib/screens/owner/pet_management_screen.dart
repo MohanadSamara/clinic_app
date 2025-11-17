@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/pet.dart';
+import 'medical_history_screen.dart';
 
 class PetManagementScreen extends StatefulWidget {
   const PetManagementScreen({super.key});
@@ -33,9 +34,15 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
+            tooltip: 'Add new pet',
             onPressed: () => _showAddPetDialog(context),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddPetDialog(context),
+        tooltip: 'Add new pet',
+        child: const Icon(Icons.add),
       ),
       body: Consumer<PetProvider>(
         builder: (context, petProvider, child) {
@@ -54,29 +61,100 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                     'No pets registered yet',
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Add your pets to book appointments and manage their care',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
                     onPressed: () => _showAddPetDialog(context),
-                    child: const Text('Add Your First Pet'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Your First Pet'),
                   ),
                 ],
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: petProvider.pets.length,
-            itemBuilder: (context, index) {
-              final pet = petProvider.pets[index];
-              return _PetCard(
-                pet: pet,
-                onEdit: () => _showEditPetDialog(context, pet),
-                onDelete: () => _showDeleteConfirmation(context, pet),
-                onViewMedicalHistory: () =>
-                    _navigateToMedicalHistory(context, pet),
-              );
-            },
+          return Column(
+            children: [
+              // Header with pet count and add button hint
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, -10 * (1 - value)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        color: Theme.of(context).colorScheme.surface,
+                        child: Row(
+                          children: [
+                            Text(
+                              '${petProvider.pets.length} pet${petProvider.pets.length == 1 ? '' : 's'} registered',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.7),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () => _showAddPetDialog(context),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Pet'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: petProvider.pets.length,
+                  itemBuilder: (context, index) {
+                    final pet = petProvider.pets[index];
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: Duration(milliseconds: 400 + (index * 100)),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, animationValue, child) {
+                        return Transform.translate(
+                          offset: Offset(50 * (1 - animationValue), 0),
+                          child: Opacity(
+                            opacity: animationValue,
+                            child: _PetCard(
+                              pet: pet,
+                              onEdit: () => _showEditPetDialog(context, pet),
+                              onDelete: () =>
+                                  _showDeleteConfirmation(context, pet),
+                              onViewMedicalHistory: () =>
+                                  _navigateToMedicalHistory(context, pet),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -181,8 +259,21 @@ class _PetCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text('${pet.species} ${pet.breed ?? ''}'),
-                      if (pet.dob != null) Text('Born: ${pet.dob}'),
+                      Text(
+                        '${pet.species}${pet.breed != null ? ' - ${pet.breed}' : ''}',
+                      ),
+                      Text(pet.ageDisplay),
+                      if (pet.medicalHistorySummary != null &&
+                          pet.medicalHistorySummary!.isNotEmpty)
+                        Text(
+                          'Medical: ${pet.medicalHistorySummary}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),
@@ -241,6 +332,7 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
   final _breedController = TextEditingController();
   final _dobController = TextEditingController();
   final _notesController = TextEditingController();
+  final _medicalHistoryController = TextEditingController();
 
   @override
   void initState() {
@@ -251,6 +343,7 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
       _breedController.text = widget.pet!.breed ?? '';
       _dobController.text = widget.pet!.dob ?? '';
       _notesController.text = widget.pet!.notes ?? '';
+      _medicalHistoryController.text = widget.pet!.medicalHistorySummary ?? '';
     }
   }
 
@@ -325,6 +418,13 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                 ),
                 maxLines: 3,
               ),
+              TextFormField(
+                controller: _medicalHistoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Medical History Summary (Optional)',
+                ),
+                maxLines: 2,
+              ),
             ],
           ),
         ),
@@ -356,6 +456,9 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                 notes: _notesController.text.isEmpty
                     ? null
                     : _notesController.text,
+                medicalHistorySummary: _medicalHistoryController.text.isEmpty
+                    ? null
+                    : _medicalHistoryController.text,
               );
 
               final success = widget.pet == null
@@ -389,21 +492,7 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
     _breedController.dispose();
     _dobController.dispose();
     _notesController.dispose();
+    _medicalHistoryController.dispose();
     super.dispose();
-  }
-}
-
-// Placeholder for Medical History Screen
-class MedicalHistoryScreen extends StatelessWidget {
-  final Pet pet;
-
-  const MedicalHistoryScreen({super.key, required this.pet});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('${pet.name} - Medical History')),
-      body: const Center(child: Text('Medical History Screen - Coming Soon')),
-    );
   }
 }

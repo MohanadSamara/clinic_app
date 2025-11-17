@@ -12,6 +12,8 @@ import 'pet_management_screen.dart';
 import 'booking_screen.dart';
 import 'appointments_screen.dart';
 import 'driver_tracking_screen.dart';
+import 'doctor_selection_screen.dart';
+import 'profile_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -164,13 +166,13 @@ class _OwnerHomeScreen extends StatelessWidget {
                   final upcomingAppointments = ownerId == null
                       ? 0
                       : appointmentProvider.appointments
-                          .where((apt) => apt.ownerId == ownerId)
-                          .where(
-                            (apt) =>
-                                apt.status != 'completed' &&
-                                apt.status != 'cancelled',
-                          )
-                          .length;
+                            .where((apt) => apt.ownerId == ownerId)
+                            .where(
+                              (apt) =>
+                                  apt.status != 'completed' &&
+                                  apt.status != 'cancelled',
+                            )
+                            .length;
 
                   return Row(
                     children: [
@@ -224,7 +226,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const BookingScreen(),
+                      builder: (context) => const DoctorSelectionScreen(),
                     ),
                   ),
                 ),
@@ -504,9 +506,10 @@ class _OwnerProfileScreen extends StatelessWidget {
                   icon: Icons.person,
                   color: Theme.of(context).colorScheme.primary,
                   onTap: () {
-                    // TODO: Implement edit profile
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Edit profile coming soon')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const OwnerProfileScreen(),
+                      ),
                     );
                   },
                 ),
@@ -581,9 +584,12 @@ class _OwnerProfileScreen extends StatelessWidget {
                           ),
                           Icon(
                             Icons.arrow_forward_ios,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.error.withOpacity(0.7),
+                            color:
+                                Theme.of(context).brightness == Brightness.light
+                                ? Colors.grey[700]
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.error.withOpacity(0.7),
                             size: 16,
                           ),
                         ],

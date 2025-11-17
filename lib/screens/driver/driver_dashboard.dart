@@ -503,477 +503,683 @@ class _DriverDashboardState extends State<DriverDashboard> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Current Location Card (Uber-style)
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
+      body: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 600),
+        builder: (context, animationValue, child) {
+          return Opacity(
+            opacity: animationValue,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - animationValue)),
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on, color: Colors.blue, size: 32),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Your Location',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.blue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _currentAddress ?? 'Getting location...',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.blue),
-                      onPressed: _loadCurrentLocation,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Map View
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Live Map',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                if (_driverLat != null && _driverLng != null)
-                  IconButton(
-                    icon: const Icon(Icons.my_location),
-                    onPressed: _centerOnCurrentLocation,
-                    tooltip: 'Center on my location',
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _loadCurrentLocation,
-                  tooltip: 'Refresh location',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Card(
-              elevation: 4,
-              child: SizedBox(
-                height: 400,
-                child: Stack(
-                  children: [
-                    FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: _getMapCenter(),
-                        initialZoom: 13.0,
-                        onTap: (_, __) {}, // Enable tap interactions
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.example.clinic_app',
-                        ),
-                        PolylineLayer(
-                          polylines: [
-                            // Actual route path (driver's movement)
-                            if (_actualRoutePoints.isNotEmpty)
-                              Polyline(
-                                points: _actualRoutePoints,
-                                color: Colors.grey.shade600,
-                                strokeWidth: 4.0,
-                                borderColor: Colors.white,
-                                borderStrokeWidth: 1.0,
-                              ),
-                            // Planned route to next appointment
-                            if (_plannedRoutePoints.isNotEmpty)
-                              Polyline(
-                                points: _plannedRoutePoints,
-                                color: Colors.blue.shade700,
-                                strokeWidth: 6.0,
-                                borderColor: Colors.white,
-                                borderStrokeWidth: 2.0,
-                              ),
-                            // Appointment sequence polylines
-                            ..._appointmentPolylines,
-                          ],
-                        ),
-                        MarkerLayer(markers: _markers),
-                      ],
-                    ),
-                    // Map Legend
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (_driverLat != null && _driverLng != null)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: const BoxDecoration(
+                    // Current Location Card (Uber-style)
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 700),
+                      builder: (context, locationValue, child) {
+                        return Opacity(
+                          opacity: locationValue,
+                          child: Transform.translate(
+                            offset: Offset(-30 * (1 - locationValue), 0),
+                            child: Card(
+                              color: Colors.blue.shade50,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on,
                                       color: Colors.blue,
-                                      shape: BoxShape.circle,
+                                      size: 32,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Your Location',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _currentAddress ??
+                                                'Getting location...',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.refresh,
+                                        color: Colors.blue,
+                                      ),
+                                      onPressed: _loadCurrentLocation,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Map View
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      builder: (context, mapValue, child) {
+                        return Opacity(
+                          opacity: mapValue,
+                          child: Transform.translate(
+                            offset: Offset(30 * (1 - mapValue), 0),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'Live Map',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    if (_driverLat != null &&
+                                        _driverLng != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.my_location),
+                                        onPressed: _centerOnCurrentLocation,
+                                        tooltip: 'Center on my location',
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh),
+                                      onPressed: _loadCurrentLocation,
+                                      tooltip: 'Refresh location',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Card(
+                                  elevation: 4,
+                                  child: SizedBox(
+                                    height: 400,
+                                    child: Stack(
+                                      children: [
+                                        FlutterMap(
+                                          mapController: _mapController,
+                                          options: MapOptions(
+                                            initialCenter: _getMapCenter(),
+                                            initialZoom: 13.0,
+                                            onTap:
+                                                (
+                                                  _,
+                                                  __,
+                                                ) {}, // Enable tap interactions
+                                          ),
+                                          children: [
+                                            TileLayer(
+                                              urlTemplate:
+                                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                              userAgentPackageName:
+                                                  'com.example.clinic_app',
+                                            ),
+                                            PolylineLayer(
+                                              polylines: [
+                                                // Actual route path (driver's movement)
+                                                if (_actualRoutePoints
+                                                    .isNotEmpty)
+                                                  Polyline(
+                                                    points: _actualRoutePoints,
+                                                    color: Colors.grey.shade600,
+                                                    strokeWidth: 4.0,
+                                                    borderColor: Colors.white,
+                                                    borderStrokeWidth: 1.0,
+                                                  ),
+                                                // Planned route to next appointment
+                                                if (_plannedRoutePoints
+                                                    .isNotEmpty)
+                                                  Polyline(
+                                                    points: _plannedRoutePoints,
+                                                    color: Colors.blue.shade700,
+                                                    strokeWidth: 6.0,
+                                                    borderColor: Colors.white,
+                                                    borderStrokeWidth: 2.0,
+                                                  ),
+                                                // Appointment sequence polylines
+                                                ..._appointmentPolylines,
+                                              ],
+                                            ),
+                                            MarkerLayer(markers: _markers),
+                                          ],
+                                        ),
+                                        // Map Legend
+                                        Positioned(
+                                          top: 10,
+                                          right: 10,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(
+                                                0.9,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                if (_driverLat != null &&
+                                                    _driverLng != null)
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Container(
+                                                        width: 12,
+                                                        height: 12,
+                                                        decoration:
+                                                            const BoxDecoration(
+                                                              color:
+                                                                  Colors.blue,
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      const Text(
+                                                        'You',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                if (_driverLat != null &&
+                                                    _driverLng != null)
+                                                  const SizedBox(height: 4),
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Container(
+                                                      width: 12,
+                                                      height: 12,
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                            color: Colors.red,
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    const Text(
+                                                      'Next Stop',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Container(
+                                                      width: 12,
+                                                      height: 12,
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                            color:
+                                                                Colors.orange,
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    const Text(
+                                                      'Other Stops',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Status Card
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 900),
+                      builder: (context, statusValue, child) {
+                        return Opacity(
+                          opacity: statusValue,
+                          child: Transform.translate(
+                            offset: Offset(-30 * (1 - statusValue), 0),
+                            child: Card(
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.outline.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              color: Theme.of(context).colorScheme.surface,
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Driver Status',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(
+                                          _currentStatus?.status ?? 'offline',
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: _getStatusColor(
+                                            _currentStatus?.status ?? 'offline',
+                                          ).withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        (_currentStatus?.status ?? 'offline')
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: _getStatusColor(
+                                            _currentStatus?.status ?? 'offline',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Status updates automatically based on location and activity.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.6),
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Next Appointment (Highlighted)
+                    if (_assignedAppointments.isNotEmpty) ...[
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 1000),
+                        builder: (context, appointmentValue, child) {
+                          return Opacity(
+                            opacity: appointmentValue,
+                            child: Transform.translate(
+                              offset: Offset(30 * (1 - appointmentValue), 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   const Text(
-                                    'You',
+                                    'Next Appointment',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Card(
+                                    color: Colors.orange.shade50,
+                                    elevation: 4,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.location_on,
+                                                color: Colors.orange,
+                                                size: 24,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  _assignedAppointments
+                                                          .first
+                                                          .address ??
+                                                      'Address not available',
+                                                  style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.access_time,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Scheduled: ${_assignedAppointments.first.scheduledAt}',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.info, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Status: ${_assignedAppointments.first.status}',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.straighten,
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _calculateDistanceToAppointment(
+                                                  _assignedAppointments.first,
+                                                ),
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          ElevatedButton.icon(
+                                            onPressed: () =>
+                                                _navigateToAppointment(
+                                                  _assignedAppointments.first,
+                                                ),
+                                            icon: const Icon(Icons.navigation),
+                                            label: const Text('Navigate'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.blue,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            if (_driverLat != null && _driverLng != null)
-                              const SizedBox(height: 4),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 12,
-                                  height: 12,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'Next Stop',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 12,
-                                  height: 12,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.orange,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'Other Stops',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Status Card
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              color: Theme.of(context).colorScheme.surface,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Driver Status',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(
-                          _currentStatus?.status ?? 'offline',
-                        ).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _getStatusColor(
-                            _currentStatus?.status ?? 'offline',
-                          ).withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        (_currentStatus?.status ?? 'offline').toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _getStatusColor(
-                            _currentStatus?.status ?? 'offline',
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Status updates automatically based on location and activity.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-                        fontStyle: FontStyle.italic,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Next Appointment (Highlighted)
-            if (_assignedAppointments.isNotEmpty) ...[
-              const Text(
-                'Next Appointment',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                color: Colors.orange.shade50,
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: Colors.orange,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _assignedAppointments.first.address ??
-                                  'Address not available',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Scheduled: ${_assignedAppointments.first.scheduledAt}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.info, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Status: ${_assignedAppointments.first.status}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.straighten, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            _calculateDistanceToAppointment(
-                              _assignedAppointments.first,
-                            ),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            _navigateToAppointment(_assignedAppointments.first),
-                        icon: const Icon(Icons.navigation),
-                        label: const Text('Navigate'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                        ),
-                      ),
+                      const SizedBox(height: 24),
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
 
-            // All Appointments
-            const Text(
-              'All Appointments',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+                    // All Appointments
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 1100),
+                      builder: (context, allAppointmentsValue, child) {
+                        return Opacity(
+                          opacity: allAppointmentsValue,
+                          child: Transform.translate(
+                            offset: Offset(-30 * (1 - allAppointmentsValue), 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'All Appointments',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
 
-            if (_assignedAppointments.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(
-                    child: Text('No appointments assigned for today'),
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _assignedAppointments.length,
-                itemBuilder: (context, index) {
-                  final appointment = _assignedAppointments[index];
-                  final isNext = index == 0;
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    color: isNext ? Colors.grey.shade100 : null,
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isNext ? Colors.orange : Colors.grey,
-                        child: Text('${index + 1}'),
-                      ),
-                      title: Text('Appointment #${appointment.id}'),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Status: ${appointment.status}'),
-                          Text('Address: ${appointment.address}'),
-                          Text('Time: ${appointment.scheduledAt}'),
-                        ],
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.navigation),
-                        onPressed: () => _navigateToAppointment(appointment),
-                      ),
+                                if (_assignedAppointments.isEmpty)
+                                  const Card(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Center(
+                                        child: Text(
+                                          'No appointments assigned for today',
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: _assignedAppointments.length,
+                                    itemBuilder: (context, index) {
+                                      final appointment =
+                                          _assignedAppointments[index];
+                                      final isNext = index == 0;
+                                      return Card(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        color: isNext
+                                            ? Colors.grey.shade100
+                                            : null,
+                                        child: ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundColor: isNext
+                                                ? Colors.orange
+                                                : Colors.grey,
+                                            child: Text('${index + 1}'),
+                                          ),
+                                          title: Text(
+                                            'Appointment #${appointment.id}',
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Status: ${appointment.status}',
+                                              ),
+                                              Text(
+                                                'Address: ${appointment.address}',
+                                              ),
+                                              Text(
+                                                'Time: ${appointment.scheduledAt}',
+                                              ),
+                                            ],
+                                          ),
+                                          trailing: IconButton(
+                                            icon: const Icon(Icons.navigation),
+                                            onPressed: () =>
+                                                _navigateToAppointment(
+                                                  appointment,
+                                                ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
 
-            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-            // Quick Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'Quick Actions',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                    // Quick Actions
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 1200),
+                      builder: (context, actionsValue, child) {
+                        return Opacity(
+                          opacity: actionsValue,
+                          child: Transform.translate(
+                            offset: Offset(30 * (1 - actionsValue), 0),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  child: Text(
+                                    'Quick Actions',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
+                                  ),
+                                ),
+
+                                GridView.count(
+                                  crossAxisCount: 2,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  children: [
+                                    ModernGridCard(
+                                      title: 'Vehicle Check',
+                                      icon: Icons.directions_car,
+                                      color: Colors.blue,
+                                      onTap: () => _showVehicleCheckDialog(),
+                                    ),
+                                    ModernGridCard(
+                                      title: 'Navigation',
+                                      icon: Icons.navigation,
+                                      color: Colors.green,
+                                      onTap: () => _openNavigation(),
+                                    ),
+                                    ModernGridCard(
+                                      title: 'Emergency',
+                                      icon: Icons.emergency,
+                                      color: Colors.red,
+                                      onTap: () => _handleEmergency(),
+                                    ),
+                                    ModernGridCard(
+                                      title: 'Support',
+                                      icon: Icons.support_agent,
+                                      color: Colors.purple,
+                                      onTap: () => _contactSupport(),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
-
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              children: [
-                ModernGridCard(
-                  title: 'Vehicle Check',
-                  icon: Icons.directions_car,
-                  color: Colors.blue,
-                  onTap: () => _showVehicleCheckDialog(),
-                ),
-                ModernGridCard(
-                  title: 'Navigation',
-                  icon: Icons.navigation,
-                  color: Colors.green,
-                  onTap: () => _openNavigation(),
-                ),
-                ModernGridCard(
-                  title: 'Emergency',
-                  icon: Icons.emergency,
-                  color: Colors.red,
-                  onTap: () => _handleEmergency(),
-                ),
-                ModernGridCard(
-                  title: 'Support',
-                  icon: Icons.support_agent,
-                  color: Colors.purple,
-                  onTap: () => _contactSupport(),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

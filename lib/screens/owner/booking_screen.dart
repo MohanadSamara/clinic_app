@@ -15,18 +15,30 @@ import '../../models/user.dart';
 import '../select_location_screen.dart';
 
 class BookingScreen extends StatefulWidget {
-  const BookingScreen({super.key});
+  final Service? selectedService;
+  final DateTime? selectedDate;
+  final TimeOfDay? selectedTime;
+  final User? selectedDoctor;
+
+  const BookingScreen({
+    super.key,
+    this.selectedService,
+    this.selectedDate,
+    this.selectedTime,
+    this.selectedDoctor,
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   Service? _selectedService;
   Pet? _selectedPet;
   List<Pet> _userPets = [];
   User? _selectedDoctor;
+  int? _selectedDoctorId;
   List<User> _doctors = [];
   TimeOfDay? _selectedTime;
   final TextEditingController _descriptionController = TextEditingController();
@@ -42,6 +54,12 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize with passed parameters
+    _selectedDate = widget.selectedDate ?? DateTime.now();
+    _selectedService = widget.selectedService;
+    _selectedTime = widget.selectedTime;
+    _selectedDoctorId = widget.selectedDoctor?.id;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppointmentProvider>().loadServices();
       _loadUserPets();
@@ -74,6 +92,17 @@ class _BookingScreenState extends State<BookingScreen> {
 
       setState(() {
         _doctors = doctors;
+        // Set selected doctor based on ID if provided
+        if (_selectedDoctorId != null) {
+          _selectedDoctor = _doctors.firstWhere(
+            (doctor) => doctor.id == _selectedDoctorId,
+            orElse: () => User(id: null, name: '', email: '', password: ''),
+          );
+          // If not found, clear the selection
+          if (_selectedDoctor?.id == null) {
+            _selectedDoctor = null;
+          }
+        }
       });
     } catch (e) {
       debugPrint('Error loading doctors: $e');
@@ -134,308 +163,598 @@ class _BookingScreenState extends State<BookingScreen> {
       ),
       body: Consumer<AppointmentProvider>(
         builder: (context, appointmentProvider, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Text(
-                  'Schedule a Visit',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Book veterinary care for your pet',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Select Date',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: SizedBox(
-                    height:
-                        400, // Constrain the calendar height to prevent overflow
-                    child: TableCalendar(
-                      firstDay: DateTime.now(),
-                      lastDay: DateTime.now().add(const Duration(days: 90)),
-                      focusedDay: _selectedDate,
-                      selectedDayPredicate: (day) =>
-                          isSameDay(_selectedDate, day),
-                      onDaySelected: (selectedDay, focusedDay) {
-                        setState(() {
-                          _selectedDate = selectedDay;
-                        });
-                      },
-                      calendarStyle: CalendarStyle(
-                        selectedDecoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        todayDecoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondary.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        defaultTextStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        weekendTextStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      headerStyle: HeaderStyle(
-                        titleTextStyle: Theme.of(context).textTheme.titleMedium!
-                            .copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                        formatButtonTextStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Select Time',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (time != null) {
-                            setState(() {
-                              _selectedTime = time;
-                            });
-                          }
-                        },
-                        child: Text(
-                          _selectedTime != null
-                              ? _selectedTime!.format(context)
-                              : 'Select Time',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Select Service',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<Service>(
-                  initialValue: _selectedService,
-                  hint: const Text('Choose a service'),
-                  items: appointmentProvider.services.map((service) {
-                    return DropdownMenuItem(
-                      value: service,
-                      child: Text('${service.name} - \$${service.price}'),
-                    );
-                  }).toList(),
-                  onChanged: (service) {
-                    setState(() {
-                      _selectedService = service;
-                      _selectedDoctor =
-                          null; // Reset doctor selection when service changes
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Select Doctor',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (_doctors.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange),
-                    ),
-                    child: const Text(
-                      'No doctors available',
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                  )
-                else
-                  DropdownButtonFormField<User>(
-                    initialValue: _selectedDoctor,
-                    hint: const Text('Choose a doctor'),
-                    items: _doctors.map((doctor) {
-                      return DropdownMenuItem(
-                        value: doctor,
-                        child: Text('Dr. ${doctor.name}'),
-                      );
-                    }).toList(),
-                    onChanged: (doctor) {
-                      setState(() {
-                        _selectedDoctor = doctor;
-                      });
-                    },
-                    validator: (value) =>
-                        value == null ? 'Please select a doctor' : null,
-                  ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Select Pet',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<Pet>(
-                  initialValue: _selectedPet,
-                  hint: const Text('Choose a pet'),
-                  items: _userPets.map((pet) {
-                    return DropdownMenuItem(
-                      value: pet,
-                      child: Text('${pet.name} (${pet.species})'),
-                    );
-                  }).toList(),
-                  onChanged: (pet) {
-                    setState(() {
-                      _selectedPet = pet;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Please select a pet' : null,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Urgency Level',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _urgencyLevel,
-                  items: const [
-                    DropdownMenuItem(value: 'routine', child: Text('Routine')),
-                    DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
-                    DropdownMenuItem(
-                      value: 'emergency',
-                      child: Text('Emergency (Urgent)'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _urgencyLevel = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-                if (_urgencyLevel != 'routine') ...[
-                  SwitchListTile(
-                    title: const Text('Share current location'),
-                    value: _shareLocation,
-                    onChanged: (v) {
-                      setState(() {
-                        _shareLocation = v;
-                      });
-                    },
-                  ),
-                  if (_shareLocation) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+          return TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 500),
+            builder: (context, animationValue, child) {
+              return Opacity(
+                opacity: animationValue,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - animationValue)),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: _locating ? null : _captureLocation,
-                          icon: _locating
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.my_location),
-                          label: const Text('Get current location'),
+                        // Header
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 600),
+                          builder: (context, headerValue, child) {
+                            return Opacity(
+                              opacity: headerValue,
+                              child: Transform.translate(
+                                offset: Offset(-30 * (1 - headerValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Schedule a Visit',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Book veterinary care for your pet',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.7),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _locError != null
-                                ? 'Error: $_locError'
-                                : (_lat != null && _lng != null)
-                                ? 'Lat: ${_lat!.toStringAsFixed(5)}, Lng: ${_lng!.toStringAsFixed(5)}'
-                                : 'Not captured yet',
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        const SizedBox(height: 32),
+                        // Date Selection Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 700),
+                          builder: (context, dateValue, child) {
+                            return Opacity(
+                              opacity: dateValue,
+                              child: Transform.translate(
+                                offset: Offset(30 * (1 - dateValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Select Date',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Card(
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        side: BorderSide(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline
+                                              .withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: SizedBox(
+                                        height:
+                                            400, // Constrain the calendar height to prevent overflow
+                                        child: TableCalendar(
+                                          firstDay: DateTime.now(),
+                                          lastDay: DateTime.now().add(
+                                            const Duration(days: 90),
+                                          ),
+                                          focusedDay: _selectedDate,
+                                          selectedDayPredicate: (day) =>
+                                              isSameDay(_selectedDate, day),
+                                          onDaySelected:
+                                              (selectedDay, focusedDay) {
+                                                setState(() {
+                                                  _selectedDate = selectedDay;
+                                                });
+                                              },
+                                          calendarStyle: CalendarStyle(
+                                            selectedDecoration: BoxDecoration(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            todayDecoration: BoxDecoration(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary
+                                                  .withOpacity(0.3),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            defaultTextStyle: TextStyle(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
+                                            ),
+                                            weekendTextStyle: TextStyle(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          headerStyle: HeaderStyle(
+                                            titleTextStyle: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium!
+                                                .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.onSurface,
+                                                ),
+                                            formatButtonTextStyle: TextStyle(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Time Selection Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 800),
+                          builder: (context, timeValue, child) {
+                            return Opacity(
+                              opacity: timeValue,
+                              child: Transform.translate(
+                                offset: Offset(-30 * (1 - timeValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Select Time',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton(
+                                            onPressed: () async {
+                                              final time = await showTimePicker(
+                                                context: context,
+                                                initialTime: TimeOfDay.now(),
+                                              );
+                                              if (time != null) {
+                                                setState(() {
+                                                  _selectedTime = time;
+                                                });
+                                              }
+                                            },
+                                            child: Text(
+                                              _selectedTime != null
+                                                  ? _selectedTime!.format(
+                                                      context,
+                                                    )
+                                                  : 'Select Time',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Service Selection Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 900),
+                          builder: (context, serviceValue, child) {
+                            return Opacity(
+                              opacity: serviceValue,
+                              child: Transform.translate(
+                                offset: Offset(30 * (1 - serviceValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Select Service',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<Service>(
+                                      value: _selectedService,
+                                      hint: const Text('Choose a service'),
+                                      items: appointmentProvider.services.map((
+                                        service,
+                                      ) {
+                                        return DropdownMenuItem(
+                                          value: service,
+                                          child: Text(
+                                            '${service.name} - \$${service.price}',
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (service) {
+                                        setState(() {
+                                          _selectedService = service;
+                                          _selectedDoctor =
+                                              null; // Reset doctor selection when service changes
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Doctor Selection Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1000),
+                          builder: (context, doctorValue, child) {
+                            return Opacity(
+                              opacity: doctorValue,
+                              child: Transform.translate(
+                                offset: Offset(-30 * (1 - doctorValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Select Doctor',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (_selectedDoctor != null)
+                                      // Show selected doctor as read-only
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.check_circle,
+                                              color: Colors.green,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Dr. ${_selectedDoctor!.name}',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            TextButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _selectedDoctor = null;
+                                                  _selectedDoctorId = null;
+                                                });
+                                              },
+                                              child: const Text('Change'),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else if (_doctors.isEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'No doctors available',
+                                          style: TextStyle(
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      DropdownButtonFormField<User>(
+                                        hint: const Text('Choose a doctor'),
+                                        items: _doctors.map((doctor) {
+                                          return DropdownMenuItem(
+                                            value: doctor,
+                                            child: Text('Dr. ${doctor.name}'),
+                                          );
+                                        }).toList(),
+                                        onChanged: (doctor) {
+                                          setState(() {
+                                            _selectedDoctor = doctor;
+                                          });
+                                        },
+                                        validator: (value) => value == null
+                                            ? 'Please select a doctor'
+                                            : null,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Pet Selection Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1100),
+                          builder: (context, petValue, child) {
+                            return Opacity(
+                              opacity: petValue,
+                              child: Transform.translate(
+                                offset: Offset(30 * (1 - petValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Select Pet',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<Pet>(
+                                      initialValue: _selectedPet,
+                                      hint: const Text('Choose a pet'),
+                                      items: _userPets.map((pet) {
+                                        return DropdownMenuItem(
+                                          value: pet,
+                                          child: Text(
+                                            '${pet.name} (${pet.species})',
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (pet) {
+                                        setState(() {
+                                          _selectedPet = pet;
+                                        });
+                                      },
+                                      validator: (value) => value == null
+                                          ? 'Please select a pet'
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Urgency and Location Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1200),
+                          builder: (context, urgencyValue, child) {
+                            return Opacity(
+                              opacity: urgencyValue,
+                              child: Transform.translate(
+                                offset: Offset(-30 * (1 - urgencyValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Urgency Level',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<String>(
+                                      initialValue: _urgencyLevel,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'routine',
+                                          child: Text('Routine'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'urgent',
+                                          child: Text('Urgent'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'emergency',
+                                          child: Text('Emergency (Urgent)'),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _urgencyLevel = value!;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 24),
+                                    if (_urgencyLevel != 'routine') ...[
+                                      SwitchListTile(
+                                        title: const Text(
+                                          'Share current location',
+                                        ),
+                                        value: _shareLocation,
+                                        onChanged: (v) {
+                                          setState(() {
+                                            _shareLocation = v;
+                                          });
+                                        },
+                                      ),
+                                      if (_shareLocation) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            ElevatedButton.icon(
+                                              onPressed: _locating
+                                                  ? null
+                                                  : _captureLocation,
+                                              icon: _locating
+                                                  ? const SizedBox(
+                                                      width: 16,
+                                                      height: 16,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                          ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.my_location,
+                                                    ),
+                                              label: const Text(
+                                                'Get current location',
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                _locError != null
+                                                    ? 'Error: $_locError'
+                                                    : (_lat != null &&
+                                                          _lng != null)
+                                                    ? 'Lat: ${_lat!.toStringAsFixed(5)}, Lng: ${_lng!.toStringAsFixed(5)}'
+                                                    : 'Not captured yet',
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Description and Address Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1300),
+                          builder: (context, detailsValue, child) {
+                            return Opacity(
+                              opacity: detailsValue,
+                              child: Transform.translate(
+                                offset: Offset(30 * (1 - detailsValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TextField(
+                                      controller: _descriptionController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Description (Optional)',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      maxLines: 3,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextField(
+                                      controller: _addressController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Address',
+                                        border: const OutlineInputBorder(),
+                                        suffixIcon: IconButton(
+                                          icon: const Icon(Icons.map),
+                                          onPressed: () => _openMapForAddress(),
+                                        ),
+                                      ),
+                                      readOnly:
+                                          true, // Make it read-only since we'll use map
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Book Button Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1400),
+                          builder: (context, buttonValue, child) {
+                            return Opacity(
+                              opacity: buttonValue,
+                              child: Transform.translate(
+                                offset: Offset(0, 20 * (1 - buttonValue)),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _bookAppointment,
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                    ),
+                                    child: const Text('Book Appointment'),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                  ],
-                ],
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description (Optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: 'Address',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.map),
-                      onPressed: () => _openMapForAddress(),
-                    ),
-                  ),
-                  readOnly: true, // Make it read-only since we'll use map
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _bookAppointment,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Book Appointment'),
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
