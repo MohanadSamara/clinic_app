@@ -174,11 +174,12 @@ class ModernActionCard extends StatelessWidget {
                           child: Icon(
                             Icons.arrow_forward_ios,
                             color:
-                                Theme.of(context).brightness == Brightness.light
-                                ? Colors.grey[700]
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                Theme.of(
+                                  context,
+                                ).iconTheme.color?.withOpacity(0.6) ??
+                                Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
                             size: 16,
                           ),
                         ),
@@ -287,11 +288,16 @@ class ModernEmergencyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+    final onErrorColor = Theme.of(context).colorScheme.onError;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       elevation: 6,
-      shadowColor: Colors.red.withOpacity(0.3),
+      shadowColor: errorColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: Colors.red.shade50,
+      color: isDark ? surfaceColor : errorColor.withOpacity(0.05),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -302,14 +308,14 @@ class ModernEmergencyCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: errorColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.red.withOpacity(0.3),
+                    color: errorColor.withOpacity(0.3),
                     width: 2,
                   ),
                 ),
-                child: const Icon(Icons.emergency, color: Colors.red, size: 28),
+                child: Icon(Icons.emergency, color: errorColor, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -320,14 +326,16 @@ class ModernEmergencyCard extends StatelessWidget {
                       'Emergency',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.red.shade700,
+                        color: errorColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '24/7 veterinary assistance',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.red.shade600,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -335,11 +343,11 @@ class ModernEmergencyCard extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
+                decoration: BoxDecoration(
+                  color: errorColor,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.phone, color: Colors.white, size: 16),
+                child: Icon(Icons.phone, color: onErrorColor, size: 16),
               ),
             ],
           ),

@@ -40,31 +40,21 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'your-web-api-key',
-    appId: 'your-web-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    authDomain: 'your-project-id.firebaseapp.com',
-    storageBucket: 'your-project-id.appspot.com',
-    measurementId: 'your-measurement-id',
-  );
-
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'your-android-api-key',
-    appId: 'your-android-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
+    apiKey: 'AIzaSyApEkl0XwmeRxs7BvhNiUgWBp79WwCada4',
+    appId: '1:34061023916:android:your-android-app-id',
+    messagingSenderId: '34061023916',
+    projectId: 'vet2u-clinic-app',
+    storageBucket: 'vet2u-clinic-app.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'your-ios-api-key',
-    appId: 'your-ios-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
-    iosBundleId: 'com.example.clinic_app',
+    apiKey: 'AIzaSyApEkl0XwmeRxs7BvhNiUgWBp79WwCada4',
+    appId: '1:34061023916:ios:your-ios-app-id',
+    messagingSenderId: '34061023916',
+    projectId: 'vet2u-clinic-app',
+    storageBucket: 'vet2u-clinic-app.firebasestorage.app',
+    iosBundleId: 'com.example.clinicApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -74,6 +64,16 @@ class DefaultFirebaseOptions {
     projectId: 'your-project-id',
     storageBucket: 'your-project-id.appspot.com',
     iosBundleId: 'com.example.clinic_app',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyApEkl0XwmeRxs7BvhNiUgWBp79WwCada4',
+    appId: '1:34061023916:web:2babd4237dc57d6c3efd09',
+    messagingSenderId: '34061023916',
+    projectId: 'vet2u-clinic-app',
+    authDomain: 'vet2u-clinic-app.firebaseapp.com',
+    storageBucket: 'vet2u-clinic-app.firebasestorage.app',
+    measurementId: 'G-VHSKQX2TRC',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

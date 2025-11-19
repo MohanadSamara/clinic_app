@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider.dart';
 import 'providers/appointment_provider.dart';
@@ -11,12 +13,16 @@ import 'providers/inventory_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/payment_provider.dart';
+import 'providers/document_provider.dart';
 import 'screens/role_based_home.dart';
 import 'theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase globally
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize auth provider to check for existing session
   final authProvider = AuthProvider();
@@ -43,6 +49,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, DocumentProvider>(
+          create: (context) => DocumentProvider(authProvider),
+          update: (context, auth, previous) =>
+              previous ?? DocumentProvider(auth),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

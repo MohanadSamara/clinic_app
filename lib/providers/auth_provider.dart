@@ -1,5 +1,6 @@
 // lib/providers/auth_provider.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -14,6 +15,9 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isInitialized = false;
 
+  // Temporary data for social login role selection
+  Map<String, dynamic>? _pendingSocialUser;
+
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
 
@@ -27,11 +31,6 @@ class AuthProvider extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
-      // Initialize Firebase
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-
       final prefs = await SharedPreferences.getInstance();
       final userData = prefs.getString(_userKey);
       if (userData != null) {
@@ -165,28 +164,45 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        throw Exception('Google sign in cancelled');
+      if (kIsWeb) {
+        // Web implementation using Firebase Auth popup
+        final firebase_auth.GoogleAuthProvider googleProvider =
+            firebase_auth.GoogleAuthProvider();
+        final firebase_auth.UserCredential userCredential = await firebase_auth
+            .FirebaseAuth
+            .instance
+            .signInWithPopup(googleProvider);
+
+        await _handleSocialLogin(
+          firebaseUser: userCredential.user!,
+          provider: 'google',
+          providerId: userCredential.user!.uid,
+        );
+      } else {
+        // Mobile implementation using Google Sign In
+        final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) {
+          throw Exception('Google sign in cancelled');
+        }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final credential = firebase_auth.GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        final firebase_auth.UserCredential userCredential = await firebase_auth
+            .FirebaseAuth
+            .instance
+            .signInWithCredential(credential);
+
+        await _handleSocialLogin(
+          firebaseUser: userCredential.user!,
+          provider: 'google',
+          providerId: userCredential.user!.uid,
+        );
       }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final credential = firebase_auth.GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final firebase_auth.UserCredential userCredential = await firebase_auth
-          .FirebaseAuth
-          .instance
-          .signInWithCredential(credential);
-
-      await _handleSocialLogin(
-        firebaseUser: userCredential.user!,
-        provider: 'google',
-        providerId: userCredential.user!.uid,
-      );
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -235,11 +251,10 @@ class AuthProvider extends ChangeNotifier {
       final existingUser = await DBHelper.instance.getUserByEmail(
         firebaseUser.email!,
       );
-      User localUser;
 
       if (existingUser != null) {
-        // Update existing user with social auth info
-        localUser = User.fromMap(existingUser);
+        // Existing user: update with social auth info if needed
+        User localUser = User.fromMap(existingUser);
         if (localUser.provider == null) {
           // Update user to include social auth
           await DBHelper.instance.updateUser(localUser.id!, {
@@ -251,25 +266,22 @@ class AuthProvider extends ChangeNotifier {
             providerId: providerId,
           );
         }
+
+        _user = localUser;
+        await _saveUserToStorage(_user!);
+        _isLoading = false;
+        notifyListeners();
       } else {
-        // Create new user from social auth
-        localUser = User(
-          name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
-          email: firebaseUser.email!,
-          password: '', // Social users don't have passwords
-          provider: provider,
-          providerId: providerId,
-        );
-
-        final id = await DBHelper.instance.insertUser(localUser.toMap());
-        localUser = User.fromMap(localUser.toMap()..['id'] = id);
+        // New user: store pending data for role selection
+        _pendingSocialUser = {
+          'name': firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
+          'email': firebaseUser.email!,
+          'provider': provider,
+          'providerId': providerId,
+        };
+        _isLoading = false;
+        // Do not notify listeners for pending state to avoid UI rebuild issues
       }
-
-      _user = localUser;
-      await _saveUserToStorage(_user!);
-
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -386,4 +398,64 @@ class AuthProvider extends ChangeNotifier {
         };
     }
   }
+
+  // Complete social registration with selected role
+  Future<void> completeSocialRegistration({
+    required String name,
+    required String email,
+    required String role,
+    required String provider,
+    required String providerId,
+  }) async {
+    if (_pendingSocialUser == null) {
+      throw Exception('No pending social registration');
+    }
+
+    try {
+      // Check if user already exists
+      final existingUser = await DBHelper.instance.getUserByEmail(email);
+
+      if (existingUser != null) {
+        // Update existing user with new role and social auth info
+        final updates = <String, dynamic>{'role': role};
+        if (existingUser['provider'] == null) {
+          updates['provider'] = provider;
+          updates['providerId'] = providerId;
+        }
+        await DBHelper.instance.updateUser(existingUser['id'], updates);
+        _user = User.fromMap(
+          existingUser,
+        ).copyWith(role: role, provider: provider, providerId: providerId);
+      } else {
+        // Create new user
+        final localUser = User(
+          name: name,
+          email: email,
+          password: '', // Social users don't have passwords
+          role: role,
+          provider: provider,
+          providerId: providerId,
+        );
+
+        final id = await DBHelper.instance.insertUser(localUser.toMap());
+        _user = User.fromMap(localUser.toMap()..['id'] = id);
+      }
+
+      await _saveUserToStorage(_user!);
+      _pendingSocialUser = null;
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Check if role selection is needed
+  bool get needsRoleSelection => _pendingSocialUser != null;
+
+  // Get pending social user data
+  Map<String, dynamic>? get pendingSocialUser => _pendingSocialUser;
 }

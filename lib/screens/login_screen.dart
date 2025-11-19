@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
 import 'role_based_home.dart';
+import 'role_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -160,10 +161,27 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await auth.signInWithGoogle();
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (auth.needsRoleSelection) {
+            final pending = auth.pendingSocialUser!;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RoleSelectionScreen(
+                  name: pending['name'],
+                  email: pending['email'],
+                  provider: pending['provider'],
+                  providerId: pending['providerId'],
+                ),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+            );
+          }
+        });
       }
     } catch (e) {
       _showError(e.toString());
@@ -181,10 +199,27 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await auth.signInWithFacebook();
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (auth.needsRoleSelection) {
+            final pending = auth.pendingSocialUser!;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RoleSelectionScreen(
+                  name: pending['name'],
+                  email: pending['email'],
+                  provider: pending['provider'],
+                  providerId: pending['providerId'],
+                ),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+            );
+          }
+        });
       }
     } catch (e) {
       _showError(e.toString());

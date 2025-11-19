@@ -1,5 +1,6 @@
 // lib/screens/doctor/doctor_dashboard.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
@@ -15,6 +16,7 @@ import 'treatment_recording_screen.dart';
 import 'inventory_management_screen.dart';
 import 'profile_screen.dart';
 import 'medical_record_form_screen.dart';
+import 'document_upload_screen.dart';
 
 class DoctorDashboard extends StatefulWidget {
   const DoctorDashboard({super.key});
@@ -150,6 +152,14 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
               color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () => authProvider.logout(),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            onPressed: () => SystemNavigator.pop(),
+            tooltip: 'Close App',
           ),
         ],
       ),
@@ -382,6 +392,18 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const _MedicalRecordsScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Upload Documents',
+                  subtitle: 'Upload treatment documents and reports',
+                  icon: Icons.upload_file,
+                  color: Colors.purple,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const DocumentUploadScreen(),
                     ),
                   ),
                 ),

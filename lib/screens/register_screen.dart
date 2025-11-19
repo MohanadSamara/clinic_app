@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'role_based_home.dart';
+import 'role_selection_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -83,10 +84,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedRole,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Role',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.work),
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(
+                  Icons.work,
+                  color: Theme.of(context).iconTheme.color,
+                ),
+              ),
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: Theme.of(context).iconTheme.color,
               ),
               items: const [
                 DropdownMenuItem(value: 'owner', child: Text('Pet Owner')),
@@ -117,6 +125,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: TextStyle(fontSize: 16),
                       ),
                     ),
+            ),
+            const SizedBox(height: 24),
+            const Text('Or register with'),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _googleSignUp,
+                    icon: const Icon(Icons.g_mobiledata, color: Colors.white),
+                    label: const Text('Google'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _facebookSignUp,
+                    icon: const Icon(Icons.facebook, color: Colors.white),
+                    label: const Text('Facebook'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Already have an account? Login here'),
             ),
           ],
         ),
@@ -161,6 +209,82 @@ class _RegisterScreenState extends State<RegisterScreen> {
           context,
           MaterialPageRoute(builder: (_) => const RoleBasedHome()),
         );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _googleSignUp() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    setState(() => _loading = true);
+    try {
+      await auth.signInWithGoogle();
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (auth.needsRoleSelection) {
+            final pending = auth.pendingSocialUser!;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RoleSelectionScreen(
+                  name: pending['name'],
+                  email: pending['email'],
+                  provider: pending['provider'],
+                  providerId: pending['providerId'],
+                ),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _facebookSignUp() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    setState(() => _loading = true);
+    try {
+      await auth.signInWithFacebook();
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (auth.needsRoleSelection) {
+            final pending = auth.pendingSocialUser!;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RoleSelectionScreen(
+                  name: pending['name'],
+                  email: pending['email'],
+                  provider: pending['provider'],
+                  providerId: pending['providerId'],
+                ),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+            );
+          }
+        });
       }
     } catch (e) {
       _showError(e.toString());

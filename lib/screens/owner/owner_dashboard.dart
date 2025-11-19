@@ -1,5 +1,6 @@
 // lib/screens/owner/owner_dashboard.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -14,6 +15,7 @@ import 'appointments_screen.dart';
 import 'driver_tracking_screen.dart';
 import 'doctor_selection_screen.dart';
 import 'profile_screen.dart';
+import 'medical_documents_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -263,6 +265,18 @@ class _OwnerHomeScreen extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const _MedicalHistoryScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernActionCard(
+                  title: 'Medical Documents',
+                  subtitle: 'Download treatment documents',
+                  icon: Icons.file_download,
+                  color: Colors.teal,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const MedicalDocumentsScreen(),
                     ),
                   ),
                 ),

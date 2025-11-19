@@ -203,6 +203,9 @@ class AppTheme {
     // Scaffold
     scaffoldBackgroundColor: neutral50,
 
+    // Icon Theme
+    iconTheme: const IconThemeData(color: neutral900),
+
     // Cards
     cardTheme: CardThemeData(
       color: Colors.white,
@@ -327,6 +330,7 @@ class AppTheme {
         fontSize: fontSizeBase,
         color: neutral500,
       ),
+      iconColor: neutral600,
     ),
 
     // Bottom Navigation Bar
@@ -541,6 +545,9 @@ class AppTheme {
 
     // Scaffold
     scaffoldBackgroundColor: neutral900,
+
+    // Icon Theme
+    iconTheme: const IconThemeData(color: neutral50),
 
     // Cards
     cardTheme: CardThemeData(

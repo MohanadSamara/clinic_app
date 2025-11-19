@@ -1,10 +1,12 @@
 // lib/db/db_helper.dart
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DBHelper {
   static final DBHelper instance = DBHelper._init();
@@ -29,11 +31,22 @@ class DBHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
+    String dbPath;
+    if (kIsWeb) {
+      // For web, use the default path (IndexedDB)
+      dbPath = await getDatabasesPath();
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      // For mobile, use the standard app data directory
+      dbPath = await getDatabasesPath();
+    } else {
+      // For desktop (Windows, Linux, macOS), use a persistent directory in the user's documents
+      final directory = await getApplicationDocumentsDirectory();
+      dbPath = directory.path;
+    }
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 10,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -124,6 +137,71 @@ class DBHelper {
         debugPrint('Error adding social auth columns: $e');
       }
     }
+    if (oldVersion < 11) {
+      // Ensure provider and providerId columns exist (fix for existing databases)
+      try {
+        // Check if columns exist and add them if they don't
+        final result = await db.rawQuery("PRAGMA table_info(users)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('provider')) {
+          await db.execute('ALTER TABLE users ADD COLUMN provider TEXT');
+          debugPrint('Added provider column to users table');
+        }
+        if (!columns.contains('providerId')) {
+          await db.execute('ALTER TABLE users ADD COLUMN providerId TEXT');
+          debugPrint('Added providerId column to users table');
+        }
+      } catch (e) {
+        debugPrint('Error ensuring social auth columns exist: $e');
+      }
+    }
+    if (oldVersion < 12) {
+      // Add new columns to documents table for enhanced file management
+      try {
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN version INTEGER DEFAULT 1',
+        );
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN uploaded_by INTEGER',
+        );
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN access_level TEXT DEFAULT "private"',
+        );
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN encryption_key TEXT',
+        );
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN file_size INTEGER DEFAULT 0',
+        );
+        await db.execute('ALTER TABLE documents ADD COLUMN mime_type TEXT');
+        await db.execute('ALTER TABLE documents ADD COLUMN checksum TEXT');
+        await db.execute('ALTER TABLE documents ADD COLUMN audit_logs TEXT');
+        debugPrint('Added enhanced columns to documents table');
+      } catch (e) {
+        debugPrint('Error adding enhanced columns to documents table: $e');
+      }
+
+      // Create audit_logs table
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER,
+            user_id INTEGER,
+            action TEXT,
+            timestamp TEXT,
+            details TEXT,
+            ip_address TEXT,
+            FOREIGN KEY (document_id) REFERENCES documents (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+          );
+        ''');
+        debugPrint('Created audit_logs table');
+      } catch (e) {
+        debugPrint('Error creating audit_logs table: $e');
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -140,7 +218,9 @@ class DBHelper {
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         phone TEXT,
-        role TEXT NOT NULL DEFAULT 'owner'
+        role TEXT NOT NULL DEFAULT 'owner',
+        provider TEXT,
+        providerId TEXT
       );
     ''');
 
@@ -321,6 +401,21 @@ class DBHelper {
       );
     ''');
 
+    // Create audit_logs table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id INTEGER,
+        user_id INTEGER,
+        action TEXT,
+        timestamp TEXT,
+        details TEXT,
+        ip_address TEXT,
+        FOREIGN KEY (document_id) REFERENCES documents (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      );
+    ''');
+
     // Insert default services after creating tables
     await _insertDefaultServices(db);
   }
@@ -335,7 +430,15 @@ class DBHelper {
         file_type TEXT,
         file_path TEXT,
         description TEXT,
-        upload_date TEXT
+        upload_date TEXT,
+        version INTEGER DEFAULT 1,
+        uploaded_by INTEGER,
+        access_level TEXT DEFAULT 'private',
+        encryption_key TEXT,
+        file_size INTEGER DEFAULT 0,
+        mime_type TEXT,
+        checksum TEXT,
+        audit_logs TEXT
       );
     ''');
 
@@ -838,6 +941,39 @@ class DBHelper {
     return await db.delete('documents', where: 'id=?', whereArgs: [id]);
   }
 
+  Future<int> updateDocument(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('documents', data, where: 'id=?', whereArgs: [id]);
+  }
+
+  // ---------- AUDIT LOGS ----------
+  Future<int> insertAuditLog(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('audit_logs', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getAuditLogsByDocument(
+    int documentId,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'audit_logs',
+      where: 'document_id=?',
+      whereArgs: [documentId],
+      orderBy: 'timestamp DESC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAuditLogsByUser(int userId) async {
+    final db = await instance.database;
+    return await db.query(
+      'audit_logs',
+      where: 'user_id=?',
+      whereArgs: [userId],
+      orderBy: 'timestamp DESC',
+    );
+  }
+
   // ---------- VACCINATION RECORDS ----------
   Future<int> insertVaccinationRecord(Map<String, dynamic> data) async {
     final db = await instance.database;
@@ -1184,6 +1320,7 @@ class DBHelper {
 
     // Clear all tables in reverse order to handle foreign keys
     final tables = [
+      'audit_logs',
       'compliance_logs',
       'vehicle_checks',
       'routes',
@@ -1219,6 +1356,7 @@ class DBHelper {
       'payments',
       'driver_status',
       'documents',
+      'audit_logs',
       'vaccination_records',
       'service_requests',
       'routes',
