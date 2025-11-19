@@ -235,7 +235,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       child: const Icon(
                                         Icons.local_hospital,
                                         size: 40,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                       ),
                                     ),
                                     const SizedBox(height: 8),

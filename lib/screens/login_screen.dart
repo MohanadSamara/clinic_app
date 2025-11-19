@@ -83,10 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _googleSignIn,
-                    icon: const Icon(Icons.g_mobiledata, color: Colors.white),
+                    icon: const Icon(Icons.g_mobiledata, color: Theme.of(context).colorScheme.onPrimary),
                     label: const Text('Google'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -97,10 +97,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _facebookSignIn,
-                    icon: const Icon(Icons.facebook, color: Colors.white),
+                    icon: const Icon(Icons.facebook, color: Theme.of(context).colorScheme.onPrimary),
                     label: const Text('Facebook'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -234,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
       ),
     );

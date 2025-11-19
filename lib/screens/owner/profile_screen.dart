@@ -192,7 +192,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                             : '?',
                                         style: const TextStyle(
                                           fontSize: 32,
-                                          color: Colors.white,
+                                          color: Theme.of(context).colorScheme.onPrimary,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

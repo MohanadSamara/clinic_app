@@ -255,7 +255,7 @@ class ModernGridCard extends StatelessWidget {
                           badge!,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),

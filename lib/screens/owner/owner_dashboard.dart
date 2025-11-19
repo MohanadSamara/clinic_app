@@ -249,7 +249,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                   title: 'Track Service',
                   subtitle: 'Follow your vet visit',
                   icon: Icons.location_on,
-                  color: Colors.purple,
+                  color: Theme.of(context).colorScheme.secondary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const DriverTrackingScreen(),
@@ -273,7 +273,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                   title: 'Medical Documents',
                   subtitle: 'Download treatment documents',
                   icon: Icons.file_download,
-                  color: Colors.teal,
+                  color: Theme.of(context).colorScheme.tertiary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const MedicalDocumentsScreen(),
@@ -311,8 +311,8 @@ class _OwnerHomeScreen extends StatelessWidget {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: const Text('Request Emergency'),
           ),
@@ -361,12 +361,12 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                   Icon(
                     Icons.medical_services_outlined,
                     size: 64,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                   SizedBox(height: 16),
                   Text(
                     'No medical records found',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                 ],
               ),
@@ -392,7 +392,7 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.pets, color: Colors.blue),
+                          const Icon(Icons.pets, color: Theme.of(context).colorScheme.secondary),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -405,7 +405,7 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                           ),
                           Text(
                             record.date.split('T')[0],
-                            style: TextStyle(color: Colors.grey[600]),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                           ),
                         ],
                       ),

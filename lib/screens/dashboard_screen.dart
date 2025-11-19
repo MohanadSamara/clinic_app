@@ -109,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ? user!.name[0].toUpperCase()
                                 : 'U',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -207,8 +207,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               icon: const Icon(Icons.add),
                               label: const Text('Add Your First Pet'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
+                                backgroundColor: Theme.of(context).colorScheme.tertiary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -257,7 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               label: const Text('Book Appointment'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.white,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -295,14 +295,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.calendar_today,
                       title: 'Booking',
                       subtitle: 'Schedule a Visit',
-                      color: const Color(0xFF2E8B57),
+                      color: Theme.of(context).colorScheme.primary,
                       onTap: () => _navigateToBooking(petCount),
                     ),
                     _ServiceCard(
                       icon: Icons.medical_services,
                       title: 'Records',
                       subtitle: 'Health Records',
-                      color: const Color(0xFF6B8E23),
+                      color: Theme.of(context).colorScheme.secondary,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Coming soon!')),
@@ -313,7 +313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.emergency,
                       title: 'Emergency',
                       subtitle: 'Immediate Care',
-                      color: const Color(0xFFDC143C),
+                      color: Theme.of(context).colorScheme.error,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -326,7 +326,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.payment,
                       title: 'Payments',
                       subtitle: 'Manage Payments',
-                      color: const Color(0xFF4169E1),
+                      color: Theme.of(context).colorScheme.tertiary,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -453,7 +453,7 @@ class _ActionButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

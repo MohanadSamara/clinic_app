@@ -310,7 +310,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
               width: 35,
               height: 35,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.blue, width: 2),
                 boxShadow: [
@@ -354,7 +354,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 width: isNext ? 40 : 32,
                 height: isNext ? 40 : 32,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isNext ? Colors.red : Colors.orange,
@@ -414,7 +414,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
               ],
               color: Colors.purple.shade600,
               strokeWidth: 3.0,
-              borderColor: Colors.white,
+              borderColor: Theme.of(context).colorScheme.surface,
               borderStrokeWidth: 1.0,
             ),
           );
@@ -650,7 +650,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                                     points: _actualRoutePoints,
                                                     color: Colors.grey.shade600,
                                                     strokeWidth: 4.0,
-                                                    borderColor: Colors.white,
+                                                    borderColor: Theme.of(context).colorScheme.surface,
                                                     borderStrokeWidth: 1.0,
                                                   ),
                                                 // Planned route to next appointment
@@ -660,7 +660,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                                     points: _plannedRoutePoints,
                                                     color: Colors.blue.shade700,
                                                     strokeWidth: 6.0,
-                                                    borderColor: Colors.white,
+                                                    borderColor: Theme.of(context).colorScheme.surface,
                                                     borderStrokeWidth: 2.0,
                                                   ),
                                                 // Appointment sequence polylines
@@ -684,7 +684,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                                   BorderRadius.circular(8),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black26,
+                                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 2),
                                                 ),

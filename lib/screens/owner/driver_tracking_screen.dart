@@ -115,7 +115,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 // Driver status summary
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: Colors.grey.shade100,
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -149,10 +149,10 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 Container(
                   height: 150,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, -2),
                       ),
@@ -289,7 +289,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: _getStatusColor(driverStatus.status),
@@ -328,7 +328,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.red, width: 3),
                   boxShadow: [

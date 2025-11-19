@@ -55,16 +55,16 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.pets, size: 64, color: Colors.grey),
+                  const Icon(Icons.pets, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   const SizedBox(height: 16),
                   const Text(
                     'No pets registered yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Add your pets to book appointments and manage their care',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -196,7 +196,7 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                 );
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
           ),
         ],
@@ -242,7 +242,7 @@ class _PetCard extends StatelessWidget {
                     pet.name.substring(0, 1).toUpperCase(),
                     style: const TextStyle(
                       fontSize: 24,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -295,7 +295,7 @@ class _PetCard extends StatelessWidget {
                         Text(
                           'Medical: ${pet.medicalHistorySummary}',
                           style: TextStyle(
-                            color: Colors.grey[600],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             fontSize: 12,
                           ),
                           maxLines: 2,
@@ -333,7 +333,7 @@ class _PetCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Notes: ${pet.notes}',
-                style: TextStyle(color: Colors.grey[600]),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ],
           ],
