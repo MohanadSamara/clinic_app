@@ -232,10 +232,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       backgroundColor: Theme.of(
                                         context,
                                       ).colorScheme.primary,
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.local_hospital,
                                         size: 40,
-                                        color: Theme.of(context).colorScheme.onPrimary,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimary,
                                       ),
                                     ),
                                     const SizedBox(height: 8),

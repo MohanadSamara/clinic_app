@@ -83,7 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _googleSignIn,
-                    icon: const Icon(Icons.g_mobiledata, color: Theme.of(context).colorScheme.onPrimary),
+                    icon: Icon(
+                      Icons.g_mobiledata,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                     label: const Text('Google'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.error,
@@ -97,7 +100,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _facebookSignIn,
-                    icon: const Icon(Icons.facebook, color: Theme.of(context).colorScheme.onPrimary),
+                    icon: Icon(
+                      Icons.facebook,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                     label: const Text('Facebook'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.secondary,

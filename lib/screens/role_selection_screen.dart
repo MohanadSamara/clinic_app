@@ -78,16 +78,18 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   final role = _roles[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
-                    child: RadioListTile<String>(
+                    child: ListTile(
                       title: Text(role['label']!),
                       subtitle: Text(role['description']!),
-                      value: role['value']!,
-                      groupValue: _selectedRole,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedRole = value;
-                        });
-                      },
+                      leading: Radio<String>(
+                        value: role['value']!,
+                        groupValue: _selectedRole,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedRole = value;
+                          });
+                        },
+                      ),
                     ),
                   );
                 },

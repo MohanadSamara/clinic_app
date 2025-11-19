@@ -108,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             user?.name.isNotEmpty == true
                                 ? user!.name[0].toUpperCase()
                                 : 'U',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Theme.of(context).colorScheme.onPrimary,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -207,8 +207,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               icon: const Icon(Icons.add),
                               label: const Text('Add Your First Pet'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.tertiary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.tertiary,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -257,7 +261,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               label: const Text('Book Appointment'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),

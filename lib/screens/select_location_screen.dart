@@ -275,7 +275,9 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
               onPressed: _confirmLocation,
               child: Text(
                 widget.isNavigationMode ? 'Start Navigation' : 'Confirm',
-                style: const TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
               ),
             ),
         ],
@@ -312,7 +314,9 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                     color: Theme.of(context).colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, -2),
                       ),

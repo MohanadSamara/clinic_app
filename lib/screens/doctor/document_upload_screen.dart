@@ -199,7 +199,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                             style: TextStyle(
                               color: _fileName != null
                                   ? Theme.of(context).colorScheme.onSurface
-                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ),
@@ -319,10 +321,15 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   ),
                 ),
                 child: _isUploading
-                    ? const CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary)
-                    : const Text(
+                    ? CircularProgressIndicator(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      )
+                    : Text(
                         'Upload Document',
-                        style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onPrimary),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       ),
               ),
             ),

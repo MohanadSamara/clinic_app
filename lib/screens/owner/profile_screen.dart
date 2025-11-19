@@ -190,9 +190,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                                   .substring(0, 1)
                                                   .toUpperCase()
                                             : '?',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 32,
-                                          color: Theme.of(context).colorScheme.onPrimary,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

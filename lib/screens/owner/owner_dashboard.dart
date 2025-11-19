@@ -63,17 +63,20 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         ).colorScheme.onSurface.withOpacity(0.6),
         elevation: 8,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Pets'),
+          BottomNavigationBarItem(icon: const Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: const Icon(Icons.pets), label: 'Pets'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
+            icon: const Icon(Icons.calendar_today),
             label: 'Book',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.schedule),
+            icon: const Icon(Icons.schedule),
             label: 'Appointments',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -354,19 +357,25 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
 
           final records = medicalProvider.medicalRecords;
           if (records.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.medical_services_outlined,
                     size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'No medical records found',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
                 ],
               ),
@@ -392,7 +401,10 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.pets, color: Theme.of(context).colorScheme.secondary),
+                          Icon(
+                            Icons.pets,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -405,7 +417,11 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                           ),
                           Text(
                             record.date.split('T')[0],
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
+                            ),
                           ),
                         ],
                       ),

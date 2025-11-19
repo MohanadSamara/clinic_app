@@ -135,7 +135,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _googleSignUp,
-                    icon: const Icon(Icons.g_mobiledata, color: Theme.of(context).colorScheme.onPrimary),
+                    icon: Icon(
+                      Icons.g_mobiledata,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                     label: const Text('Google'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.error,
@@ -149,7 +152,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _facebookSignUp,
-                    icon: const Icon(Icons.facebook, color: Theme.of(context).colorScheme.onPrimary),
+                    icon: Icon(
+                      Icons.facebook,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                     label: const Text('Facebook'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.secondary,
