@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/appointment.dart';
-import '../../services/calendar_service.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
