@@ -6,11 +6,16 @@ import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/medical_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../models/service.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
 import '../../models/pet.dart';
+import '../../models/user.dart';
+import '../../db/db_helper.dart';
+import '../../l10n/app_localizations.dart';
 import '../../components/modern_cards.dart';
+import '../../screens/owner/doctor_selection_screen.dart';
 import 'appointment_management_screen.dart';
 import 'treatment_recording_screen.dart';
 import 'inventory_management_screen.dart';
@@ -50,21 +55,27 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           context,
         ).colorScheme.onSurface.withOpacity(0.6),
         elevation: 8,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: AppLocalizations.of(context)!.home,
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.schedule),
-            label: 'Appointments',
+            label: AppLocalizations.of(context)!.appointments,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.medical_services),
-            label: 'Treatments',
+            label: AppLocalizations.of(context)!.treatments,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),
-            label: 'Inventory',
+            label: AppLocalizations.of(context)!.inventory,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: AppLocalizations.of(context)!.profile,
+          ),
         ],
       ),
     );
@@ -80,6 +91,7 @@ class _DoctorHomeScreen extends StatefulWidget {
 
 class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
   Service? _selectedService;
+  User? _linkedDriver;
   bool _isLoading = false;
 
   @override
@@ -102,6 +114,27 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
     await serviceProvider.loadServices();
     if (doctorId != null) {
       await appointmentProvider.loadAppointments(doctorId: doctorId);
+      await _loadLinkedDriver();
+    }
+  }
+
+  Future<void> _loadLinkedDriver() async {
+    if (!mounted) return;
+    final authProvider = context.read<AuthProvider>();
+    try {
+      if (authProvider.user?.linkedDriverId != null) {
+        final dbHelper = DBHelper.instance;
+        final driverData = await dbHelper.getUserById(
+          authProvider.user!.linkedDriverId!,
+        );
+        if (driverData != null && mounted) {
+          setState(() {
+            _linkedDriver = User.fromMap(driverData);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading linked driver: $e');
     }
   }
 
@@ -141,11 +174,30 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vet2U'),
+        title: Text(AppLocalizations.of(context)!.appTitle),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
+          Consumer<LocaleProvider>(
+            builder: (context, localeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  Icons.language,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => _showLanguageDialog(context, localeProvider),
+                tooltip: AppLocalizations.of(context)!.changeLanguage,
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const DoctorSelectionScreen()),
+            ),
+            tooltip: AppLocalizations.of(context)!.selectDriver,
+          ),
           IconButton(
             icon: Icon(
               Icons.logout,
@@ -159,7 +211,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
               color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () => SystemNavigator.pop(),
-            tooltip: 'Close App',
+            tooltip: AppLocalizations.of(context)!.closeApp,
           ),
         ],
       ),
@@ -183,7 +235,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome back,',
+                    AppLocalizations.of(context)!.welcomeBack,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Theme.of(
                         context,
@@ -224,7 +276,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Service for Today',
+                        AppLocalizations.of(context)!.serviceForToday,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w600,
@@ -300,6 +352,122 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
               ),
             ),
           ),
+
+          // Linked Driver Card
+          if (_linkedDriver != null) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 950),
+                  builder: (context, driverValue, child) {
+                    return Opacity(
+                      opacity: driverValue,
+                      child: Transform.translate(
+                        offset: Offset(30 * (1 - driverValue), 0),
+                        child: Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          color: Theme.of(context).colorScheme.surface,
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Linked Driver',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _linkedDriver!.name,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _linkedDriver!.email,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                                ),
+                                if (_linkedDriver!.phone != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Phone: ${_linkedDriver!.phone}',
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'ACTIVE',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
 
           // Quick Stats
           SliverToBoxAdapter(
@@ -434,6 +602,47 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLanguageDialog(
+    BuildContext context,
+    LocaleProvider localeProvider,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
+              title: const Text('English'),
+              onTap: () {
+                localeProvider.setLocale(const Locale('en'));
+                Navigator.of(context).pop();
+              },
+              selected: localeProvider.locale.languageCode == 'en',
+            ),
+            ListTile(
+              leading: const Text('🇸🇦', style: TextStyle(fontSize: 24)),
+              title: const Text('العربية'),
+              onTap: () {
+                localeProvider.setLocale(const Locale('ar'));
+                Navigator.of(context).pop();
+              },
+              selected: localeProvider.locale.languageCode == 'ar',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
         ],
       ),

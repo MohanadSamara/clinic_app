@@ -5,11 +5,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/appointment_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/appointment.dart';
 import '../../models/driver_status.dart';
+import '../../models/user.dart';
 import '../../db/db_helper.dart';
 import '../../components/modern_cards.dart';
+import 'doctor_selection_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -23,6 +26,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   final MapController _mapController = MapController();
   List<Appointment> _assignedAppointments = [];
   DriverStatus? _currentStatus;
+  User? _linkedDoctor;
   bool _isLoading = true;
   bool _isDisposed = false;
   String? _currentAddress;
@@ -67,7 +71,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user?.id != null) {
       // Run database operations in parallel for better performance
-      await Future.wait([_loadAssignedAppointments(), _loadDriverStatus()]);
+      await Future.wait([
+        _loadAssignedAppointments(),
+        _loadDriverStatus(),
+        _loadLinkedDoctor(),
+      ]);
 
       // Load location separately as it may take longer (especially on web with API calls)
       _loadCurrentLocationAsync();
@@ -93,14 +101,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final authProvider = context.read<AuthProvider>();
     try {
       final dbHelper = DBHelper.instance;
-      // Get appointments assigned to this driver, or all appointments with locations if none assigned
-      var assignedAppointments = await dbHelper.getAppointments(
-        driverId: authProvider.user!.id!,
-      );
+      List<Map<String, dynamic>> assignedAppointmentsData = [];
 
-      // If no assigned appointments, load all appointments with locations
-      if (assignedAppointments.isEmpty) {
-        assignedAppointments = await dbHelper.getAppointments(
+      // Check if driver is linked to a doctor
+      if (authProvider.user?.linkedDoctorId == null) {
+        // Driver is not linked to any doctor - show no appointments
+        assignedAppointmentsData = [];
+      } else {
+        // Driver is linked to a doctor - get appointments for that doctor
+        assignedAppointmentsData = await dbHelper.getAppointments(
+          doctorId: authProvider.user!.linkedDoctorId!,
           hasLocation: true,
         );
       }
@@ -108,7 +118,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       if (mounted && !_isDisposed) {
         setState(() {
           _assignedAppointments =
-              assignedAppointments
+              assignedAppointmentsData
                   .map((a) => Appointment.fromMap(a))
                   .where(
                     (apt) =>
@@ -151,6 +161,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
       }
     } catch (e) {
       debugPrint('Error loading driver status: $e');
+    }
+  }
+
+  Future<void> _loadLinkedDoctor() async {
+    if (!mounted) return;
+    final authProvider = context.read<AuthProvider>();
+    try {
+      if (authProvider.user?.linkedDoctorId != null) {
+        final dbHelper = DBHelper.instance;
+        final doctorData = await dbHelper.getUserById(
+          authProvider.user!.linkedDoctorId!,
+        );
+        if (doctorData != null && mounted) {
+          setState(() {
+            _linkedDoctor = User.fromMap(doctorData);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading linked doctor: $e');
     }
   }
 
@@ -487,6 +517,25 @@ class _DriverDashboardState extends State<DriverDashboard> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
+          Consumer<LocaleProvider>(
+            builder: (context, localeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  Icons.language,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => _showLanguageDialog(context, localeProvider),
+                tooltip: 'Change Language',
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const DoctorSelectionScreen()),
+            ),
+            tooltip: 'Select Doctor',
+          ),
           IconButton(
             icon: Icon(
               Icons.refresh,
@@ -650,7 +699,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                                     points: _actualRoutePoints,
                                                     color: Colors.grey.shade600,
                                                     strokeWidth: 4.0,
-                                                    borderColor: Theme.of(context).colorScheme.surface,
+                                                    borderColor: Theme.of(
+                                                      context,
+                                                    ).colorScheme.surface,
                                                     borderStrokeWidth: 1.0,
                                                   ),
                                                 // Planned route to next appointment
@@ -660,7 +711,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                                     points: _plannedRoutePoints,
                                                     color: Colors.blue.shade700,
                                                     strokeWidth: 6.0,
-                                                    borderColor: Theme.of(context).colorScheme.surface,
+                                                    borderColor: Theme.of(
+                                                      context,
+                                                    ).colorScheme.surface,
                                                     borderStrokeWidth: 2.0,
                                                   ),
                                                 // Appointment sequence polylines
@@ -684,7 +737,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                                   BorderRadius.circular(8),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.1),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 2),
                                                 ),
@@ -886,6 +942,120 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       },
                     ),
 
+                    // Linked Doctor Card
+                    if (_linkedDoctor != null) ...[
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 950),
+                        builder: (context, doctorValue, child) {
+                          return Opacity(
+                            opacity: doctorValue,
+                            child: Transform.translate(
+                              offset: Offset(30 * (1 - doctorValue), 0),
+                              child: Card(
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                color: Theme.of(context).colorScheme.surface,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.person,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            size: 24,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            'Linked Doctor',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.onSurface,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Dr. ${_linkedDoctor!.name}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _linkedDoctor!.email,
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7),
+                                        ),
+                                      ),
+                                      if (_linkedDoctor!.phone != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Phone: ${_linkedDoctor!.phone}',
+                                          style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.7),
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'ACTIVE',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
                     const SizedBox(height: 24),
 
                     // Next Appointment (Highlighted)
@@ -1010,6 +1180,89 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         },
                       ),
                       const SizedBox(height: 24),
+                    ] else if (_linkedDoctor == null) ...[
+                      // Show message for unlinked drivers
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 1000),
+                        builder: (context, noAppointmentValue, child) {
+                          return Opacity(
+                            opacity: noAppointmentValue,
+                            child: Transform.translate(
+                              offset: Offset(30 * (1 - noAppointmentValue), 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'No Appointments Available',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Card(
+                                    color: Colors.grey.shade50,
+                                    elevation: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(20.0),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.link_off,
+                                            size: 64,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            'Link with a Doctor',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'You need to link with a doctor to see appointments. Only linked drivers can view and manage appointments.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          ElevatedButton.icon(
+                                            onPressed: () =>
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const DoctorSelectionScreen(),
+                                                  ),
+                                                ),
+                                            icon: const Icon(Icons.person_add),
+                                            label: const Text(
+                                              'Link with Doctor',
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.blue,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 24,
+                                                    vertical: 12,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
                     ],
 
                     // All Appointments
@@ -1034,12 +1287,74 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 const SizedBox(height: 16),
 
                                 if (_assignedAppointments.isEmpty)
-                                  const Card(
+                                  Card(
                                     child: Padding(
-                                      padding: EdgeInsets.all(16.0),
+                                      padding: const EdgeInsets.all(16.0),
                                       child: Center(
-                                        child: Text(
-                                          'No appointments assigned for today',
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (_linkedDoctor == null) ...[
+                                              const Icon(
+                                                Icons.link_off,
+                                                size: 48,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(height: 16),
+                                              const Text(
+                                                'No doctor linked',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                'Link with a doctor to see appointments',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              ElevatedButton.icon(
+                                                onPressed: () =>
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            const DoctorSelectionScreen(),
+                                                      ),
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.person_add,
+                                                ),
+                                                label: const Text(
+                                                  'Link with Doctor',
+                                                ),
+                                              ),
+                                            ] else ...[
+                                              const Icon(
+                                                Icons.event_busy,
+                                                size: 48,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(height: 16),
+                                              const Text(
+                                                'No appointments assigned for today',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'For Dr. ${_linkedDoctor!.name}',
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -1399,5 +1714,46 @@ class _DriverDashboardState extends State<DriverDashboard> {
     if (_driverLat != null && _driverLng != null) {
       _mapController.move(LatLng(_driverLat!, _driverLng!), 15.0);
     }
+  }
+
+  void _showLanguageDialog(
+    BuildContext context,
+    LocaleProvider localeProvider,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
+              title: const Text('English'),
+              onTap: () {
+                localeProvider.setLocale(const Locale('en'));
+                Navigator.of(context).pop();
+              },
+              selected: localeProvider.locale.languageCode == 'en',
+            ),
+            ListTile(
+              leading: const Text('🇸🇦', style: TextStyle(fontSize: 24)),
+              title: const Text('العربية'),
+              onTap: () {
+                localeProvider.setLocale(const Locale('ar'));
+                Navigator.of(context).pop();
+              },
+              selected: localeProvider.locale.languageCode == 'ar',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 }

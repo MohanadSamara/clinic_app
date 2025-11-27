@@ -30,6 +30,36 @@ class PetProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadPetsByDoctor(int doctorId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await DBHelper.instance.getPetsByDoctor(doctorId);
+      _pets = data.map((item) => Pet.fromMap(item)).toList();
+    } catch (e) {
+      debugPrint('Error loading pets by doctor: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadPetsByLinkedDoctor(int doctorId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await DBHelper.instance.getPetsByLinkedDoctor(doctorId);
+      _pets = data.map((item) => Pet.fromMap(item)).toList();
+    } catch (e) {
+      debugPrint('Error loading pets by linked doctor: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadMedicalRecords(int petId) async {
     try {
       final data = await DBHelper.instance.getMedicalRecordsByPet(petId);
@@ -42,11 +72,25 @@ class PetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> addPet(Pet pet) async {
+  Future<bool> addPet(Pet pet, {int? doctorId}) async {
     try {
       final id = await DBHelper.instance.insertPet(pet.toMap());
       final newPet = pet.copyWith(id: id);
       _pets.add(newPet);
+
+      // Create initial medical record if doctor is linked
+      if (doctorId != null) {
+        final initialRecord = MedicalRecord(
+          petId: id,
+          doctorId: doctorId,
+          diagnosis: 'Initial checkup',
+          treatment: 'Pet registered in system',
+          date: DateTime.now().toIso8601String().split('T')[0],
+          notes: 'Initial medical record created upon pet registration',
+        );
+        await DBHelper.instance.insertMedicalRecord(initialRecord.toMap());
+      }
+
       notifyListeners();
       return true;
     } catch (e) {

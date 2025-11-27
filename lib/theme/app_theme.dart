@@ -72,10 +72,10 @@ class AppTheme {
   static const Color driverArrived = Color(0xFF2196F3);
   static const Color driverOffline = Color(0xFF9E9E9E);
 
-  // ===== TYPOGRAPHY SYSTEM =====
+  // ===== ENHANCED TYPOGRAPHY SYSTEM =====
   static const String fontFamily = 'Inter'; // Modern, readable font
 
-  // Font Sizes
+  // Font Sizes - Premium Scale
   static const double fontSizeXs = 12.0;
   static const double fontSizeSm = 14.0;
   static const double fontSizeBase = 16.0;
@@ -84,16 +84,18 @@ class AppTheme {
   static const double fontSize2xl = 24.0;
   static const double fontSize3xl = 30.0;
   static const double fontSize4xl = 36.0;
+  static const double fontSize5xl = 48.0;
 
-  // Font Weights
+  // Font Weights - Extended Range
   static const FontWeight fontWeightLight = FontWeight.w300;
   static const FontWeight fontWeightRegular = FontWeight.w400;
   static const FontWeight fontWeightMedium = FontWeight.w500;
   static const FontWeight fontWeightSemiBold = FontWeight.w600;
   static const FontWeight fontWeightBold = FontWeight.w700;
   static const FontWeight fontWeightExtraBold = FontWeight.w800;
+  static const FontWeight fontWeightBlack = FontWeight.w900;
 
-  // ===== SPACING SYSTEM =====
+  // ===== PREMIUM SPACING SYSTEM =====
   static const double spacingXs = 4.0;
   static const double spacingSm = 8.0;
   static const double spacingMd = 16.0;
@@ -101,31 +103,88 @@ class AppTheme {
   static const double spacingXl = 32.0;
   static const double spacing2xl = 48.0;
   static const double spacing3xl = 64.0;
+  static const double spacing4xl = 80.0;
 
-  // ===== BORDER RADIUS SYSTEM =====
+  // ===== VET THEME COMPATIBILITY SPACING =====
+  static const double padding = spacingMd; // 16.0 - Standard padding
+  static const double paddingLarge =
+      spacingLg; // 24.0 - Large padding for sections
+  static const double paddingSmall =
+      spacingSm; // 8.0 - Small padding for tight spaces
+
+  // ===== ENHANCED BORDER RADIUS SYSTEM =====
   static const double borderRadiusNone = 0.0;
-  static const double borderRadiusSm = 4.0;
-  static const double borderRadiusMd = 8.0;
-  static const double borderRadiusLg = 12.0;
-  static const double borderRadiusXl = 16.0;
-  static const double borderRadius2xl = 24.0;
+  static const double borderRadiusSm = 8.0; // Small elements
+  static const double borderRadiusMd = 12.0; // Buttons and interactive elements
+  static const double borderRadiusLg = 16.0; // Cards and containers
+  static const double borderRadiusXl = 20.0; // Large containers
+  static const double borderRadius2xl = 24.0; // Vet theme inspired large radius
+  static const double borderRadius3xl = 32.0; // Premium large size
   static const double borderRadiusFull = 9999.0;
 
-  // ===== SHADOW SYSTEM =====
+  // ===== VET THEME COMPATIBILITY =====
+  static const double cardRadius = borderRadiusLg; // 16.0
+  static const double buttonRadius = borderRadiusMd; // 12.0
+  static const double smallRadius = borderRadiusSm; // 8.0
+  static const double largeRadius = borderRadius2xl; // 24.0
+
+  // Vet theme color compatibility
+  static const Color background = neutral50;
+  static const Color onSurfaceVariant = neutral600;
+  static const Color primary = primary500;
+
+  // ===== PREMIUM SHADOW SYSTEM =====
+  static const List<BoxShadow> shadowXs = [
+    BoxShadow(color: Color(0x08000000), offset: Offset(0, 1), blurRadius: 1),
+  ];
+
   static const List<BoxShadow> shadowSm = [
     BoxShadow(color: Color(0x0D000000), offset: Offset(0, 1), blurRadius: 2),
   ];
 
   static const List<BoxShadow> shadowMd = [
-    BoxShadow(color: Color(0x1A000000), offset: Offset(0, 4), blurRadius: 6),
+    BoxShadow(color: Color(0x14000000), offset: Offset(0, 2), blurRadius: 4),
   ];
 
   static const List<BoxShadow> shadowLg = [
-    BoxShadow(color: Color(0x26000000), offset: Offset(0, 10), blurRadius: 15),
+    BoxShadow(color: Color(0x1A000000), offset: Offset(0, 4), blurRadius: 8),
   ];
 
   static const List<BoxShadow> shadowXl = [
-    BoxShadow(color: Color(0x33000000), offset: Offset(0, 20), blurRadius: 25),
+    BoxShadow(color: Color(0x26000000), offset: Offset(0, 8), blurRadius: 16),
+  ];
+
+  static const List<BoxShadow> shadow2xl = [
+    BoxShadow(color: Color(0x33000000), offset: Offset(0, 16), blurRadius: 24),
+  ];
+
+  // ===== VET THEME COMPATIBILITY SHADOWS =====
+  static const List<BoxShadow> softShadow = [
+    BoxShadow(
+      color: Color(0x0A000000), // Very subtle shadow
+      blurRadius: 4,
+      offset: Offset(0, 1),
+    ),
+  ];
+
+  static const List<BoxShadow> mediumShadow = [
+    BoxShadow(
+      color: Color(0x12000000), // Medium shadow for cards
+      blurRadius: 8,
+      offset: Offset(0, 2),
+    ),
+  ];
+
+  static const List<BoxShadow> strongShadow = [
+    BoxShadow(
+      color: Color(0x1F000000), // Strong shadow for emphasis
+      blurRadius: 16,
+      offset: Offset(0, 4),
+    ),
+  ];
+
+  static const List<BoxShadow> elevationShadow = [
+    BoxShadow(color: Color(0x0F000000), blurRadius: 12, offset: Offset(0, 6)),
   ];
 
   // ===== ANIMATION SYSTEM =====

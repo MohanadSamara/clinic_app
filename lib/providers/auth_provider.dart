@@ -294,6 +294,7 @@ class AuthProvider extends ChangeNotifier {
     String? phone,
     String? currentPassword,
     String? newPassword,
+    String? profileImage,
   }) async {
     if (_user == null) throw Exception('Not authenticated');
 
@@ -304,6 +305,11 @@ class AuthProvider extends ChangeNotifier {
       }
       if (phone != null) {
         updates['phone'] = phone.trim().isEmpty ? null : phone.trim();
+      }
+      if (profileImage != null) {
+        updates['profileImage'] = profileImage.trim().isEmpty
+            ? null
+            : profileImage.trim();
       }
 
       // Handle password change
@@ -330,6 +336,7 @@ class AuthProvider extends ChangeNotifier {
           name: updates['name'] ?? _user!.name,
           phone: updates['phone'] ?? _user!.phone,
           password: updates['password'] ?? _user!.password,
+          profileImage: updates['profileImage'] ?? _user!.profileImage,
         );
         _user = updatedUser;
         await _saveUserToStorage(_user!);

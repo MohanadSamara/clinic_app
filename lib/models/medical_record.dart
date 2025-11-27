@@ -35,15 +35,15 @@ class MedicalRecord {
   };
 
   factory MedicalRecord.fromMap(Map<String, dynamic> m) => MedicalRecord(
-    id: m['id'],
-    petId: m['pet_id'],
-    doctorId: m['doctor_id'],
-    diagnosis: m['diagnosis'] ?? '',
-    treatment: m['treatment'] ?? '',
-    prescription: m['prescription'],
-    notes: m['notes'],
-    date: m['date'] ?? '',
-    attachments: m['attachments']?.split(','),
+    id: m['id'] is int ? m['id'] as int : null,
+    petId: m['pet_id'] is int ? m['pet_id'] as int : 0,
+    doctorId: m['doctor_id'] is int ? m['doctor_id'] as int : 0,
+    diagnosis: m['diagnosis']?.toString() ?? '',
+    treatment: m['treatment']?.toString() ?? '',
+    prescription: m['prescription']?.toString(),
+    notes: m['notes']?.toString(),
+    date: m['date']?.toString() ?? '',
+    attachments: m['attachments']?.toString().split(','),
   );
 
   MedicalRecord copyWith({

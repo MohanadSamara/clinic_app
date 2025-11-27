@@ -8,6 +8,7 @@ import '../../providers/pet_provider.dart';
 import '../../models/document.dart';
 import '../../models/pet.dart';
 import '../../theme/app_theme.dart';
+import '../../components/ui_kit.dart';
 
 class MedicalDocumentsScreen extends StatefulWidget {
   const MedicalDocumentsScreen({super.key});
@@ -126,6 +127,10 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
       ),
       body: Column(
         children: [
+          SectionHeader(
+            title: 'Medical Documents',
+            subtitle: 'Prescriptions, lab results, and more',
+          ),
           // Pet Filter
           Consumer<PetProvider>(
             builder: (context, petProvider, child) {
@@ -184,34 +189,11 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                 }
 
                 if (documents.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.description,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No medical documents found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Documents uploaded by your doctor will appear here',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                  return EmptyState(
+                    icon: Icons.description,
+                    title: 'No medical documents found',
+                    message:
+                        'Documents uploaded by your doctor will appear here',
                   );
                 }
 

@@ -29,13 +29,13 @@ class Service {
   };
 
   factory Service.fromMap(Map<String, dynamic> m) => Service(
-    id: m['id'],
-    name: m['name'] ?? '',
-    description: m['description'] ?? '',
-    price: (m['price'] as num).toDouble(),
-    category: m['category'] ?? '',
+    id: m['id'] is int ? m['id'] as int : null,
+    name: m['name']?.toString() ?? '',
+    description: m['description']?.toString() ?? '',
+    price: m['price'] is num ? (m['price'] as num).toDouble() : 0.0,
+    category: m['category']?.toString() ?? '',
     isActive: m['is_active'] == 1,
-    promotionalPrice: m['promotional_price'] != null
+    promotionalPrice: m['promotional_price'] is num
         ? (m['promotional_price'] as num).toDouble()
         : null,
   );

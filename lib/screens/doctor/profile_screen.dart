@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart';
+import '../../theme/app_theme.dart';
+import '../../components/ui_kit.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({super.key});
@@ -166,7 +168,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             child: Transform.translate(
               offset: Offset(0, 20 * (1 - animationValue)),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(AppTheme.padding),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -287,7 +289,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                   ),
                                 ),
                                 child: Padding(
-                                  padding: const EdgeInsets.all(24),
+                                  padding: EdgeInsets.all(AppTheme.padding),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -311,7 +313,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         controller: _nameController,
                                         decoration: const InputDecoration(
                                           labelText: 'Full Name',
-                                          border: OutlineInputBorder(),
                                           prefixIcon: Icon(Icons.person),
                                         ),
                                         validator: (value) {
@@ -332,7 +333,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         controller: _emailController,
                                         decoration: const InputDecoration(
                                           labelText: 'Email Address',
-                                          border: OutlineInputBorder(),
                                           prefixIcon: Icon(Icons.email),
                                         ),
                                         readOnly: true,
@@ -345,7 +345,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         controller: _phoneController,
                                         decoration: const InputDecoration(
                                           labelText: 'Phone Number',
-                                          border: OutlineInputBorder(),
                                           prefixIcon: Icon(Icons.phone),
                                         ),
                                         keyboardType: TextInputType.phone,
@@ -699,27 +698,19 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                               offset: Offset(0, 20 * (1 - buttonValue)),
                               child: Column(
                                 children: [
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: _isLoading
-                                          ? null
-                                          : _updateProfile,
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                      ),
-                                      child: _isLoading
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : const Text('Save Changes'),
-                                    ),
+                                  PrimaryButton(
+                                    label: 'Save Changes',
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _updateProfile,
+                                    isLoading: _isLoading,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Your profile information helps us contact you and secure your account.',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(color: Colors.grey[600]),
+                                    textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: 16),
                                   SizedBox(

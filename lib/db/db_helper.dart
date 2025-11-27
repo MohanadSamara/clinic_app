@@ -46,7 +46,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 12,
+      version: 17,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -202,6 +202,79 @@ class DBHelper {
         debugPrint('Error creating audit_logs table: $e');
       }
     }
+    if (oldVersion < 13) {
+      // Add profileImage column to users table
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN profileImage TEXT');
+        debugPrint('Added profileImage column to users table');
+      } catch (e) {
+        debugPrint('Error adding profileImage column: $e');
+      }
+    }
+    if (oldVersion < 14) {
+      // Add linked_doctor_id and linked_driver_id columns to users table for direct doctor-driver linking
+      try {
+        await db.execute(
+          'ALTER TABLE users ADD COLUMN linked_doctor_id INTEGER',
+        );
+        await db.execute(
+          'ALTER TABLE users ADD COLUMN linked_driver_id INTEGER',
+        );
+        debugPrint(
+          'Added linked_doctor_id and linked_driver_id columns to users table',
+        );
+      } catch (e) {
+        debugPrint('Error adding linked columns to users table: $e');
+      }
+    }
+    if (oldVersion < 15) {
+      // Ensure linked_doctor_id and linked_driver_id columns exist (fix for databases where migration failed)
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(users)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('linked_doctor_id')) {
+          await db.execute(
+            'ALTER TABLE users ADD COLUMN linked_doctor_id INTEGER',
+          );
+          debugPrint('Added linked_doctor_id column to users table');
+        }
+        if (!columns.contains('linked_driver_id')) {
+          await db.execute(
+            'ALTER TABLE users ADD COLUMN linked_driver_id INTEGER',
+          );
+          debugPrint('Added linked_driver_id column to users table');
+        }
+      } catch (e) {
+        debugPrint('Error ensuring linked columns exist: $e');
+      }
+    }
+    if (oldVersion < 16) {
+      // Add medical_record_id column to documents table
+      try {
+        await db.execute(
+          'ALTER TABLE documents ADD COLUMN medical_record_id INTEGER',
+        );
+        debugPrint('Added medical_record_id column to documents table');
+      } catch (e) {
+        debugPrint(
+          'Error adding medical_record_id column to documents table: $e',
+        );
+      }
+    }
+    if (oldVersion < 17) {
+      // Add calendar_event_id column to appointments table for Google Calendar integration
+      try {
+        await db.execute(
+          'ALTER TABLE appointments ADD COLUMN calendar_event_id TEXT',
+        );
+        debugPrint('Added calendar_event_id column to appointments table');
+      } catch (e) {
+        debugPrint(
+          'Error adding calendar_event_id column to appointments table: $e',
+        );
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -220,7 +293,10 @@ class DBHelper {
         phone TEXT,
         role TEXT NOT NULL DEFAULT 'owner',
         provider TEXT,
-        providerId TEXT
+        providerId TEXT,
+        profileImage TEXT,
+        linked_doctor_id INTEGER,
+        linked_driver_id INTEGER
       );
     ''');
 
@@ -257,9 +333,36 @@ class DBHelper {
         driver_id INTEGER,
         urgency_level TEXT,
         location_lat REAL,
-        location_lng REAL
+        location_lng REAL,
+        calendar_event_id TEXT
       );
     ''');
+
+    // Create indexes for appointments performance
+    await db.execute(
+      'CREATE INDEX idx_appointments_owner_id ON appointments(owner_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_doctor_id ON appointments(doctor_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_driver_id ON appointments(driver_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_status ON appointments(status)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_scheduled_at ON appointments(scheduled_at)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_location ON appointments(location_lat, location_lng)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_owner_status ON appointments(owner_id, status)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_appointments_doctor_status ON appointments(doctor_id, status)',
+    );
 
     // Services table
     await db.execute('''
@@ -327,6 +430,24 @@ class DBHelper {
         status TEXT,
         transaction_id TEXT,
         created_at TEXT
+      );
+    ''');
+
+    // Vans table
+    await db.execute('''
+      CREATE TABLE vans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        license_plate TEXT UNIQUE NOT NULL,
+        model TEXT,
+        capacity INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'available',
+        description TEXT,
+        assigned_driver_id INTEGER,
+        assigned_doctor_id INTEGER,
+        created_at TEXT,
+        FOREIGN KEY (assigned_driver_id) REFERENCES users (id),
+        FOREIGN KEY (assigned_doctor_id) REFERENCES users (id)
       );
     ''');
 
@@ -426,6 +547,7 @@ class DBHelper {
       CREATE TABLE IF NOT EXISTS documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         pet_id INTEGER,
+        medical_record_id INTEGER,
         file_name TEXT,
         file_type TEXT,
         file_path TEXT,
@@ -587,6 +709,32 @@ class DBHelper {
     return await db.query('pets', where: 'owner_id=?', whereArgs: [ownerId]);
   }
 
+  Future<List<Map<String, dynamic>>> getPetsByDoctor(int doctorId) async {
+    final db = await instance.database;
+    return await db.rawQuery(
+      '''
+      SELECT DISTINCT p.* FROM pets p
+      INNER JOIN medical_records mr ON p.id = mr.pet_id
+      WHERE mr.doctor_id = ?
+      ORDER BY p.name ASC
+    ''',
+      [doctorId],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPetsByLinkedDoctor(int doctorId) async {
+    final db = await instance.database;
+    return await db.rawQuery(
+      '''
+      SELECT p.* FROM pets p
+      INNER JOIN users u ON p.owner_id = u.id
+      WHERE u.linked_doctor_id = ?
+      ORDER BY p.name ASC
+    ''',
+      [doctorId],
+    );
+  }
+
   Future<Map<String, dynamic>?> getPetById(int id) async {
     final db = await instance.database;
     final res = await db.query('pets', where: 'id=?', whereArgs: [id]);
@@ -669,7 +817,7 @@ class DBHelper {
       whereClause += '(location_lat IS NOT NULL AND location_lng IS NOT NULL)';
     }
 
-    // Join with users table to get driver information
+    // Join with users table to get driver and doctor information
     final query =
         '''
       SELECT
@@ -677,11 +825,15 @@ class DBHelper {
         doctor.name as doctor_name,
         doctor.email as doctor_email,
         doctor.phone as doctor_phone,
+        driver.name as driver_name,
+        driver.email as driver_email,
+        driver.phone as driver_phone,
         owner.name as owner_name,
         owner.email as owner_email,
         owner.phone as owner_phone
       FROM appointments
       LEFT JOIN users doctor ON appointments.doctor_id = doctor.id
+      LEFT JOIN users driver ON appointments.driver_id = driver.id
       LEFT JOIN users owner ON appointments.owner_id = owner.id
       ${whereClause.isNotEmpty ? 'WHERE $whereClause' : ''}
       ORDER BY appointments.scheduled_at DESC
@@ -933,6 +1085,31 @@ class DBHelper {
       where: 'pet_id=?',
       whereArgs: [petId],
       orderBy: 'upload_date DESC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getDocumentsByMedicalRecord(
+    int medicalRecordId,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'documents',
+      where: 'medical_record_id=?',
+      whereArgs: [medicalRecordId],
+      orderBy: 'upload_date DESC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getDocumentsByOwner(int ownerId) async {
+    final db = await instance.database;
+    return await db.rawQuery(
+      '''
+      SELECT d.* FROM documents d
+      INNER JOIN pets p ON d.pet_id = p.id
+      WHERE p.owner_id = ?
+      ORDER BY d.upload_date DESC
+      ''',
+      [ownerId],
     );
   }
 
@@ -1240,6 +1417,11 @@ class DBHelper {
     return null;
   }
 
+  Future<String> getUserNameById(int id) async {
+    final user = await getUserById(id);
+    return user?['name'] as String? ?? 'Unknown User';
+  }
+
   // ---------- DRIVER STATUS ----------
   Future<int> insertDriverStatus(Map<String, dynamic> data) async {
     final db = await instance.database;
@@ -1262,6 +1444,67 @@ class DBHelper {
   Future<List<Map<String, dynamic>>> getAllDriverStatuses() async {
     final db = await instance.database;
     return await db.query('driver_status', orderBy: 'last_updated DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getLinkedDriverStatuses() async {
+    final db = await instance.database;
+    // Get driver statuses for drivers that are linked to doctors
+    return await db.rawQuery('''
+      SELECT ds.* FROM driver_status ds
+      INNER JOIN users u ON ds.driver_id = u.id
+      WHERE u.linked_doctor_id IS NOT NULL
+      ORDER BY ds.last_updated DESC
+    ''');
+  }
+
+  // ---------- VANS ----------
+  Future<int> insertVan(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('vans', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllVans() async {
+    final db = await instance.database;
+    return await db.query('vans', orderBy: 'name ASC');
+  }
+
+  Future<Map<String, dynamic>?> getVanById(int id) async {
+    final db = await instance.database;
+    final res = await db.query('vans', where: 'id=?', whereArgs: [id]);
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getVanByDriverId(int driverId) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'vans',
+      where: 'assigned_driver_id=?',
+      whereArgs: [driverId],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getVanByDoctorId(int doctorId) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'vans',
+      where: 'assigned_doctor_id=?',
+      whereArgs: [doctorId],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  Future<int> updateVan(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('vans', data, where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<int> deleteVan(int id) async {
+    final db = await instance.database;
+    return await db.delete('vans', where: 'id=?', whereArgs: [id]);
   }
 
   // ---------- COMPLIANCE LOGS ----------

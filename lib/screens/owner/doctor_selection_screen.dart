@@ -6,6 +6,8 @@ import '../../db/db_helper.dart';
 import '../../models/user.dart';
 import '../../models/service.dart';
 import '../../components/modern_cards.dart';
+import '../../theme/app_theme.dart';
+import '../../components/ui_kit.dart';
 import 'booking_screen.dart';
 
 class DoctorSelectionScreen extends StatefulWidget {
@@ -107,22 +109,23 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                SectionHeader(
+                  title: 'Choose a Doctor',
+                  subtitle: 'Select a vet based on your pet and service',
+                ),
                 // Search and Filter Bar
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(AppTheme.padding),
                   color: Theme.of(context).colorScheme.surface,
                   child: Column(
                     children: [
                       // Search Bar
                       TextField(
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Search doctors...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          prefixIcon: Icon(Icons.search),
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
+                          fillColor: Colors.white,
                         ),
                         onChanged: (value) {
                           setState(() {
@@ -138,12 +141,9 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: _selectedSpecialty,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: 'Specialty',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
+                                contentPadding: EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 8,
                                 ),
@@ -194,41 +194,27 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                 // Doctor List
                 Expanded(
                   child: _filteredDoctors.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.medical_services_outlined,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No doctors found',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Try adjusting your search or filters',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
+                      ? EmptyState(
+                          icon: Icons.medical_services_outlined,
+                          title: 'No doctors found',
+                          message: 'Try adjusting your search or filters',
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _filteredDoctors.length,
-                          itemBuilder: (context, index) {
-                            final doctor = _filteredDoctors[index];
-                            return _DoctorCard(
-                              doctor: doctor,
-                              onSelect: () => _selectDoctor(doctor),
-                            );
-                          },
+                      : Card(
+                          margin: EdgeInsets.all(AppTheme.padding),
+                          child: ListView.builder(
+                            padding: EdgeInsets.all(AppTheme.padding),
+                            itemCount: _filteredDoctors.length,
+                            itemBuilder: (context, index) {
+                              final doctor = _filteredDoctors[index];
+                              return CompactSpecialistCard(
+                                name: doctor.name,
+                                specialty: 'Veterinary Medicine',
+                                rating: 4.8,
+                                reviewCount: 42,
+                                onTap: () => _selectDoctor(doctor),
+                              );
+                            },
+                          ),
                         ),
                 ),
               ],
@@ -246,124 +232,6 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
           selectedDate: widget.selectedDate,
           selectedTime: widget.selectedTime,
           selectedDoctor: doctor,
-        ),
-      ),
-    );
-  }
-}
-
-class _DoctorCard extends StatelessWidget {
-  final User doctor;
-  final VoidCallback onSelect;
-
-  const _DoctorCard({required this.doctor, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onSelect,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              // Doctor Avatar
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Text(
-                  doctor.name.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Doctor Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dr. ${doctor.name}',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Veterinary Medicine', // Placeholder specialty
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Rating and Experience
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '4.8', // Placeholder rating
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(width: 16),
-                        const Icon(Icons.work, color: Colors.grey, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '8 years exp.', // Placeholder experience
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Availability
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Available Today', // Placeholder availability
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Arrow
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Theme.of(context).brightness == Brightness.light
-                    ? Colors.grey[700]
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                size: 16,
-              ),
-            ],
-          ),
         ),
       ),
     );

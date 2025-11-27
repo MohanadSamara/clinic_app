@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/appointment.dart';
+import '../../services/calendar_service.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -214,6 +215,11 @@ class _AppointmentCard extends StatelessWidget {
                           'Doctor: ${appointment.doctorName}',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
+                      if (appointment.driverName != null)
+                        Text(
+                          'Driver: ${appointment.driverName}',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
                       if (appointment.address != null)
                         Text(
                           'Location: ${appointment.address}',
@@ -269,6 +275,59 @@ class _AppointmentCard extends StatelessWidget {
                     onPressed: onCancel,
                     style: TextButton.styleFrom(foregroundColor: Colors.red),
                     child: const Text('Cancel'),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                if (appointment.status == 'confirmed') ...[
+                  // Show calendar icon for confirmed appointments (automatically synced)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: Colors.green,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Synced to Calendar',
+                          style: TextStyle(color: Colors.green, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // Show add to calendar button for other statuses
+                  TextButton.icon(
+                    onPressed: () async {
+                      final success =
+                          await CalendarService.addAppointmentToCalendar(
+                            appointment,
+                          );
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Added to Google Calendar'),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to add to calendar'),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_today, size: 18),
+                    label: const Text('Add to Calendar'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ],
               ],

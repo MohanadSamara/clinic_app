@@ -1,6 +1,7 @@
 class Document {
   final int? id;
   final int petId;
+  final int? medicalRecordId; // Link to medical record
   final String fileName;
   final String fileType; // 'image', 'pdf', 'document'
   final String filePath;
@@ -18,6 +19,7 @@ class Document {
   Document({
     this.id,
     required this.petId,
+    this.medicalRecordId,
     required this.fileName,
     required this.fileType,
     required this.filePath,
@@ -37,6 +39,7 @@ class Document {
     return {
       'id': id,
       'pet_id': petId,
+      'medical_record_id': medicalRecordId,
       'file_name': fileName,
       'file_type': fileType,
       'file_path': filePath,
@@ -57,6 +60,7 @@ class Document {
     return Document(
       id: map['id'],
       petId: map['pet_id'],
+      medicalRecordId: map['medical_record_id'],
       fileName: map['file_name'],
       fileType: map['file_type'],
       filePath: map['file_path'],
@@ -80,6 +84,7 @@ class Document {
   Document copyWith({
     int? id,
     int? petId,
+    int? medicalRecordId,
     String? fileName,
     String? fileType,
     String? filePath,
@@ -97,6 +102,7 @@ class Document {
     return Document(
       id: id ?? this.id,
       petId: petId ?? this.petId,
+      medicalRecordId: medicalRecordId ?? this.medicalRecordId,
       fileName: fileName ?? this.fileName,
       fileType: fileType ?? this.fileType,
       filePath: filePath ?? this.filePath,

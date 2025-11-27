@@ -12,9 +12,11 @@ class Appointment {
   final int? doctorId;
   final String? doctorName;
   final int? driverId;
+  final String? driverName;
   final String urgencyLevel; // 'routine', 'urgent', 'emergency'
   final double? locationLat;
   final double? locationLng;
+  final String? calendarEventId;
 
   Appointment({
     this.id,
@@ -29,9 +31,11 @@ class Appointment {
     this.doctorId,
     this.doctorName,
     this.driverId,
+    this.driverName,
     this.urgencyLevel = 'routine',
     this.locationLat,
     this.locationLng,
+    this.calendarEventId,
   });
 
   Map<String, dynamic> toMap() => {
@@ -49,26 +53,31 @@ class Appointment {
     'urgency_level': urgencyLevel,
     'location_lat': locationLat,
     'location_lng': locationLng,
+    'calendar_event_id': calendarEventId,
   };
 
   factory Appointment.fromMap(Map<String, dynamic> m) => Appointment(
-    id: m['id'],
-    ownerId: m['owner_id'],
-    petId: m['pet_id'],
-    serviceType: m['service_type'] ?? '',
-    description: m['description'],
-    scheduledAt: m['scheduled_at'] ?? '',
-    status: m['status'] ?? 'pending',
-    address: m['address'],
-    price: (m['price'] is int)
-        ? (m['price'] as int).toDouble()
-        : (m['price'] as double?),
-    doctorId: m['doctor_id'],
-    doctorName: m['doctor_name'],
-    driverId: m['driver_id'],
-    urgencyLevel: m['urgency_level'] ?? 'routine',
-    locationLat: (m['location_lat'] as num?)?.toDouble(),
-    locationLng: (m['location_lng'] as num?)?.toDouble(),
+    id: m['id'] is int ? m['id'] as int : null,
+    ownerId: m['owner_id'] is int ? m['owner_id'] as int : 0,
+    petId: m['pet_id'] is int ? m['pet_id'] as int : 0,
+    serviceType: m['service_type']?.toString() ?? '',
+    description: m['description']?.toString(),
+    scheduledAt: m['scheduled_at']?.toString() ?? '',
+    status: m['status']?.toString() ?? 'pending',
+    address: m['address']?.toString(),
+    price: m['price'] is num ? (m['price'] as num).toDouble() : null,
+    doctorId: m['doctor_id'] is int ? m['doctor_id'] as int : null,
+    doctorName: m['doctor_name']?.toString(),
+    driverId: m['driver_id'] is int ? m['driver_id'] as int : null,
+    driverName: m['driver_name']?.toString(),
+    urgencyLevel: m['urgency_level']?.toString() ?? 'routine',
+    locationLat: m['location_lat'] is num
+        ? (m['location_lat'] as num).toDouble()
+        : null,
+    locationLng: m['location_lng'] is num
+        ? (m['location_lng'] as num).toDouble()
+        : null,
+    calendarEventId: m['calendar_event_id']?.toString(),
   );
 
   Appointment copyWith({
@@ -84,9 +93,11 @@ class Appointment {
     int? doctorId,
     String? doctorName,
     int? driverId,
+    String? driverName,
     String? urgencyLevel,
     double? locationLat,
     double? locationLng,
+    String? calendarEventId,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -101,9 +112,11 @@ class Appointment {
       doctorId: doctorId ?? this.doctorId,
       doctorName: doctorName ?? this.doctorName,
       driverId: driverId ?? this.driverId,
+      driverName: driverName ?? this.driverName,
       urgencyLevel: urgencyLevel ?? this.urgencyLevel,
       locationLat: locationLat ?? this.locationLat,
       locationLng: locationLng ?? this.locationLng,
+      calendarEventId: calendarEventId ?? this.calendarEventId,
     );
   }
 }

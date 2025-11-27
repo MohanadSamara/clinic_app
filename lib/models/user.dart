@@ -9,6 +9,9 @@ class User {
   final String role;
   final String? provider; // e.g., 'google', 'facebook', 'email'
   final String? providerId; // ID from social provider
+  final String? profileImage; // Path to profile image
+  final int? linkedDoctorId; // For drivers: which doctor they work with
+  final int? linkedDriverId; // For doctors: which driver works with them
 
   User({
     this.id,
@@ -19,6 +22,9 @@ class User {
     this.role = 'owner',
     this.provider,
     this.providerId,
+    this.profileImage,
+    this.linkedDoctorId,
+    this.linkedDriverId,
   });
 
   Map<String, dynamic> toMap() => {
@@ -30,17 +36,27 @@ class User {
     'role': role,
     'provider': provider,
     'providerId': providerId,
+    'profileImage': profileImage,
+    'linked_doctor_id': linkedDoctorId,
+    'linked_driver_id': linkedDriverId,
   };
 
   factory User.fromMap(Map<String, dynamic> m) => User(
-    id: m['id'],
-    name: m['name'] ?? '',
-    email: m['email'] ?? '',
-    password: m['password'] ?? '',
-    phone: m['phone'],
-    role: m['role'] ?? 'owner',
-    provider: m['provider'],
-    providerId: m['providerId'],
+    id: m['id'] is int ? m['id'] as int : null,
+    name: m['name']?.toString() ?? 'Unknown',
+    email: m['email']?.toString() ?? 'No email',
+    password: m['password']?.toString() ?? '',
+    phone: m['phone']?.toString(),
+    role: m['role']?.toString() ?? 'owner',
+    provider: m['provider']?.toString(),
+    providerId: m['providerId']?.toString(),
+    profileImage: m['profileImage']?.toString(),
+    linkedDoctorId: m['linked_doctor_id'] is int
+        ? m['linked_doctor_id'] as int
+        : null,
+    linkedDriverId: m['linked_driver_id'] is int
+        ? m['linked_driver_id'] as int
+        : null,
   );
 
   User copyWith({
@@ -52,6 +68,9 @@ class User {
     String? role,
     String? provider,
     String? providerId,
+    String? profileImage,
+    int? linkedDoctorId,
+    int? linkedDriverId,
   }) {
     return User(
       id: id ?? this.id,
@@ -62,6 +81,9 @@ class User {
       role: role ?? this.role,
       provider: provider ?? this.provider,
       providerId: providerId ?? this.providerId,
+      profileImage: profileImage ?? this.profileImage,
+      linkedDoctorId: linkedDoctorId ?? this.linkedDoctorId,
+      linkedDriverId: linkedDriverId ?? this.linkedDriverId,
     );
   }
 }

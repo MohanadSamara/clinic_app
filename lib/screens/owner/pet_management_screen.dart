@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/pet.dart';
+import '../../theme/app_theme.dart';
+import '../../components/ui_kit.dart';
 import 'medical_history_screen.dart';
 
 class PetManagementScreen extends StatefulWidget {
@@ -51,51 +53,22 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
           }
 
           if (petProvider.pets.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.pets,
-                    size: 64,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withAlpha(153),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No pets registered yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(153),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Add your pets to book appointments and manage their care',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(153),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddPetDialog(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Your First Pet'),
-                  ),
-                ],
-              ),
+            return EmptyState(
+              icon: Icons.pets,
+              title: 'No pets registered yet',
+              message:
+                  'Add your pets to book appointments and manage their care',
+              actionLabel: 'Add Your First Pet',
+              onAction: () => _showAddPetDialog(context),
             );
           }
 
           return Column(
             children: [
+              SectionHeader(
+                title: 'My Pets',
+                subtitle: 'Tap a pet to view or update its details',
+              ),
               // Header with pet count and add button hint
               TweenAnimationBuilder<double>(
                 tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -142,7 +115,10 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.padding,
+                    vertical: 16,
+                  ),
                   itemCount: petProvider.pets.length,
                   itemBuilder: (context, index) {
                     final pet = petProvider.pets[index];
@@ -281,6 +257,25 @@ class _PetCard extends StatelessWidget {
                         '${pet.species}${pet.breed != null ? ' - ${pet.breed}' : ''}',
                       ),
                       Text(pet.ageDisplay),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          pet.species,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -530,8 +525,12 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                           : _medicalHistoryController.text,
                     );
 
+              final linkedDoctorId = authProvider.user?.linkedDoctorId;
               final success = widget.pet == null
-                  ? await context.read<PetProvider>().addPet(pet)
+                  ? await context.read<PetProvider>().addPet(
+                      pet,
+                      doctorId: linkedDoctorId,
+                    )
                   : await context.read<PetProvider>().updatePet(pet);
 
               if (success) {

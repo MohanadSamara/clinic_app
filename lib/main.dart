@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider.dart';
 import 'providers/appointment_provider.dart';
@@ -14,6 +15,8 @@ import 'providers/theme_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/payment_provider.dart';
 import 'providers/document_provider.dart';
+import 'providers/notification_provider.dart';
+import 'services/notification_service.dart';
 import 'screens/role_based_home.dart';
 import 'theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,6 +26,10 @@ void main() async {
 
   // Initialize Firebase globally
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
 
   // Initialize auth provider to check for existing session
   final authProvider = AuthProvider();
@@ -54,14 +61,15 @@ class MyApp extends StatelessWidget {
           update: (context, auth, previous) =>
               previous ?? DocumentProvider(auth),
         ),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          final localeProvider = Provider.of<LocaleProvider>(context);
+      child: Consumer2<ThemeProvider, LocaleProvider>(
+        builder: (context, themeProvider, localeProvider, child) {
           return MaterialApp(
             title: 'Vet2U',
             locale: localeProvider.locale,
             localizationsDelegates: const [
+              AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:io' show Platform;
+import '../../l10n/app_localizations.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
@@ -13,6 +14,7 @@ import '../../models/service.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
 import '../select_location_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 class BookingScreen extends StatefulWidget {
   final Service? selectedService;
@@ -74,7 +76,11 @@ class _BookingScreenState extends State<BookingScreen> {
         ownerId: authProvider.user!.id!,
       );
       setState(() {
-        _userPets = context.read<PetProvider>().pets;
+        _userPets = context
+            .read<PetProvider>()
+            .pets
+            .take(20)
+            .toList(); // Limit pets for performance
       });
     }
   }
@@ -154,9 +160,10 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book Appointment'),
+        title: Text(l10n.bookAppointment),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -189,7 +196,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Schedule a Visit',
+                                      l10n.scheduleVisit,
                                       style: Theme.of(context)
                                           .textTheme
                                           .headlineMedium
@@ -202,7 +209,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Book veterinary care for your pet',
+                                      l10n.bookVetCare,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyLarge
@@ -233,7 +240,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Select Date',
+                                      l10n.selectDate,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleLarge
@@ -337,8 +344,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Select Time',
+                                    Text(
+                                      l10n.selectTime,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -365,7 +372,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   ? _selectedTime!.format(
                                                       context,
                                                     )
-                                                  : 'Select Time',
+                                                  : l10n.selectTime,
                                             ),
                                           ),
                                         ),
@@ -390,8 +397,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Select Service',
+                                    Text(
+                                      l10n.selectService,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -400,7 +407,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<Service>(
                                       value: _selectedService,
-                                      hint: const Text('Choose a service'),
+                                      hint: Text(l10n.chooseService),
                                       items: appointmentProvider.services.map((
                                         service,
                                       ) {
@@ -414,8 +421,6 @@ class _BookingScreenState extends State<BookingScreen> {
                                       onChanged: (service) {
                                         setState(() {
                                           _selectedService = service;
-                                          _selectedDoctor =
-                                              null; // Reset doctor selection when service changes
                                         });
                                       },
                                     ),
@@ -438,8 +443,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Select Doctor',
+                                    Text(
+                                      l10n.selectDoctor,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -467,7 +472,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              'Dr. ${_selectedDoctor!.name}',
+                                              '${l10n.dr} ${_selectedDoctor!.name}',
                                               style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w500,
@@ -482,7 +487,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   _selectedDoctorId = null;
                                                 });
                                               },
-                                              child: const Text('Change'),
+                                              child: Text(l10n.change),
                                             ),
                                           ],
                                         ),
@@ -499,8 +504,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                             color: Colors.orange,
                                           ),
                                         ),
-                                        child: const Text(
-                                          'No doctors available',
+                                        child: Text(
+                                          l10n.noDoctorsAvailable,
                                           style: TextStyle(
                                             color: Colors.orange,
                                           ),
@@ -508,7 +513,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                       )
                                     else
                                       DropdownButtonFormField<User>(
-                                        hint: const Text('Choose a doctor'),
+                                        hint: Text(l10n.chooseDoctor),
                                         items: _doctors.map((doctor) {
                                           return DropdownMenuItem(
                                             value: doctor,
@@ -521,7 +526,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                           });
                                         },
                                         validator: (value) => value == null
-                                            ? 'Please select a doctor'
+                                            ? l10n.chooseDoctor
                                             : null,
                                       ),
                                   ],
@@ -543,8 +548,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Select Pet',
+                                    Text(
+                                      l10n.selectPet,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -553,7 +558,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<Pet>(
                                       initialValue: _selectedPet,
-                                      hint: const Text('Choose a pet'),
+                                      hint: Text(l10n.choosePet),
                                       items: _userPets.map((pet) {
                                         return DropdownMenuItem(
                                           value: pet,
@@ -567,9 +572,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                           _selectedPet = pet;
                                         });
                                       },
-                                      validator: (value) => value == null
-                                          ? 'Please select a pet'
-                                          : null,
+                                      validator: (value) =>
+                                          value == null ? l10n.choosePet : null,
                                     ),
                                   ],
                                 ),
@@ -590,8 +594,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Urgency Level',
+                                    Text(
+                                      l10n.urgencyLevel,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -600,18 +604,18 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<String>(
                                       initialValue: _urgencyLevel,
-                                      items: const [
+                                      items: [
                                         DropdownMenuItem(
                                           value: 'routine',
-                                          child: Text('Routine'),
+                                          child: Text(l10n.routine),
                                         ),
                                         DropdownMenuItem(
                                           value: 'urgent',
-                                          child: Text('Urgent'),
+                                          child: Text(l10n.urgent),
                                         ),
                                         DropdownMenuItem(
                                           value: 'emergency',
-                                          child: Text('Emergency (Urgent)'),
+                                          child: Text(l10n.emergency),
                                         ),
                                       ],
                                       onChanged: (value) {
@@ -623,9 +627,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 24),
                                     if (_urgencyLevel != 'routine') ...[
                                       SwitchListTile(
-                                        title: const Text(
-                                          'Share current location',
-                                        ),
+                                        title: Text(l10n.shareCurrentLocation),
                                         value: _shareLocation,
                                         onChanged: (v) {
                                           setState(() {
@@ -655,8 +657,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   : const Icon(
                                                       Icons.my_location,
                                                     ),
-                                              label: const Text(
-                                                'Get current location',
+                                              label: Text(
+                                                l10n.getCurrentLocation,
                                               ),
                                             ),
                                             const SizedBox(width: 12),
@@ -696,7 +698,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Appointment Location *',
+                                      l10n.appointmentLocation,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -707,7 +709,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Select the location where the vet service will be provided. This helps the driver navigate to your location.',
+                                      l10n.locationDescription,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Theme.of(context)
@@ -737,8 +739,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                         decoration: InputDecoration(
                                           labelText:
                                               _addressController.text.isEmpty
-                                              ? 'Click the map icon to select location *'
-                                              : 'Selected Location',
+                                              ? l10n.clickMapIcon
+                                              : l10n.selectedLocation,
                                           border: InputBorder.none,
                                           contentPadding: const EdgeInsets.all(
                                             16,
@@ -767,7 +769,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 8),
                                         child: Text(
-                                          'Location is required for the driver to find you',
+                                          l10n.locationRequired,
                                           style: TextStyle(
                                             color: Colors.red,
                                             fontSize: 12,
@@ -795,8 +797,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                   children: [
                                     TextField(
                                       controller: _descriptionController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Description (Optional)',
+                                      decoration: InputDecoration(
+                                        labelText: l10n.descriptionOptional,
                                         border: OutlineInputBorder(),
                                       ),
                                       maxLines: 3,
@@ -807,7 +809,6 @@ class _BookingScreenState extends State<BookingScreen> {
                             );
                           },
                         ),
-                        const SizedBox(height: 24),
                         // Book Button Section
                         TweenAnimationBuilder<double>(
                           tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -826,7 +827,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                         vertical: 16,
                                       ),
                                     ),
-                                    child: const Text('Book Appointment'),
+                                    child: Text(l10n.bookAppointmentButton),
                                   ),
                                 ),
                               ),
@@ -846,24 +847,21 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _bookAppointment() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedService == null ||
         _selectedTime == null ||
         _selectedPet == null ||
         _selectedDoctor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select service, time, pet, and doctor'),
-        ),
+        SnackBar(content: Text(l10n.pleaseSelectServiceTimePetDoctor)),
       );
       return;
     }
 
     if (_lat == null || _lng == null || _addressController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a location for the appointment'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectLocation)));
       return;
     }
 
@@ -871,7 +869,7 @@ class _BookingScreenState extends State<BookingScreen> {
     if (authProvider.user?.id == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please login first')));
+      ).showSnackBar(SnackBar(content: Text(l10n.pleaseLoginFirst)));
       return;
     }
 
@@ -892,10 +890,25 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
+    // Get linked driver for the selected doctor
+    int? linkedDriverId;
+    try {
+      final dbHelper = DBHelper.instance;
+      final doctorData = await dbHelper.getUserById(_selectedDoctor!.id!);
+      if (doctorData != null) {
+        final doctor = User.fromMap(doctorData);
+        linkedDriverId = doctor.linkedDriverId;
+      }
+    } catch (e) {
+      debugPrint('Error getting linked driver: $e');
+      // Continue without linked driver - will use auto-assignment later
+    }
+
     final appointment = Appointment(
       ownerId: authProvider.user!.id!,
       petId: _selectedPet!.id!, // Use selected pet ID
       doctorId: _selectedDoctor!.id!, // Required doctor ID
+      driverId: linkedDriverId, // Auto-assign linked driver if available
       serviceType: _selectedService!.name,
       description: _descriptionController.text,
       scheduledAt: scheduledDateTime.toIso8601String(),
@@ -912,13 +925,13 @@ class _BookingScreenState extends State<BookingScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appointment booked successfully!')),
+        SnackBar(content: Text(l10n.appointmentBookedSuccessfully)),
       );
       Navigator.of(context).pop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to book appointment')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.failedToBookAppointment)));
     }
   }
 

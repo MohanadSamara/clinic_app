@@ -1,11 +1,14 @@
 // lib/screens/doctor/medical_record_form_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/medical_provider.dart';
+import '../../providers/document_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/medical_record.dart';
 import '../../models/pet.dart';
 import '../../models/appointment.dart';
+import '../../models/document.dart';
 
 class MedicalRecordFormScreen extends StatefulWidget {
   final MedicalRecord? record;
@@ -34,6 +37,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   DateTime _selectedDate = DateTime.now();
+  MedicalRecord? _savedRecord;
 
   @override
   void initState() {
@@ -58,6 +62,86 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
     _prescriptionController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  void _showFileUploadOption() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Add Supporting Documents',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Upload medical documents, lab results, or images related to this record',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).pop(); // Close form screen
+                      },
+                      icon: const Icon(Icons.skip_next),
+                      label: const Text('Skip for Now'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _navigateToFileUpload();
+                      },
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Upload Files'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToFileUpload() {
+    // Navigate to file upload screen with the pet information
+    Navigator.of(
+      context,
+    ).pushNamed('/doctor/document-upload', arguments: {'pet': widget.pet});
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -124,6 +208,10 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
           : await context.read<MedicalProvider>().updateMedicalRecord(record);
 
       if (success && mounted) {
+        setState(() {
+          _savedRecord = record;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -133,7 +221,13 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
             ),
           ),
         );
-        Navigator.of(context).pop();
+
+        // Show option to upload files after successful save (only for new records)
+        if (widget.record == null) {
+          _showFileUploadOption();
+        } else {
+          Navigator.of(context).pop();
+        }
       } else {
         throw Exception('Failed to save medical record');
       }

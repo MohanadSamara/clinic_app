@@ -138,6 +138,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const RoleBasedHome()),

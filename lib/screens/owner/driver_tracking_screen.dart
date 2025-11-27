@@ -1,10 +1,13 @@
 // lib/screens/owner/driver_tracking_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../db/db_helper.dart';
 import '../../models/driver_status.dart';
 import '../../models/appointment.dart';
+import '../../theme/app_theme.dart';
+import '../../components/ui_kit.dart';
 
 class DriverTrackingScreen extends StatefulWidget {
   const DriverTrackingScreen({super.key});
@@ -16,19 +19,31 @@ class DriverTrackingScreen extends StatefulWidget {
 class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   List<DriverStatus> _driverStatuses = [];
   List<Appointment> _appointments = [];
+  Map<int, String> _driverNames = {};
   bool _isLoading = true;
   final MapController _mapController = MapController();
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadDriverStatuses();
+    _startPeriodicRefresh();
   }
 
   @override
   void dispose() {
     _mapController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  void _startPeriodicRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadDriverStatuses();
+      }
+    });
   }
 
   Future<void> _loadDriverStatuses() async {
@@ -40,19 +55,58 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
         hasLocation: true,
       );
 
+      // Load driver names for all driver IDs
+      final driverIds = driverStatusesData
+          .map((data) => data['driver_id'] as int)
+          .toSet()
+          .toList();
+      final driverNames = <int, String>{};
+      for (final driverId in driverIds) {
+        driverNames[driverId] = await dbHelper.getUserNameById(driverId);
+      }
+
       if (mounted) {
         setState(() {
           _driverStatuses = driverStatusesData
               .map((data) => DriverStatus.fromMap(data))
+              .where((driver) => _isDriverActive(driver.status))
               .toList();
-          _appointments = appointmentsData
+          _driverNames = driverNames;
+          final allAppointments = appointmentsData
               .map((data) => Appointment.fromMap(data))
               .where(
                 (appointment) =>
                     appointment.locationLat != null &&
-                    appointment.locationLng != null,
+                    appointment.locationLng != null &&
+                    _isAppointmentActive(appointment.status) &&
+                    appointment.driverId !=
+                        null, // Only show appointments with assigned drivers
               )
               .toList();
+
+          // Find the nearest upcoming appointment
+          final now = DateTime.now();
+          Appointment? nearestAppointment;
+          DateTime? nearestDate;
+
+          for (final appointment in allAppointments) {
+            try {
+              final scheduledDate = DateTime.parse(appointment.scheduledAt);
+              if (scheduledDate.isAfter(now) &&
+                  (nearestDate == null ||
+                      scheduledDate.isBefore(nearestDate))) {
+                nearestDate = scheduledDate;
+                nearestAppointment = appointment;
+              }
+            } catch (e) {
+              // Skip invalid dates
+              continue;
+            }
+          }
+
+          _appointments = nearestAppointment != null
+              ? [nearestAppointment]
+              : [];
           _isLoading = false;
         });
       }
@@ -81,6 +135,23 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     }
   }
 
+  bool _isAppointmentActive(String status) {
+    // Filter out completed appointments - only show active/in-progress ones
+    final activeStatuses = [
+      'confirmed',
+      'in_progress',
+      'driver_assigned',
+      'en_route',
+      'arrived',
+    ];
+    return activeStatuses.contains(status.toLowerCase());
+  }
+
+  bool _isDriverActive(String status) {
+    // Filter to show only active drivers (not offline)
+    return status.toLowerCase() != 'offline';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -97,21 +168,17 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _driverStatuses.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.location_off, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No active drivers found',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                ],
-              ),
+          ? EmptyState(
+              icon: Icons.location_off,
+              title: 'No active trip',
+              message: 'Tracking will appear here when a driver is assigned.',
             )
           : Column(
               children: [
+                SectionHeader(
+                  title: 'Driver Tracking',
+                  subtitle: 'Live location of your assigned mobile clinic',
+                ),
                 // Driver status summary
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -127,22 +194,25 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 ),
                 // Map
                 Expanded(
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _getMapCenter(),
-                      initialZoom: 12.0,
-                      onTap: (_, __) {},
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.clinic_app',
+                  child: Card(
+                    margin: EdgeInsets.all(AppTheme.padding),
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _getMapCenter(),
+                        initialZoom: 12.0,
+                        onTap: (_, __) {},
                       ),
-                      MarkerLayer(markers: _buildDriverMarkers()),
-                      PolylineLayer(polylines: _buildPolylines()),
-                    ],
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.clinic_app',
+                        ),
+                        MarkerLayer(markers: _buildDriverMarkers()),
+                        PolylineLayer(polylines: _buildPolylines()),
+                      ],
+                    ),
                   ),
                 ),
                 // Driver list
@@ -152,7 +222,9 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     color: Theme.of(context).colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, -2),
                       ),
@@ -189,7 +261,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Driver ${driverStatus.driverId}',
+                                _driverNames[driverStatus.driverId] ??
+                                    'Driver ${driverStatus.driverId}',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -358,7 +431,10 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Driver ${driverStatus.driverId}'),
+        title: Text(
+          _driverNames[driverStatus.driverId] ??
+              'Driver ${driverStatus.driverId}',
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,7 +482,9 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
             if (appointment.doctorName != null)
               Text('Doctor: ${appointment.doctorName}'),
             if (appointment.driverId != null)
-              Text('Assigned Driver: ${appointment.driverId}'),
+              Text(
+                'Assigned Driver: ${appointment.driverName ?? _driverNames[appointment.driverId] ?? 'Driver ${appointment.driverId}'}',
+              ),
           ],
         ),
         actions: [
@@ -421,23 +499,14 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
 
   List<Polyline> _buildPolylines() {
     final polylines = <Polyline>[];
+    final appointmentMap = {for (final appt in _appointments) appt.id: appt};
 
     // Create polylines connecting drivers to their assigned appointments
     for (final driver in _driverStatuses) {
       if (driver.currentAppointmentId != null) {
-        final appointment = _appointments.firstWhere(
-          (appt) => appt.id == driver.currentAppointmentId,
-          orElse: () => Appointment(
-            id: null,
-            serviceType: '',
-            status: '',
-            scheduledAt: '',
-            ownerId: 0,
-            petId: 0,
-          ),
-        );
+        final appointment = appointmentMap[driver.currentAppointmentId];
 
-        if (appointment.id != null &&
+        if (appointment != null &&
             appointment.locationLat != null &&
             appointment.locationLng != null) {
           polylines.add(

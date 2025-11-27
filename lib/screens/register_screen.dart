@@ -233,6 +233,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await auth.signInWithGoogle();
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           if (auth.needsRoleSelection) {
             final pending = auth.pendingSocialUser!;
             Navigator.pushReplacement(
@@ -271,6 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await auth.signInWithFacebook();
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           if (auth.needsRoleSelection) {
             final pending = auth.pendingSocialUser!;
             Navigator.pushReplacement(
