@@ -301,34 +301,6 @@ class _AppointmentCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                ] else ...[
-                  // Show add to calendar button for other statuses
-                  TextButton.icon(
-                    onPressed: () async {
-                      final success =
-                          await CalendarService.addAppointmentToCalendar(
-                            appointment,
-                          );
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Added to Google Calendar'),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Failed to add to calendar'),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.calendar_today, size: 18),
-                    label: const Text('Add to Calendar'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
                 ],
               ],
             ),
