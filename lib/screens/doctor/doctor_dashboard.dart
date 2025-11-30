@@ -7,6 +7,7 @@ import '../../providers/service_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../models/service.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
@@ -178,7 +179,6 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
         title: Text(AppLocalizations.of(context)!.appTitle),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           Consumer<LocaleProvider>(
             builder: (context, localeProvider, child) {
@@ -189,6 +189,20 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                 ),
                 onPressed: () => _showLanguageDialog(context, localeProvider),
                 tooltip: AppLocalizations.of(context)!.changeLanguage,
+              );
+            },
+          ),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => themeProvider.toggleTheme(),
+                tooltip: themeProvider.isDarkMode
+                    ? 'Switch to Light Mode'
+                    : 'Switch to Dark Mode',
               );
             },
           ),
@@ -684,7 +698,6 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
         title: const Text('Medical Records'),
         elevation: 0,
         backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -1066,7 +1079,6 @@ class _DoctorProfileScreen extends StatelessWidget {
         title: const Text('Profile'),
         elevation: 0,
         backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
       ),
       body: CustomScrollView(
         slivers: [

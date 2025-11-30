@@ -65,7 +65,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
 
                   if (records.isEmpty) {
                     return EmptyState(
-                      icon: Icons.history,
+                      icon: Icons.medical_services,
                       title: 'No records yet',
                       message: 'Your pet\'s past visits will appear here.',
                     );
@@ -256,9 +256,9 @@ class _MedicalRecordCardState extends State<_MedicalRecordCard> {
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
           width: 1,
         ),
       ),
@@ -407,7 +407,7 @@ class _MedicalRecordCardState extends State<_MedicalRecordCard> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: backgroundColor.withOpacity(0.5)),
       ),
       child: Column(

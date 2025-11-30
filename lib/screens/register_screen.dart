@@ -35,298 +35,184 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: colorScheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Top area: enhanced header with app branding
+              // Top area
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            colorScheme.primary.withValues(alpha: 0.1),
-                            colorScheme.secondary.withValues(alpha: 0.05),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.pets,
-                        size: 48,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     Text(
-                      'Vet2U',
+                      'Create Account',
                       style: theme.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                        letterSpacing: -1.0,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Mobile veterinary care',
+                      "Let's set up your account",
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
 
-              // Header area
-              Text(
-                'Create Account',
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
+              // Form card
+              Card(
+                color: colorScheme.surface,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Join Vet2U',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Form Fields
-              TextField(
-                controller: _name,
-                decoration: InputDecoration(
-                  labelText: 'Full Name',
-                  hintText: 'Enter your full name',
-                  prefixIcon: Icon(
-                    Icons.person_outline,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _email,
-                decoration: InputDecoration(
-                  labelText: 'Email Address',
-                  hintText: 'Enter your email',
-                  prefixIcon: Icon(
-                    Icons.email_outlined,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _pass,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  hintText: 'Min 6 characters',
-                  prefixIcon: Icon(
-                    Icons.lock_outline,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                obscureText: true,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _phone,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  hintText: 'Optional',
-                  prefixIcon: Icon(
-                    Icons.phone_outlined,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedRole,
-                decoration: InputDecoration(
-                  labelText: 'Role',
-                  hintText: 'Select your role',
-                  prefixIcon: Icon(
-                    Icons.work_outline,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'owner', child: Text('Pet Owner')),
-                  DropdownMenuItem(
-                    value: 'doctor',
-                    child: Text('Veterinarian'),
-                  ),
-                  DropdownMenuItem(value: 'driver', child: Text('Driver')),
-                  DropdownMenuItem(
-                    value: 'admin',
-                    child: Text('Administrator'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedRole = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Primary action button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: auth.isLoading || _loading
-                    ? Container(
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: colorScheme.onPrimary,
-                            strokeWidth: 2.5,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      // Form Fields
+                      TextField(
+                        controller: _name,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          hintText: 'Enter your full name',
+                          prefixIcon: Icon(
+                            Icons.person_outline,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-                      )
-                    : ElevatedButton(
-                        onPressed: _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          elevation: theme.brightness == Brightness.light
-                              ? 2
-                              : 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        child: const Text('Create Account'),
+                        textInputAction: TextInputAction.next,
                       ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _email,
+                        decoration: InputDecoration(
+                          labelText: 'Email Address',
+                          hintText: 'Enter your email',
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _pass,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Min 6 characters',
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number',
+                          hintText: 'Optional',
+                          prefixIcon: Icon(
+                            Icons.phone_outlined,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _selectedRole,
+                        decoration: InputDecoration(
+                          labelText: 'Role',
+                          hintText: 'Select your role',
+                          prefixIcon: Icon(
+                            Icons.work_outline,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'owner',
+                            child: Text('Pet Owner'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'doctor',
+                            child: Text('Veterinarian'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'driver',
+                            child: Text('Driver'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'admin',
+                            child: Text('Administrator'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedRole = value!;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Primary action button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: auth.isLoading || _loading
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: colorScheme.onPrimary,
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              )
+                            : ElevatedButton(
+                                onPressed: _register,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: colorScheme.primary,
+                                  foregroundColor: colorScheme.onPrimary,
+                                  elevation: 1,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  textStyle: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                child: const Text('Create Account'),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+
+              const SizedBox(height: 24),
 
               const SizedBox(height: 32),
 
@@ -360,7 +246,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 24),
 
-              // Social Login Buttons - secondary actions with lower visual weight
+              // Social buttons
               Row(
                 children: [
                   Expanded(
@@ -371,21 +257,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'Google',
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(
-                          color: colorScheme.outline.withOpacity(0.3),
-                          width: 1,
+                          color: colorScheme.outline.withOpacity(0.15),
+                          width: 1.5,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
+                        backgroundColor: colorScheme.surface,
+                        foregroundColor: colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _facebookSignUp,
@@ -394,17 +283,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'Facebook',
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(
-                          color: colorScheme.outline.withOpacity(0.3),
-                          width: 1,
+                          color: colorScheme.outline.withOpacity(0.15),
+                          width: 1.5,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
+                        backgroundColor: colorScheme.surface,
+                        foregroundColor: colorScheme.onSurface,
                       ),
                     ),
                   ),

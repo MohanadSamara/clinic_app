@@ -27,6 +27,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navigateToBooking(int petCount) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (petCount == 0) {
       // Show dialog prompting user to add a pet first
       showDialog(
@@ -34,7 +36,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context) => AlertDialog(
           title: const Text('No Pets Found'),
           content: const Text(
-            'You need to add at least one pet before booking an appointment. Would you like to add a pet now?',
+            'You need to add at least one pet before booking an appointment. '
+            'Would you like to add a pet now?',
           ),
           actions: [
             TextButton(
@@ -52,7 +55,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               child: const Text('Add Pet'),
             ),
@@ -71,13 +78,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final user = auth.user;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Vet2U Dashboard'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
         elevation: 0,
         actions: [
           IconButton(
@@ -89,6 +98,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Consumer<PetProvider>(
         builder: (context, petProvider, child) {
           final petCount = petProvider.pets.length;
+
+          // Colors for the pet status chip
+          final bool hasPets = petCount > 0;
+          final Color statusBgColor = hasPets
+              ? colorScheme.primary.withOpacity(0.08)
+              : colorScheme.tertiary.withOpacity(0.10);
+          final Color statusBorderColor = hasPets
+              ? colorScheme.primary
+              : colorScheme.tertiary;
+          final Color statusTextColor = statusBorderColor;
+
+          // Colors for CTA cards
+          final Color addPetCardBg = colorScheme.tertiaryContainer.withOpacity(
+            0.35,
+          );
+          final Color readyToBookBg = colorScheme.primary.withOpacity(0.08);
+
+          final TextStyle? mutedBodyStyle = theme.textTheme.bodyMedium
+              ?.copyWith(color: colorScheme.onSurfaceVariant);
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -96,20 +125,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 // User Info Card
                 Card(
-                  elevation: 4,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
                         CircleAvatar(
                           radius: 30,
-                          backgroundColor: Theme.of(context).primaryColor,
+                          backgroundColor: colorScheme.primary,
                           child: Text(
                             user?.name.isNotEmpty == true
                                 ? user!.name[0].toUpperCase()
                                 : 'U',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color: colorScheme.onPrimary,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -122,15 +154,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Text(
                                 user?.name ?? 'User',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                user?.email ?? '',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: Colors.grey[600]),
-                              ),
+                              if ((user?.email ?? '').isNotEmpty)
+                                Text(user!.email!, style: mutedBodyStyle),
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -138,25 +168,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: petCount > 0
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: statusBgColor,
+                                  borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: petCount > 0
-                                        ? Colors.green
-                                        : Colors.orange,
+                                    color: statusBorderColor,
+                                    width: 1,
                                   ),
                                 ),
                                 child: Text(
-                                  petCount > 0
+                                  hasPets
                                       ? '$petCount Pet${petCount > 1 ? 's' : ''} Registered'
                                       : 'No Pets Yet',
                                   style: TextStyle(
-                                    color: petCount > 0
-                                        ? Colors.green
-                                        : Colors.orange,
-                                    fontWeight: FontWeight.bold,
+                                    color: statusTextColor,
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -174,25 +199,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Quick Booking CTA (if no pets, show add pet prompt)
                 if (petCount == 0)
                   Card(
-                    color: Colors.orange.shade50,
-                    elevation: 2,
+                    color: addPetCardBg,
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          Icon(Icons.pets, size: 48, color: Colors.orange),
+                          Icon(
+                            Icons.pets,
+                            size: 48,
+                            color: colorScheme.tertiary,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             'Get Started!',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Add your pet profile to start booking veterinary services',
+                            'Add your pet profile to start booking veterinary services.',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[700]),
+                            style: mutedBodyStyle,
                           ),
                           const SizedBox(height: 16),
                           SizedBox(
@@ -207,17 +239,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               icon: const Icon(Icons.add),
                               label: const Text('Add Your First Pet'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.tertiary,
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimary,
+                                backgroundColor: colorScheme.tertiary,
+                                foregroundColor: colorScheme.onTertiary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
                             ),
@@ -228,8 +256,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   )
                 else
                   Card(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    elevation: 2,
+                    color: readyToBookBg,
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
@@ -237,20 +268,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Icon(
                             Icons.calendar_month,
                             size: 48,
-                            color: Theme.of(context).primaryColor,
+                            color: colorScheme.primary,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'Ready to Book?',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Schedule a veterinary visit for your pet',
+                            'Schedule a veterinary visit for your pet.',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[700]),
+                            style: mutedBodyStyle,
                           ),
                           const SizedBox(height: 16),
                           SizedBox(
@@ -260,15 +291,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               icon: const Icon(Icons.add_circle_outline),
                               label: const Text('Book Appointment'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimary,
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
                             ),
@@ -283,7 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Services Section
                 Text(
                   'Our Services',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -301,14 +330,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.calendar_today,
                       title: 'Booking',
                       subtitle: 'Schedule a Visit',
-                      color: Theme.of(context).colorScheme.primary,
+                      color: colorScheme.primary,
                       onTap: () => _navigateToBooking(petCount),
                     ),
                     _ServiceCard(
                       icon: Icons.medical_services,
                       title: 'Records',
                       subtitle: 'Health Records',
-                      color: Theme.of(context).colorScheme.secondary,
+                      color: colorScheme.secondary,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Coming soon!')),
@@ -319,7 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.emergency,
                       title: 'Emergency',
                       subtitle: 'Immediate Care',
-                      color: Theme.of(context).colorScheme.error,
+                      color: colorScheme.error,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -332,7 +361,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.payment,
                       title: 'Payments',
                       subtitle: 'Manage Payments',
-                      color: Theme.of(context).colorScheme.tertiary,
+                      color: colorScheme.tertiary,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -349,7 +378,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Quick Navigation Buttons
                 Text(
                   'Quick Actions',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -402,31 +431,42 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Card(
-      elevation: 2,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 28, color: color),
+              ),
+              const SizedBox(height: 12),
               Text(
                 title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -450,6 +490,8 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
@@ -458,10 +500,10 @@ class _ActionButton extends StatelessWidget {
         label: Text(text),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

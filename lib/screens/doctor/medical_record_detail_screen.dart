@@ -122,8 +122,8 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
       appBar: AppBar(
         title: const Text('Medical Record Details'),
         elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -156,8 +156,8 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
     final petName = _pet?.name ?? 'Unknown Pet';
 
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -274,8 +274,8 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
 
   Widget _buildDocumentsSection() {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

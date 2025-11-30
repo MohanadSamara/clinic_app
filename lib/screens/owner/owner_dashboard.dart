@@ -127,8 +127,35 @@ class _OwnerHomeScreen extends StatelessWidget {
         title: const Text('Vet2U Dashboard'),
         elevation: 0,
         backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          Consumer<LocaleProvider>(
+            builder: (context, localeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  Icons.language,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => _showLanguageDialog(context, localeProvider),
+                tooltip: AppLocalizations.of(context)!.changeLanguage,
+              );
+            },
+          ),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => themeProvider.toggleTheme(),
+                tooltip: themeProvider.isDarkMode
+                    ? 'Switch to Light Mode'
+                    : 'Switch to Dark Mode',
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -186,9 +213,11 @@ class _OwnerHomeScreen extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: petCount == 0
-                                      ? colorScheme.error.withOpacity(0.08)
-                                      : colorScheme.primary.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(12),
+                                      ? colorScheme.tertiaryContainer
+                                            .withOpacity(0.7)
+                                      : colorScheme.primaryContainer
+                                            .withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   petCount == 0
@@ -197,8 +226,8 @@ class _OwnerHomeScreen extends StatelessWidget {
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: petCount == 0
-                                            ? colorScheme.error
-                                            : colorScheme.primary,
+                                            ? colorScheme.onTertiaryContainer
+                                            : colorScheme.onPrimaryContainer,
                                         fontWeight: FontWeight.w500,
                                       ),
                                 ),
@@ -222,7 +251,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                   elevation: 2,
                   color: hasPets
                       ? colorScheme.surface
-                      : colorScheme.primary.withOpacity(0.08),
+                      : colorScheme.tertiaryContainer.withOpacity(0.7),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -269,7 +298,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                               backgroundColor: colorScheme.primary,
                               foregroundColor: colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             child: Text(
@@ -713,14 +742,14 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
               value: _selectedPet,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(color: colorScheme.primary, width: 2),
                 ),
               ),
@@ -748,10 +777,10 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context)!.describeSymptoms,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(color: colorScheme.primary, width: 2),
                 ),
                 contentPadding: const EdgeInsets.all(16),
@@ -1004,7 +1033,6 @@ class _OwnerProfileScreen extends StatelessWidget {
         title: Text(AppLocalizations.of(context)!.profile),
         elevation: 0,
         backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
       ),
       body: CustomScrollView(
         slivers: [

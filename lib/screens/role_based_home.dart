@@ -18,7 +18,7 @@ class RoleBasedHome extends StatelessWidget {
         // Show loading indicator while initializing
         if (!authProvider.isInitialized) {
           return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: Theme.of(context).colorScheme.background,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

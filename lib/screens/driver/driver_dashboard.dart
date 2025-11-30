@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/appointment.dart';
 import '../../models/driver_status.dart';
@@ -526,6 +527,20 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 ),
                 onPressed: () => _showLanguageDialog(context, localeProvider),
                 tooltip: 'Change Language',
+              );
+            },
+          ),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onPressed: () => themeProvider.toggleTheme(),
+                tooltip: themeProvider.isDarkMode
+                    ? 'Switch to Light Mode'
+                    : 'Switch to Dark Mode',
               );
             },
           ),

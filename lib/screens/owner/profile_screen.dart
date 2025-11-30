@@ -352,10 +352,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                               child: Card(
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(20),
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline
-                                        .withValues(alpha: 0.3),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline.withOpacity(0.15),
                                     width: 1,
                                   ),
                                 ),
@@ -473,10 +474,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                               child: Card(
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(20),
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline
-                                        .withValues(alpha: 0.3),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline.withOpacity(0.15),
                                     width: 1,
                                   ),
                                 ),
@@ -631,10 +633,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                               child: Card(
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(20),
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline
-                                        .withValues(alpha: 0.3),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline.withOpacity(0.15),
                                     width: 1,
                                   ),
                                 ),
@@ -919,11 +922,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                               child: Card(
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(20),
                                   side: BorderSide(
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.error.withValues(alpha: 0.3),
+                                    ).colorScheme.error.withOpacity(0.15),
                                     width: 1,
                                   ),
                                 ),

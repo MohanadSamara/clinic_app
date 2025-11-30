@@ -204,48 +204,50 @@ class AppTheme {
 
     // Color Scheme
     colorScheme: const ColorScheme.light(
-      primary: Color(0xFF0D9488), // Teal
-      onPrimary: Colors.white,
-      primaryContainer: Color(0xFFCCFBF1),
-      onPrimaryContainer: Color(0xFF0F766E),
+      primary: Color(0xFF2CB9B0), // Teal
+      onPrimary: Color(0xFFFFFFFF),
+      primaryContainer: Color(0xFFD0F3EF),
+      onPrimaryContainer: Color(0xFF005148),
 
-      secondary: Color(0xFF7C3AED), // Purple
-      onSecondary: Colors.white,
-      secondaryContainer: Color(0xFFEDE9FE),
-      onSecondaryContainer: Color(0xFF5B21B6),
+      secondary: Color(0xFFFFB74D), // Amber
+      onSecondary: Color(0xFF3E2723),
+      secondaryContainer: Color(0xFFFFF2D8),
+      onSecondaryContainer: Color(0xFF6A4F22),
 
-      tertiary: Color(0xFFF59E0B), // Amber
-      onTertiary: Color(0xFF0F172A),
-      tertiaryContainer: Color(0xFFFEF3C7),
-      onTertiaryContainer: Color(0xFFD97706),
+      tertiary: Color(0xFF6C63FF), // Indigo
+      onTertiary: Color(0xFFFFFFFF),
+      tertiaryContainer: Color(0xFFE1DFFF),
+      onTertiaryContainer: Color(0xFF3A336E),
 
-      error: Color(0xFFEF4444),
-      onError: Colors.white,
+      error: Color(0xFFE53935),
+      onError: Color(0xFFFFFFFF),
       errorContainer: Color(0xFFFFDAD6),
       onErrorContainer: Color(0xFF410002),
 
       surface: Color(0xFFFFFFFF),
-      onSurface: Color(0xFF0F172A),
-      surfaceVariant: Color(0xFFF1F5F9),
-      onSurfaceVariant: Color(0xFF64748B),
+      onSurface: Color(0xFF151820),
+      surfaceVariant: Color(0xFFEFF2F8),
+      onSurfaceVariant: Color(0xFF5C677D),
 
-      outline: Color(0xFFCBD5E1),
+      outline: Color(0xFFD0D7E2),
       outlineVariant: Color(0xFFE2E8F0),
 
-      shadow: Color(0xFFCBD5E1),
-      scrim: Color(0xFF0F172A),
+      shadow: Color(0xFFD0D7E2),
+      scrim: Color(0xFF1A1C1E),
 
       inverseSurface: Color(0xFF1E293B),
       onInverseSurface: Color(0xFFF8FAFC),
-      inversePrimary: Color(0xFF14B8A6),
+      inversePrimary: Color(0xFF2CB9B0),
 
-      surfaceTint: Color(0xFF0D9488),
+      surfaceTint: Color(0xFF2CB9B0),
+
+      background: Color(0xFFF5F7FB),
+      onBackground: Color(0xFF1A1C1E),
     ),
 
     // App Bar
     appBarTheme: AppBarTheme(
-      backgroundColor: Color(0xFF0D9488),
-      foregroundColor: Colors.white,
+      backgroundColor: const Color(0xFF2CB9B0), // colorScheme.primary
       elevation: 0,
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
@@ -253,23 +255,19 @@ class AppTheme {
         fontFamily: fontFamily,
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
-        color: Colors.white,
       ),
-      iconTheme: const IconThemeData(color: Colors.white),
-      actionsIconTheme: const IconThemeData(color: Colors.white),
     ),
 
     // Scaffold
-    scaffoldBackgroundColor: Color(0xFFF8FAFC),
-
+    scaffoldBackgroundColor: const Color(0xFFF5F7FB), // colorScheme.background
     // Icon Theme
     iconTheme: const IconThemeData(color: neutral900),
 
     // Cards
     cardTheme: CardThemeData(
-      color: Color(0xFFFFFFFF),
-      shadowColor: Color(0xFF0D9488).withOpacity(0.1),
-      elevation: 4,
+      color: const Color(0xFFFFFFFF), // colorScheme.surface
+      shadowColor: const Color(0xFF2CB9B0).withOpacity(0.1),
+      elevation: 2, // Reduced for modern look
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusLg),
       ),
@@ -279,10 +277,10 @@ class AppTheme {
     // Buttons
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Color(0xFF0D9488),
+        backgroundColor: const Color(0xFF2CB9B0), // colorScheme.primary
         foregroundColor: Colors.white,
-        elevation: 2,
-        shadowColor: Color(0xFF0D9488).withOpacity(0.3),
+        elevation: 1,
+        shadowColor: const Color(0xFF2CB9B0).withOpacity(0.3),
         padding: const EdgeInsets.symmetric(
           horizontal: spacingLg,
           vertical: spacingMd,
@@ -357,22 +355,25 @@ class AppTheme {
     // Input Decoration
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: neutral100,
+      fillColor: const Color(0xFFF5F7FB), // neutral100 equivalent
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: neutral300),
+        borderSide: const BorderSide(color: Color(0xFFD0D7E2)), // outline
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: neutral300),
+        borderSide: const BorderSide(color: Color(0xFFD0D7E2)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: primary500, width: 2),
+        borderSide: const BorderSide(
+          color: Color(0xFF2CB9B0),
+          width: 2,
+        ), // primary
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: error),
+        borderSide: const BorderSide(color: Color(0xFFE53935)),
       ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: spacingMd,
@@ -382,21 +383,21 @@ class AppTheme {
         fontFamily: fontFamily,
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
-        color: neutral600,
+        color: Color(0xFF5C677D), // onSurfaceVariant
       ),
       hintStyle: const TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeBase,
-        color: neutral500,
+        color: Color(0xFF5C677D),
       ),
-      iconColor: neutral600,
+      iconColor: const Color(0xFF5C677D),
     ),
 
     // Bottom Navigation Bar
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
-      selectedItemColor: primary500,
-      unselectedItemColor: neutral500,
+      selectedItemColor: const Color(0xFF2CB9B0), // primary
+      unselectedItemColor: const Color(0xFF5C677D), // onSurfaceVariant
       selectedLabelStyle: const TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeXs,
@@ -413,8 +414,8 @@ class AppTheme {
 
     // Tab Bar
     tabBarTheme: TabBarThemeData(
-      labelColor: primary500,
-      unselectedLabelColor: neutral600,
+      labelColor: const Color(0xFF2CB9B0), // primary
+      unselectedLabelColor: const Color(0xFF5C677D), // onSurfaceVariant
       labelStyle: const TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeBase,
@@ -425,7 +426,7 @@ class AppTheme {
         fontSize: fontSizeBase,
         fontWeight: fontWeightRegular,
       ),
-      indicatorColor: primary500,
+      indicatorColor: const Color(0xFF2CB9B0),
       indicatorSize: TabBarIndicatorSize.tab,
     ),
 
@@ -547,48 +548,50 @@ class AppTheme {
 
     // Color Scheme
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF14B8A6), // Lighter teal
-      onPrimary: Color(0xFF0F172A),
-      primaryContainer: Color(0xFF0F766E),
-      onPrimaryContainer: Color(0xFFCCFBF1),
+      primary: Color(0xFF2CB9B0), // Teal
+      onPrimary: Color(0xFF00332F),
+      primaryContainer: Color(0xFF005148),
+      onPrimaryContainer: Color(0xFFD0F3EF),
 
-      secondary: Color(0xFFA855F7), // Lighter purple
-      onSecondary: Color(0xFF0F172A),
-      secondaryContainer: Color(0xFF5B21B6),
-      onSecondaryContainer: Color(0xFFEDE9FE),
+      secondary: Color(0xFFFFB74D), // Amber
+      onSecondary: Color(0xFF3E2723),
+      secondaryContainer: Color(0xFF6A4F22),
+      onSecondaryContainer: Color(0xFFFFF2D8),
 
-      tertiary: Color(0xFFFCD34D), // Lighter amber
-      onTertiary: Color(0xFF0F172A),
-      tertiaryContainer: Color(0xFFD97706),
-      onTertiaryContainer: Color(0xFFFEF3C7),
+      tertiary: Color(0xFF9C95FF), // Lighter indigo
+      onTertiary: Color(0xFF211A5A),
+      tertiaryContainer: Color(0xFF3A336E),
+      onTertiaryContainer: Color(0xFFE1DFFF),
 
-      error: Color(0xFFF87171),
-      onError: Color(0xFF0F172A),
+      error: Color(0xFFF27B74),
+      onError: Color(0xFF3C0503),
       errorContainer: Color(0xFF93000A),
       onErrorContainer: Color(0xFFFFDAD6),
 
-      surface: Color(0xFF1E293B),
-      onSurface: Color(0xFFF8FAFC),
-      surfaceVariant: Color(0xFF334155),
-      onSurfaceVariant: Color(0xFF94A3B8),
+      surface: Color(0xFF0B1018),
+      onSurface: Color(0xFFE2E7F0),
+      surfaceVariant: Color(0xFF171C24),
+      onSurfaceVariant: Color(0xFFA2AEC5),
 
-      outline: Color(0xFF475569),
+      outline: Color(0xFF3D4355),
       outlineVariant: Color(0xFF64748B),
 
       shadow: Color(0xFF0F172A),
-      scrim: Color(0xFFF8FAFC),
+      scrim: Color(0xFFE2E7F0),
 
       inverseSurface: Color(0xFFF1F5F9),
       onInverseSurface: Color(0xFF0F172A),
-      inversePrimary: Color(0xFF0D9488),
+      inversePrimary: Color(0xFF2CB9B0),
 
-      surfaceTint: Color(0xFF14B8A6),
+      surfaceTint: Color(0xFF2CB9B0),
+
+      background: Color(0xFF050A11),
+      onBackground: Color(0xFFE2E7F0),
     ),
 
     // App Bar
     appBarTheme: AppBarTheme(
-      backgroundColor: Color(0xFF1E293B),
-      foregroundColor: Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF0B1018), // surface
       elevation: 0,
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
@@ -596,23 +599,19 @@ class AppTheme {
         fontFamily: fontFamily,
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
-        color: Color(0xFFF8FAFC),
       ),
-      iconTheme: const IconThemeData(color: Color(0xFFF8FAFC)),
-      actionsIconTheme: const IconThemeData(color: Color(0xFFF8FAFC)),
     ),
 
     // Scaffold
-    scaffoldBackgroundColor: Color(0xFF0F172A),
-
+    scaffoldBackgroundColor: const Color(0xFF050A11), // colorScheme.background
     // Icon Theme
     iconTheme: const IconThemeData(color: neutral50),
 
     // Cards
     cardTheme: CardThemeData(
-      color: Color(0xFF1E293B),
-      shadowColor: Color(0xFF14B8A6).withOpacity(0.2),
-      elevation: 6,
+      color: const Color(0xFF0B1018), // surface
+      shadowColor: const Color(0xFF2CB9B0).withOpacity(0.2),
+      elevation: 1, // Reduced for modern look
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusLg),
       ),
@@ -622,10 +621,10 @@ class AppTheme {
     // Buttons
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Color(0xFF14B8A6),
-        foregroundColor: Color(0xFF0F172A),
-        elevation: 2,
-        shadowColor: Color(0xFF14B8A6).withOpacity(0.3),
+        backgroundColor: const Color(0xFF2CB9B0), // primary
+        foregroundColor: const Color(0xFF00332F), // onPrimary
+        elevation: 1,
+        shadowColor: const Color(0xFF2CB9B0).withOpacity(0.3),
         padding: const EdgeInsets.symmetric(
           horizontal: spacingLg,
           vertical: spacingMd,
@@ -700,22 +699,25 @@ class AppTheme {
     // Input Decoration
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: neutral800,
+      fillColor: const Color(0xFF171C24), // surfaceVariant
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: neutral600),
+        borderSide: const BorderSide(color: Color(0xFF3D4355)), // outline
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: neutral600),
+        borderSide: const BorderSide(color: Color(0xFF3D4355)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: primary400, width: 2),
+        borderSide: const BorderSide(
+          color: Color(0xFF2CB9B0),
+          width: 2,
+        ), // primary
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadiusMd),
-        borderSide: const BorderSide(color: errorLight),
+        borderSide: const BorderSide(color: Color(0xFFF27B74)), // error
       ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: spacingMd,
@@ -725,20 +727,20 @@ class AppTheme {
         fontFamily: fontFamily,
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
-        color: neutral300,
+        color: Color(0xFFA2AEC5), // onSurfaceVariant
       ),
       hintStyle: const TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeBase,
-        color: neutral500,
+        color: Color(0xFFA2AEC5),
       ),
     ),
 
     // Bottom Navigation Bar
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: neutral800,
-      selectedItemColor: primary400,
-      unselectedItemColor: neutral400,
+      backgroundColor: const Color(0xFF0B1018), // surface
+      selectedItemColor: const Color(0xFF2CB9B0), // primary
+      unselectedItemColor: const Color(0xFFA2AEC5), // onSurfaceVariant
       selectedLabelStyle: const TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeXs,
@@ -755,8 +757,8 @@ class AppTheme {
 
     // Tab Bar
     tabBarTheme: TabBarThemeData(
-      labelColor: primary400,
-      unselectedLabelColor: neutral400,
+      labelColor: const Color(0xFF2CB9B0), // primary
+      unselectedLabelColor: const Color(0xFFA2AEC5), // onSurfaceVariant
       labelStyle: const TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeBase,
@@ -767,7 +769,7 @@ class AppTheme {
         fontSize: fontSizeBase,
         fontWeight: fontWeightRegular,
       ),
-      indicatorColor: primary400,
+      indicatorColor: const Color(0xFF2CB9B0),
       indicatorSize: TabBarIndicatorSize.tab,
     ),
 

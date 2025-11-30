@@ -26,11 +26,11 @@ class NotificationPreferencesScreen extends StatelessWidget {
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.2),
+                    ).colorScheme.outline.withOpacity(0.15),
                     width: 1,
                   ),
                 ),
@@ -72,11 +72,11 @@ class NotificationPreferencesScreen extends StatelessWidget {
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.2),
+                    ).colorScheme.outline.withOpacity(0.15),
                     width: 1,
                   ),
                 ),
@@ -116,11 +116,11 @@ class NotificationPreferencesScreen extends StatelessWidget {
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.2),
+                    ).colorScheme.outline.withOpacity(0.15),
                     width: 1,
                   ),
                 ),
@@ -159,11 +159,11 @@ class NotificationPreferencesScreen extends StatelessWidget {
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.2),
+                    ).colorScheme.outline.withOpacity(0.15),
                     width: 1,
                   ),
                 ),
@@ -202,11 +202,11 @@ class NotificationPreferencesScreen extends StatelessWidget {
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.2),
+                    ).colorScheme.outline.withOpacity(0.15),
                     width: 1,
                   ),
                 ),
@@ -246,11 +246,11 @@ class NotificationPreferencesScreen extends StatelessWidget {
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withOpacity(0.2),
+                    ).colorScheme.outline.withOpacity(0.15),
                     width: 1,
                   ),
                 ),
@@ -313,7 +313,7 @@ class NotificationPreferencesScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),

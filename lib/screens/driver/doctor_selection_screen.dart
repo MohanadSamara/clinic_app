@@ -80,8 +80,13 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Doctor'), elevation: 0),
+      appBar: AppBar(
+        title: const Text('Select Doctor'),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _doctors.isEmpty
