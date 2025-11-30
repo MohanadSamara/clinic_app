@@ -456,27 +456,48 @@ class _BookingScreenState extends State<BookingScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: Colors.green.withOpacity(0.1),
+                                          color:
+                                              (Theme.of(context).brightness ==
+                                                          Brightness.dark
+                                                      ? const Color(0xFF34D399)
+                                                      : Colors.green)
+                                                  .withOpacity(0.1),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Colors.green,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFF34D399)
+                                                : Colors.green,
                                           ),
                                         ),
                                         child: Row(
                                           children: [
-                                            const Icon(
+                                            Icon(
                                               Icons.check_circle,
-                                              color: Colors.green,
+                                              color:
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark
+                                                  ? const Color(0xFF34D399)
+                                                  : Colors.green,
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
                                               '${l10n.dr} ${_selectedDoctor!.name}',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w500,
-                                                color: Colors.green,
+                                                color:
+                                                    Theme.of(
+                                                          context,
+                                                        ).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF34D399)
+                                                    : Colors.green,
                                               ),
                                             ),
                                             const Spacer(),
@@ -496,18 +517,31 @@ class _BookingScreenState extends State<BookingScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: Colors.orange.withOpacity(0.1),
+                                          color:
+                                              (Theme.of(context).brightness ==
+                                                          Brightness.dark
+                                                      ? const Color(0xFFFFB74D)
+                                                      : Colors.orange)
+                                                  .withOpacity(0.1),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Colors.orange,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFFFFB74D)
+                                                : Colors.orange,
                                           ),
                                         ),
                                         child: Text(
                                           l10n.noDoctorsAvailable,
                                           style: TextStyle(
-                                            color: Colors.orange,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFFFFB74D)
+                                                : Colors.orange,
                                           ),
                                         ),
                                       )
@@ -723,7 +757,13 @@ class _BookingScreenState extends State<BookingScreen> {
                                       decoration: BoxDecoration(
                                         border: Border.all(
                                           color: _addressController.text.isEmpty
-                                              ? Colors.red.withOpacity(0.5)
+                                              ? (Theme.of(context).brightness ==
+                                                            Brightness.dark
+                                                        ? const Color(
+                                                            0xFFF87171,
+                                                          )
+                                                        : Colors.red)
+                                                    .withOpacity(0.5)
                                               : Theme.of(context)
                                                     .colorScheme
                                                     .outline
@@ -752,7 +792,14 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   _addressController
                                                       .text
                                                       .isEmpty
-                                                  ? Colors.red
+                                                  ? (Theme.of(
+                                                              context,
+                                                            ).brightness ==
+                                                            Brightness.dark
+                                                        ? const Color(
+                                                            0xFFF87171,
+                                                          )
+                                                        : Colors.red)
                                                   : Theme.of(
                                                       context,
                                                     ).colorScheme.primary,
@@ -771,7 +818,11 @@ class _BookingScreenState extends State<BookingScreen> {
                                         child: Text(
                                           l10n.locationRequired,
                                           style: TextStyle(
-                                            color: Colors.red,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFFF87171)
+                                                : Colors.red,
                                             fontSize: 12,
                                           ),
                                         ),

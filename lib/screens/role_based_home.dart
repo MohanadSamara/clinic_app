@@ -17,8 +17,25 @@ class RoleBasedHome extends StatelessWidget {
       builder: (context, authProvider, child) {
         // Show loading indicator while initializing
         if (!authProvider.isInitialized) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading your dashboard...',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 

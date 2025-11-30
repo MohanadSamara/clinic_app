@@ -305,7 +305,10 @@ class NotificationPreferencesScreen extends StatelessWidget {
                         );
                       }
                     : null,
-                icon: const Icon(Icons.notifications_active),
+                icon: Icon(
+                  Icons.notifications_active,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
                 label: const Text('Send Test Notification'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),

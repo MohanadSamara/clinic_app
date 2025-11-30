@@ -204,47 +204,47 @@ class AppTheme {
 
     // Color Scheme
     colorScheme: const ColorScheme.light(
-      primary: primary500,
+      primary: Color(0xFF0D9488), // Teal
       onPrimary: Colors.white,
-      primaryContainer: primary100,
-      onPrimaryContainer: primary800,
+      primaryContainer: Color(0xFFCCFBF1),
+      onPrimaryContainer: Color(0xFF0F766E),
 
-      secondary: secondary500,
+      secondary: Color(0xFF7C3AED), // Purple
       onSecondary: Colors.white,
-      secondaryContainer: secondary100,
-      onSecondaryContainer: secondary800,
+      secondaryContainer: Color(0xFFEDE9FE),
+      onSecondaryContainer: Color(0xFF5B21B6),
 
-      tertiary: accent500,
-      onTertiary: Colors.white,
-      tertiaryContainer: accent100,
-      onTertiaryContainer: accent800,
+      tertiary: Color(0xFFF59E0B), // Amber
+      onTertiary: Color(0xFF0F172A),
+      tertiaryContainer: Color(0xFFFEF3C7),
+      onTertiaryContainer: Color(0xFFD97706),
 
-      error: error,
+      error: Color(0xFFEF4444),
       onError: Colors.white,
       errorContainer: Color(0xFFFFDAD6),
       onErrorContainer: Color(0xFF410002),
 
-      surface: neutral50,
-      onSurface: neutral900,
-      surfaceVariant: neutral100,
-      onSurfaceVariant: neutral700,
+      surface: Color(0xFFFFFFFF),
+      onSurface: Color(0xFF0F172A),
+      surfaceVariant: Color(0xFFF1F5F9),
+      onSurfaceVariant: Color(0xFF64748B),
 
-      outline: neutral400,
-      outlineVariant: neutral300,
+      outline: Color(0xFFCBD5E1),
+      outlineVariant: Color(0xFFE2E8F0),
 
-      shadow: neutral200,
-      scrim: neutral900,
+      shadow: Color(0xFFCBD5E1),
+      scrim: Color(0xFF0F172A),
 
-      inverseSurface: neutral800,
-      onInverseSurface: neutral50,
-      inversePrimary: primary400,
+      inverseSurface: Color(0xFF1E293B),
+      onInverseSurface: Color(0xFFF8FAFC),
+      inversePrimary: Color(0xFF14B8A6),
 
-      surfaceTint: primary500,
+      surfaceTint: Color(0xFF0D9488),
     ),
 
     // App Bar
     appBarTheme: AppBarTheme(
-      backgroundColor: primary500,
+      backgroundColor: Color(0xFF0D9488),
       foregroundColor: Colors.white,
       elevation: 0,
       shadowColor: Colors.transparent,
@@ -260,16 +260,16 @@ class AppTheme {
     ),
 
     // Scaffold
-    scaffoldBackgroundColor: neutral50,
+    scaffoldBackgroundColor: Color(0xFFF8FAFC),
 
     // Icon Theme
     iconTheme: const IconThemeData(color: neutral900),
 
     // Cards
     cardTheme: CardThemeData(
-      color: Colors.white,
-      shadowColor: neutral200,
-      elevation: 2,
+      color: Color(0xFFFFFFFF),
+      shadowColor: Color(0xFF0D9488).withOpacity(0.1),
+      elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusLg),
       ),
@@ -279,10 +279,10 @@ class AppTheme {
     // Buttons
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: primary500,
+        backgroundColor: Color(0xFF0D9488),
         foregroundColor: Colors.white,
-        elevation: 0,
-        shadowColor: Colors.transparent,
+        elevation: 2,
+        shadowColor: Color(0xFF0D9488).withOpacity(0.3),
         padding: const EdgeInsets.symmetric(
           horizontal: spacingLg,
           vertical: spacingMd,
@@ -547,48 +547,48 @@ class AppTheme {
 
     // Color Scheme
     colorScheme: const ColorScheme.dark(
-      primary: primary400,
-      onPrimary: neutral900,
-      primaryContainer: primary800,
-      onPrimaryContainer: primary100,
+      primary: Color(0xFF14B8A6), // Lighter teal
+      onPrimary: Color(0xFF0F172A),
+      primaryContainer: Color(0xFF0F766E),
+      onPrimaryContainer: Color(0xFFCCFBF1),
 
-      secondary: secondary400,
-      onSecondary: neutral900,
-      secondaryContainer: secondary800,
-      onSecondaryContainer: secondary100,
+      secondary: Color(0xFFA855F7), // Lighter purple
+      onSecondary: Color(0xFF0F172A),
+      secondaryContainer: Color(0xFF5B21B6),
+      onSecondaryContainer: Color(0xFFEDE9FE),
 
-      tertiary: accent400,
-      onTertiary: neutral900,
-      tertiaryContainer: accent800,
-      onTertiaryContainer: accent100,
+      tertiary: Color(0xFFFCD34D), // Lighter amber
+      onTertiary: Color(0xFF0F172A),
+      tertiaryContainer: Color(0xFFD97706),
+      onTertiaryContainer: Color(0xFFFEF3C7),
 
-      error: errorLight,
-      onError: neutral900,
+      error: Color(0xFFF87171),
+      onError: Color(0xFF0F172A),
       errorContainer: Color(0xFF93000A),
       onErrorContainer: Color(0xFFFFDAD6),
 
-      surface: neutral900,
-      onSurface: neutral50,
-      surfaceVariant: neutral800,
-      onSurfaceVariant: neutral300,
+      surface: Color(0xFF1E293B),
+      onSurface: Color(0xFFF8FAFC),
+      surfaceVariant: Color(0xFF334155),
+      onSurfaceVariant: Color(0xFF94A3B8),
 
-      outline: neutral500,
-      outlineVariant: neutral600,
+      outline: Color(0xFF475569),
+      outlineVariant: Color(0xFF64748B),
 
-      shadow: neutral900,
-      scrim: neutral50,
+      shadow: Color(0xFF0F172A),
+      scrim: Color(0xFFF8FAFC),
 
-      inverseSurface: neutral100,
-      onInverseSurface: neutral900,
-      inversePrimary: primary600,
+      inverseSurface: Color(0xFFF1F5F9),
+      onInverseSurface: Color(0xFF0F172A),
+      inversePrimary: Color(0xFF0D9488),
 
-      surfaceTint: primary400,
+      surfaceTint: Color(0xFF14B8A6),
     ),
 
     // App Bar
     appBarTheme: AppBarTheme(
-      backgroundColor: neutral900,
-      foregroundColor: neutral50,
+      backgroundColor: Color(0xFF1E293B),
+      foregroundColor: Color(0xFFF8FAFC),
       elevation: 0,
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
@@ -596,23 +596,23 @@ class AppTheme {
         fontFamily: fontFamily,
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
-        color: neutral50,
+        color: Color(0xFFF8FAFC),
       ),
-      iconTheme: const IconThemeData(color: neutral50),
-      actionsIconTheme: const IconThemeData(color: neutral50),
+      iconTheme: const IconThemeData(color: Color(0xFFF8FAFC)),
+      actionsIconTheme: const IconThemeData(color: Color(0xFFF8FAFC)),
     ),
 
     // Scaffold
-    scaffoldBackgroundColor: neutral900,
+    scaffoldBackgroundColor: Color(0xFF0F172A),
 
     // Icon Theme
     iconTheme: const IconThemeData(color: neutral50),
 
     // Cards
     cardTheme: CardThemeData(
-      color: neutral800,
-      shadowColor: neutral900,
-      elevation: 4,
+      color: Color(0xFF1E293B),
+      shadowColor: Color(0xFF14B8A6).withOpacity(0.2),
+      elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusLg),
       ),
@@ -622,10 +622,10 @@ class AppTheme {
     // Buttons
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: primary400,
-        foregroundColor: neutral900,
-        elevation: 0,
-        shadowColor: Colors.transparent,
+        backgroundColor: Color(0xFF14B8A6),
+        foregroundColor: Color(0xFF0F172A),
+        elevation: 2,
+        shadowColor: Color(0xFF14B8A6).withOpacity(0.3),
         padding: const EdgeInsets.symmetric(
           horizontal: spacingLg,
           vertical: spacingMd,

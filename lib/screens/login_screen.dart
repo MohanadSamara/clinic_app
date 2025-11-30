@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../theme/app_theme.dart';
 import 'register_screen.dart';
 import 'role_based_home.dart';
 import 'role_selection_screen.dart';
@@ -27,43 +26,86 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final auth = Provider.of<AuthProvider>(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Welcome Back'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        centerTitle: true,
-      ),
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppTheme.paddingLarge),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
-              // Header
+              const SizedBox(height: 24),
+
+              // Top area: enhanced header with app branding
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [colorScheme.primary, colorScheme.secondary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.pets,
+                        size: 48,
+                        color: colorScheme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Vet2U',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                        letterSpacing: -1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mobile veterinary care',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 48),
+
+              // Header area
               Text(
                 'Sign In',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                style: theme.textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                  letterSpacing: -1.0,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Welcome back to Vet2U',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.w400,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
 
               // Form Fields
               TextField(
@@ -73,15 +115,32 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintText: 'Enter your email',
                   prefixIcon: Icon(
                     Icons.email_outlined,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surface,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               TextField(
                 controller: _password,
                 decoration: InputDecoration(
@@ -89,72 +148,77 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintText: 'Enter your password',
                   prefixIcon: Icon(
                     Icons.lock_outline,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surface,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
                   ),
                 ),
                 obscureText: true,
                 textInputAction: TextInputAction.done,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-              // Login Button
+              // Primary action button
               SizedBox(
                 width: double.infinity,
+                height: 56,
                 child: auth.isLoading || _loading
                     ? Container(
-                        height: 56,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.buttonRadius,
-                          ),
+                          color: colorScheme.primary,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Center(
-                          child: SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: colorScheme.onPrimary,
+                            strokeWidth: 2.5,
                           ),
                         ),
                       )
                     : ElevatedButton(
                         onPressed: _login,
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          elevation: theme.brightness == Brightness.light
+                              ? 2
+                              : 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.buttonRadius,
-                            ),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        child: const Text(
-                          'Sign In',
-                          style: TextStyle(
-                            fontSize: 16,
+                          textStyle: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
                           ),
                         ),
+                        child: const Text('Sign In'),
                       ),
               ),
 
               const SizedBox(height: 32),
 
-              // Divider
+              // Divider with "Or continue with"
               Row(
                 children: [
                   Expanded(
                     child: Divider(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.3),
+                      color: colorScheme.outline.withOpacity(0.3),
                       thickness: 1,
                     ),
                   ),
@@ -162,77 +226,74 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'Or continue with',
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                        fontSize: 14,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                   Expanded(
                     child: Divider(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.3),
+                      color: colorScheme.outline.withOpacity(0.3),
                       thickness: 1,
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-              // Social Login Buttons
+              // Enhanced Social Login Buttons with modern styling
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _googleSignIn,
-                      icon: Icon(
-                        Icons.g_mobiledata,
-                        color: Theme.of(context).colorScheme.error,
+                      icon: Icon(Icons.g_mobiledata, color: colorScheme.error),
+                      label: Text(
+                        'Google',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      label: const Text('Google'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.outline.withValues(alpha: 0.3),
-                          width: 1,
+                          color: colorScheme.outline.withValues(alpha: 0.3),
+                          width: 1.5,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.buttonRadius,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
+                        backgroundColor: colorScheme.surface,
+                        foregroundColor: colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _facebookSignIn,
-                      icon: Icon(
-                        Icons.facebook,
-                        color: Theme.of(context).colorScheme.secondary,
+                      icon: Icon(Icons.facebook, color: colorScheme.secondary),
+                      label: Text(
+                        'Facebook',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      label: const Text('Facebook'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.outline.withValues(alpha: 0.3),
-                          width: 1,
+                          color: colorScheme.outline.withValues(alpha: 0.3),
+                          width: 1.5,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.buttonRadius,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
+                        backgroundColor: colorScheme.surface,
+                        foregroundColor: colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -241,17 +302,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 32),
 
-              // Sign Up Link
+              // Sign Up Link - secondary action
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     "Don't have an account? ",
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                      fontSize: 16,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                   TextButton(
@@ -266,9 +324,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       'Sign Up',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 16,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

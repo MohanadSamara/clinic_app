@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
+import '../../providers/locale_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../notification_preferences_screen.dart';
 
 class OwnerProfileScreen extends StatefulWidget {
@@ -29,7 +32,6 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   final ImagePicker _picker = ImagePicker();
 
   // Account settings
-  bool _notificationsEnabled = true;
   String _selectedLanguage = 'en';
   bool _biometricEnabled = false;
 
@@ -145,7 +147,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt),
+              leading: Icon(
+                Icons.camera_alt,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               title: const Text('Camera'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -153,7 +158,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: Icon(
+                Icons.photo_library,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               title: const Text('Gallery'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -205,46 +213,6 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
           });
         }
       }
-    }
-  }
-
-  Future<void> _exportData() async {
-    // TODO: Implement data export functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Data export feature coming soon')),
-    );
-  }
-
-  Future<void> _deleteAccount() async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete Account'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldDelete == true) {
-      // TODO: Implement account deletion
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account deletion feature coming soon')),
-        );
-      });
     }
   }
 
@@ -355,7 +323,12 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                     const SizedBox(height: 8),
                                     TextButton.icon(
                                       onPressed: _showImageSourceDialog,
-                                      icon: const Icon(Icons.camera_alt),
+                                      icon: Icon(
+                                        Icons.camera_alt,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
                                       label: const Text('Change Photo'),
                                     ),
                                   ],
@@ -409,10 +382,15 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       // Name Field
                                       TextFormField(
                                         controller: _nameController,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           labelText: 'Full Name',
-                                          border: OutlineInputBorder(),
-                                          prefixIcon: Icon(Icons.person),
+                                          border: const OutlineInputBorder(),
+                                          prefixIcon: Icon(
+                                            Icons.person,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
                                         validator: (value) {
                                           if (value == null ||
@@ -430,10 +408,15 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       // Email Field (Read-only for now)
                                       TextFormField(
                                         controller: _emailController,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           labelText: 'Email Address',
-                                          border: OutlineInputBorder(),
-                                          prefixIcon: Icon(Icons.email),
+                                          border: const OutlineInputBorder(),
+                                          prefixIcon: Icon(
+                                            Icons.email,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
                                         readOnly: true,
                                         enabled: false,
@@ -443,10 +426,15 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       // Phone Field
                                       TextFormField(
                                         controller: _phoneController,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           labelText: 'Phone Number (Optional)',
-                                          border: OutlineInputBorder(),
-                                          prefixIcon: Icon(Icons.phone),
+                                          border: const OutlineInputBorder(),
+                                          prefixIcon: Icon(
+                                            Icons.phone,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
                                         keyboardType: TextInputType.phone,
                                         validator: (value) {
@@ -543,10 +531,15 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         TextFormField(
                                           controller:
                                               _currentPasswordController,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Current Password',
-                                            border: OutlineInputBorder(),
-                                            prefixIcon: Icon(Icons.lock),
+                                            border: const OutlineInputBorder(),
+                                            prefixIcon: Icon(
+                                              Icons.lock,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                            ),
                                           ),
                                           obscureText: true,
                                           validator: (value) {
@@ -562,11 +555,14 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         const SizedBox(height: 16),
                                         TextFormField(
                                           controller: _newPasswordController,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'New Password',
-                                            border: OutlineInputBorder(),
+                                            border: const OutlineInputBorder(),
                                             prefixIcon: Icon(
                                               Icons.lock_outline,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                           obscureText: true,
@@ -587,11 +583,14 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         TextFormField(
                                           controller:
                                               _confirmPasswordController,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Confirm New Password',
-                                            border: OutlineInputBorder(),
+                                            border: const OutlineInputBorder(),
                                             prefixIcon: Icon(
                                               Icons.lock_outline,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                           obscureText: true,
@@ -660,48 +659,77 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       const SizedBox(height: 24),
 
                                       // Notifications Toggle
-                                      SwitchListTile(
-                                        title: const Text('Push Notifications'),
-                                        subtitle: const Text(
-                                          'Receive appointment reminders and updates',
-                                        ),
-                                        value: _notificationsEnabled,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _notificationsEnabled = value;
-                                          });
-                                        },
+                                      Consumer<NotificationProvider>(
+                                        builder:
+                                            (
+                                              context,
+                                              notificationProvider,
+                                              child,
+                                            ) {
+                                              return SwitchListTile(
+                                                title: const Text(
+                                                  'Push Notifications',
+                                                ),
+                                                subtitle: const Text(
+                                                  'Receive appointment reminders and updates',
+                                                ),
+                                                value: notificationProvider!
+                                                    .notificationsEnabled,
+                                                onChanged: (value) {
+                                                  notificationProvider!
+                                                      .setNotificationsEnabled(
+                                                        value,
+                                                      );
+                                                },
+                                              );
+                                            },
                                       ),
                                       const Divider(),
 
                                       // Language Selection
-                                      ListTile(
-                                        title: const Text('Language'),
-                                        subtitle: Text(
-                                          _selectedLanguage == 'en'
-                                              ? 'English'
-                                              : 'العربية',
-                                        ),
-                                        trailing: DropdownButton<String>(
-                                          value: _selectedLanguage,
-                                          items: const [
-                                            DropdownMenuItem(
-                                              value: 'en',
-                                              child: Text('English'),
-                                            ),
-                                            DropdownMenuItem(
-                                              value: 'ar',
-                                              child: Text('العربية'),
-                                            ),
-                                          ],
-                                          onChanged: (value) {
-                                            if (value != null) {
-                                              setState(() {
-                                                _selectedLanguage = value;
-                                              });
-                                            }
-                                          },
-                                        ),
+                                      Consumer<LocaleProvider>(
+                                        builder:
+                                            (context, localeProvider, child) {
+                                              return ListTile(
+                                                title: const Text('Language'),
+                                                subtitle: Text(
+                                                  localeProvider!
+                                                              .locale
+                                                              .languageCode ==
+                                                          'en'
+                                                      ? 'English'
+                                                      : 'العربية',
+                                                ),
+                                                trailing:
+                                                    DropdownButton<String>(
+                                                      value: localeProvider!
+                                                          .locale
+                                                          .languageCode,
+                                                      items: const [
+                                                        DropdownMenuItem(
+                                                          value: 'en',
+                                                          child: Text(
+                                                            'English',
+                                                          ),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'ar',
+                                                          child: Text(
+                                                            'العربية',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      onChanged: (value) {
+                                                        if (value != null) {
+                                                          localeProvider!
+                                                              .setLocale(
+                                                                Locale(value),
+                                                              );
+                                                        }
+                                                      },
+                                                    ),
+                                              );
+                                            },
                                       ),
                                       const Divider(),
 
@@ -716,6 +744,41 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                           setState(() {
                                             _biometricEnabled = value;
                                           });
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                value
+                                                    ? 'Biometric login enabled (feature coming soon)'
+                                                    : 'Biometric login disabled',
+                                              ),
+                                              backgroundColor: value
+                                                  ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary
+                                                  : Theme.of(
+                                                      context,
+                                                    ).colorScheme.secondary,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const Divider(),
+
+                                      // Theme Mode
+                                      Consumer<ThemeProvider>(
+                                        builder: (context, themeProvider, child) {
+                                          return SwitchListTile(
+                                            title: const Text('Dark Mode'),
+                                            subtitle: const Text(
+                                              'Switch between light and dark themes',
+                                            ),
+                                            value: themeProvider!.isDarkMode,
+                                            onChanged: (value) {
+                                              themeProvider!.toggleTheme();
+                                            },
+                                          );
                                         },
                                       ),
                                       const Divider(),
@@ -728,8 +791,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         subtitle: const Text(
                                           'Manage reminders and alerts',
                                         ),
-                                        trailing: const Icon(
+                                        trailing: Icon(
                                           Icons.notifications,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
                                         ),
                                         onTap: () {
                                           Navigator.of(context).push(
@@ -756,18 +822,27 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.red.shade50,
+                            color: Theme.of(context).colorScheme.errorContainer,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red.shade200),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.error.withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error, color: Colors.red),
+                              Icon(
+                                Icons.error,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _errorMessage!,
-                                  style: const TextStyle(color: Colors.red),
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
                                 ),
                               ),
                             ],
@@ -846,7 +921,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   side: BorderSide(
-                                    color: Colors.red.shade200,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.error.withValues(alpha: 0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -863,13 +940,19 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                             .titleLarge
                                             ?.copyWith(
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.red.shade700,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
                                             ),
                                       ),
                                       const SizedBox(height: 16),
-                                      const Text(
+                                      Text(
                                         'Manage your account security and data',
-                                        style: TextStyle(color: Colors.grey),
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
                                       ),
                                       const SizedBox(height: 24),
 
@@ -878,16 +961,22 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         width: double.infinity,
                                         child: OutlinedButton.icon(
                                           onPressed: _logout,
-                                          icon: const Icon(
+                                          icon: Icon(
                                             Icons.logout,
-                                            color: Colors.red,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
                                           ),
                                           label: const Text('Logout'),
                                           style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                              color: Colors.red,
+                                            side: BorderSide(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
                                             ),
-                                            foregroundColor: Colors.red,
+                                            foregroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 16,
                                             ),
@@ -900,17 +989,36 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       SizedBox(
                                         width: double.infinity,
                                         child: OutlinedButton.icon(
-                                          onPressed: _exportData,
-                                          icon: const Icon(
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: const Text(
+                                                  'Data export feature is coming soon',
+                                                ),
+                                                backgroundColor: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                              ),
+                                            );
+                                          },
+                                          icon: Icon(
                                             Icons.download,
-                                            color: Colors.blue,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                           ),
                                           label: const Text('Export My Data'),
                                           style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                              color: Colors.blue,
+                                            side: BorderSide(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
                                             ),
-                                            foregroundColor: Colors.blue,
+                                            foregroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 16,
                                             ),
@@ -923,14 +1031,31 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton.icon(
-                                          onPressed: _deleteAccount,
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: const Text(
+                                                  'Account deletion feature is coming soon',
+                                                ),
+                                                backgroundColor: Theme.of(
+                                                  context,
+                                                ).colorScheme.error,
+                                              ),
+                                            );
+                                          },
                                           icon: const Icon(
                                             Icons.delete_forever,
                                           ),
                                           label: const Text('Delete Account'),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            foregroundColor: Colors.white,
+                                            backgroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
+                                            foregroundColor: Theme.of(
+                                              context,
+                                            ).colorScheme.onError,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 16,
                                             ),

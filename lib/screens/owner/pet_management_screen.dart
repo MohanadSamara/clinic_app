@@ -231,7 +231,7 @@ class _PetCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   child: Text(
                     pet.name.substring(0, 1).toUpperCase(),
                     style: TextStyle(
@@ -264,7 +264,9 @@ class _PetCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -272,7 +274,7 @@ class _PetCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: AppTheme.primary,
+                            color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                       ),

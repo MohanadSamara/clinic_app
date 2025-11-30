@@ -167,7 +167,7 @@ class _AppointmentManagementScreenState
         .read<AppointmentProvider>()
         .updateAppointmentStatus(
           appointment.id!,
-          'confirmed',
+          'accepted',
           doctorId: authProvider.user!.id!,
         );
     if (success) {
@@ -535,6 +535,8 @@ class _AppointmentCard extends StatelessWidget {
     switch (status) {
       case 'pending':
         return Colors.orange;
+      case 'accepted':
+        return Colors.teal;
       case 'confirmed':
         return Colors.blue;
       case 'completed':
@@ -550,6 +552,8 @@ class _AppointmentCard extends StatelessWidget {
     switch (status) {
       case 'pending':
         return Icons.schedule;
+      case 'accepted':
+        return Icons.thumb_up;
       case 'confirmed':
         return Icons.check_circle;
       case 'completed':

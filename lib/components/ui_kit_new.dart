@@ -23,8 +23,8 @@ class HeroWelcomeSection extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primary500.withOpacity(0.1),
-            AppTheme.accent500.withOpacity(0.05),
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -42,18 +42,21 @@ class HeroWelcomeSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [AppTheme.primary400, AppTheme.primary600],
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    ],
                   ),
                 ),
                 child: CircleAvatar(
                   radius: 35,
-                  backgroundColor: AppTheme.neutral100,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   child: Text(
                     userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primary500,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -66,7 +69,7 @@ class HeroWelcomeSection extends StatelessWidget {
                     Text(
                       'Welcome back,',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.neutral600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     Text(
@@ -74,7 +77,7 @@ class HeroWelcomeSection extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.neutral900,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                     ),
                     if (subtitle != null) ...[
@@ -84,14 +87,18 @@ class HeroWelcomeSection extends StatelessWidget {
                           Icon(
                             Icons.verified,
                             size: 16,
-                            color: AppTheme.success,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               subtitle!,
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppTheme.neutral600),
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ),
                         ],
@@ -150,7 +157,7 @@ class CompactSpecialistCard extends StatelessWidget {
                 height: 60,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
-                  color: AppTheme.primary100,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   image: imageUrl != null
                       ? DecorationImage(
                           image: NetworkImage(imageUrl!),
@@ -159,7 +166,11 @@ class CompactSpecialistCard extends StatelessWidget {
                       : null,
                 ),
                 child: imageUrl == null
-                    ? Icon(Icons.person, color: AppTheme.primary500, size: 30)
+                    ? Icon(
+                        Icons.person,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 30,
+                      )
                     : null,
               ),
               const SizedBox(width: 16),
@@ -171,34 +182,42 @@ class CompactSpecialistCard extends StatelessWidget {
                       'Dr. $name',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.neutral900,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       specialty,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.primary500,
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.star, size: 16, color: AppTheme.accent500),
+                        Icon(
+                          Icons.star,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '$rating',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w500,
-                                color: AppTheme.neutral900,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                         ),
                         Text(
                           ' ($reviewCount reviews)',
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.neutral600),
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),
@@ -208,7 +227,7 @@ class CompactSpecialistCard extends StatelessWidget {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: AppTheme.neutral600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),
@@ -236,8 +255,9 @@ class CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = backgroundColor ?? AppTheme.primary100;
-    final txtColor = textColor ?? AppTheme.primary500;
+    final bgColor =
+        backgroundColor ?? Theme.of(context).colorScheme.primaryContainer;
+    final txtColor = textColor ?? Theme.of(context).colorScheme.primary;
 
     return InkWell(
       onTap: onTap,
@@ -290,11 +310,11 @@ class EnhancedSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.neutral100,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.neutral900.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -305,8 +325,15 @@ class EnhancedSearchBar extends StatelessWidget {
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: AppTheme.neutral600),
-          prefixIcon: leading ?? Icon(Icons.search, color: AppTheme.neutral600),
+          hintStyle: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          prefixIcon:
+              leading ??
+              Icon(
+                Icons.search,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
           suffixIcon: trailing != null
               ? Row(mainAxisSize: MainAxisSize.min, children: trailing!)
               : null,
@@ -343,14 +370,15 @@ class PetAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            borderColor ?? AppTheme.primary400,
-            borderColor?.withOpacity(0.7) ?? AppTheme.primary600,
+            borderColor ?? Theme.of(context).colorScheme.primary,
+            borderColor?.withOpacity(0.7) ??
+                Theme.of(context).colorScheme.primary.withOpacity(0.7),
           ],
         ),
       ),
       child: CircleAvatar(
         radius: radius,
-        backgroundColor: AppTheme.neutral100,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
         child: imageUrl == null
             ? Text(
@@ -358,7 +386,7 @@ class PetAvatar extends StatelessWidget {
                 style: TextStyle(
                   fontSize: radius * 0.6,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.primary500,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               )
             : null,
@@ -393,7 +421,7 @@ class SectionHeader extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.secondary500,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (subtitle != null) ...[
@@ -401,7 +429,7 @@ class SectionHeader extends StatelessWidget {
                   Text(
                     subtitle!,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.neutral600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -498,26 +526,30 @@ class EmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.primary500.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 48, color: AppTheme.primary500),
+              child: Icon(
+                icon,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: AppTheme.secondary500,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               message,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: AppTheme.neutral600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             if (actionLabel != null && onAction != null) ...[

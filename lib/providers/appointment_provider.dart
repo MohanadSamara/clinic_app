@@ -577,7 +577,8 @@ class AppointmentProvider extends ChangeNotifier {
 
 // Role-based permission checks
 const Map<String, Set<String>> _allowedTransitions = {
-  'pending': {'confirmed', 'cancelled'},
+  'pending': {'accepted', 'cancelled'},
+  'accepted': {'confirmed', 'cancelled'},
   'confirmed': {
     'en_route',
     'cancelled',
@@ -591,10 +592,13 @@ const Map<String, Set<String>> _allowedTransitions = {
 };
 
 bool canOwnerUpdateAppointment(String currentStatus, String newStatus) {
-  // Owners can only cancel or reschedule pending appointments
+  // Owners can cancel pending appointments or confirm accepted appointments
   // They cannot mark appointments as complete - that's for doctors only
   if (currentStatus == 'pending') {
     return newStatus == 'cancelled' || newStatus == 'rescheduled';
+  }
+  if (currentStatus == 'accepted') {
+    return newStatus == 'confirmed' || newStatus == 'cancelled';
   }
   return false;
 }

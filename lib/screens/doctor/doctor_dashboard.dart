@@ -150,6 +150,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
     final serviceProvider = Provider.of<ServiceProvider>(context);
@@ -288,15 +289,17 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: colorScheme.secondaryContainer,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.shade200),
+                            border: Border.all(
+                              color: colorScheme.secondary.withOpacity(0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.check_circle,
-                                color: Colors.green.shade700,
+                                color: colorScheme.secondary,
                                 size: 24,
                               ),
                               const SizedBox(width: 12),
@@ -305,7 +308,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                                   _selectedService!.name,
                                   style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(
-                                        color: Colors.green.shade700,
+                                        color: colorScheme.secondary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -445,15 +448,17 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
+                                    color: colorScheme.secondary.withOpacity(
+                                      0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'ACTIVE',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.green,
+                                      color: colorScheme.secondary,
                                     ),
                                   ),
                                 ),
@@ -480,7 +485,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                       title: 'Today\'s Appointments',
                       value: todaysAppointments.toString(),
                       icon: Icons.calendar_today,
-                      color: Colors.blue,
+                      color: colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -489,7 +494,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                       title: 'Completed',
                       value: completedAppointments.toString(),
                       icon: Icons.check_circle,
-                      color: Colors.green,
+                      color: colorScheme.secondary,
                     ),
                   ),
                 ],
@@ -520,7 +525,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   title: 'Manage Appointments',
                   subtitle: 'View and update patient schedules',
                   icon: Icons.calendar_today,
-                  color: Colors.blue,
+                  color: colorScheme.primary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const AppointmentManagementScreen(),
@@ -532,7 +537,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   title: 'Record Treatments',
                   subtitle: 'Document medical procedures',
                   icon: Icons.medical_services,
-                  color: Colors.teal,
+                  color: colorScheme.secondary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const TreatmentRecordingScreen(),
@@ -544,7 +549,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   title: 'Inventory Management',
                   subtitle: 'Check supplies and medications',
                   icon: Icons.inventory,
-                  color: Colors.orange,
+                  color: colorScheme.tertiary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const InventoryManagementScreen(),
@@ -556,7 +561,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   title: 'Medical Records',
                   subtitle: 'View and manage patient records',
                   icon: Icons.medical_services,
-                  color: Colors.teal,
+                  color: colorScheme.secondary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const _MedicalRecordsScreen(),
@@ -568,7 +573,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   title: 'Upload Documents',
                   subtitle: 'Upload treatment documents and reports',
                   icon: Icons.upload_file,
-                  color: Colors.purple,
+                  color: colorScheme.primary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const DocumentUploadScreen(),
@@ -580,7 +585,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   title: 'Emergency Cases',
                   subtitle: 'Handle urgent situations',
                   icon: Icons.emergency,
-                  color: Colors.red,
+                  color: colorScheme.error,
                   onTap: () => _showEmergencyQueue(context),
                 ),
                 const SizedBox(height: 24),
@@ -673,12 +678,13 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Medical Records'),
         elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -715,14 +721,14 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
                           Icon(
                             Icons.medical_services_outlined,
                             size: 64,
-                            color: Colors.grey[400],
+                            color: colorScheme.onSurface.withOpacity(0.4),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No medical records found',
                             style: TextStyle(
                               fontSize: 18,
-                              color: Colors.grey[600],
+                              color: colorScheme.onSurface.withOpacity(0.6),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -731,7 +737,7 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
                             'Add medical records for your patients',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[500],
+                              color: colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -863,6 +869,7 @@ class _MedicalRecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     // Parse date for better display
     final date = DateTime.tryParse(record.date);
     final formattedDate = date != null
@@ -951,8 +958,8 @@ class _MedicalRecordCard extends StatelessWidget {
               'Diagnosis',
               record.diagnosis,
               Icons.local_hospital,
-              Colors.red.shade100,
-              Colors.red,
+              colorScheme.errorContainer,
+              colorScheme.error,
             ),
 
             const SizedBox(height: 16),
@@ -963,8 +970,8 @@ class _MedicalRecordCard extends StatelessWidget {
               'Treatment',
               record.treatment,
               Icons.healing,
-              Colors.green.shade100,
-              Colors.green,
+              colorScheme.secondaryContainer,
+              colorScheme.secondary,
             ),
 
             // Prescription Section (if available)
@@ -976,8 +983,8 @@ class _MedicalRecordCard extends StatelessWidget {
                 'Prescription',
                 record.prescription!,
                 Icons.medication,
-                Colors.blue.shade100,
-                Colors.blue,
+                colorScheme.primaryContainer,
+                colorScheme.primary,
               ),
             ],
 
@@ -989,8 +996,8 @@ class _MedicalRecordCard extends StatelessWidget {
                 'Additional Notes',
                 record.notes!,
                 Icons.note,
-                Colors.purple.shade100,
-                Colors.purple,
+                colorScheme.tertiaryContainer,
+                colorScheme.tertiary,
               ),
             ],
           ],
@@ -1007,6 +1014,7 @@ class _MedicalRecordCard extends StatelessWidget {
     Color backgroundColor,
     Color iconColor,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1034,7 +1042,7 @@ class _MedicalRecordCard extends StatelessWidget {
           Text(
             content,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+              color: colorScheme.onSurface.withOpacity(0.8),
               height: 1.4,
             ),
           ),
@@ -1049,6 +1057,7 @@ class _DoctorProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
@@ -1056,8 +1065,8 @@ class _DoctorProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
       ),
       body: CustomScrollView(
         slivers: [
@@ -1068,8 +1077,8 @@ class _DoctorProfileScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    Theme.of(context).colorScheme.surface,
+                    colorScheme.primary.withOpacity(0.1),
+                    colorScheme.surface,
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -1079,11 +1088,11 @@ class _DoctorProfileScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 60,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: colorScheme.primary,
                     child: Icon(
                       Icons.medical_services,
                       size: 36,
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -1091,15 +1100,13 @@ class _DoctorProfileScreen extends StatelessWidget {
                     'Dr. ${user?.name ?? 'Doctor'}',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     user?.email ?? 'No email',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -1116,7 +1123,7 @@ class _DoctorProfileScreen extends StatelessWidget {
                   title: 'Professional Information',
                   subtitle: 'Update your credentials',
                   icon: Icons.medical_services,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: colorScheme.primary,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -1130,7 +1137,7 @@ class _DoctorProfileScreen extends StatelessWidget {
                   title: 'Phone: ${user?.phone ?? 'Not set'}',
                   subtitle: 'Contact number',
                   icon: Icons.phone,
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: colorScheme.secondary,
                   onTap: () {
                     // TODO: Implement phone update
                   },
@@ -1141,12 +1148,13 @@ class _DoctorProfileScreen extends StatelessWidget {
                   title: 'Schedule Settings',
                   subtitle: 'Working hours and availability',
                   icon: Icons.schedule,
-                  color: Theme.of(context).colorScheme.tertiary,
+                  color: colorScheme.tertiary,
                   onTap: () {
                     // TODO: Implement schedule settings
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Schedule settings coming soon'),
+                      SnackBar(
+                        content: const Text('Schedule settings coming soon'),
+                        backgroundColor: colorScheme.error,
                       ),
                     );
                   },
@@ -1156,12 +1164,15 @@ class _DoctorProfileScreen extends StatelessWidget {
                   title: 'Notifications',
                   subtitle: 'Alert preferences',
                   icon: Icons.notifications,
-                  color: Colors.purple,
+                  color: colorScheme.primary,
                   onTap: () {
                     // TODO: Implement notification settings
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Notification settings coming soon'),
+                      SnackBar(
+                        content: const Text(
+                          'Notification settings coming soon',
+                        ),
+                        backgroundColor: colorScheme.error,
                       ),
                     );
                   },
@@ -1172,13 +1183,11 @@ class _DoctorProfileScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.error.withOpacity(0.3),
+                      color: colorScheme.error.withOpacity(0.3),
                       width: 1,
                     ),
                   ),
-                  color: Theme.of(context).colorScheme.error.withOpacity(0.05),
+                  color: colorScheme.error.withOpacity(0.05),
                   child: InkWell(
                     onTap: () => authProvider.logout(),
                     borderRadius: BorderRadius.circular(16),
@@ -1189,14 +1198,12 @@ class _DoctorProfileScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.error.withOpacity(0.1),
+                              color: colorScheme.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.logout,
-                              color: Theme.of(context).colorScheme.error,
+                              color: colorScheme.error,
                               size: 24,
                             ),
                           ),
@@ -1207,18 +1214,16 @@ class _DoctorProfileScreen extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.error,
+                                    color: colorScheme.error,
                                   ),
                             ),
                           ),
                           Icon(
                             Icons.arrow_forward_ios,
                             color:
-                                Theme.of(context).brightness == Brightness.light
-                                ? Colors.grey[700]
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.error.withOpacity(0.7),
+                                Theme.of(context).brightness == Brightness.dark
+                                ? colorScheme.onSurfaceVariant
+                                : Colors.black87,
                             size: 16,
                           ),
                         ],

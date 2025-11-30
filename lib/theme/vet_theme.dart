@@ -246,4 +246,198 @@ class VetTheme {
       ),
     );
   }
+
+  static ThemeData dark() {
+    return ThemeData(
+      useMaterial3: true,
+      primaryColor: primaryLight,
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      colorScheme: const ColorScheme.dark(
+        primary: primaryLight,
+        secondary: secondaryLight,
+        tertiary: accentLight,
+        error: error,
+        surface: Color(0xFF1E293B),
+        surfaceContainer: Color(0xFF334155),
+        surfaceContainerHighest: Color(0xFF475569),
+        background: Color(0xFF0F172A),
+        onSurface: Color(0xFFF8FAFC),
+        onSurfaceVariant: Color(0xFF94A3B8),
+        outline: Color(0xFF475569),
+        outlineVariant: Color(0xFF64748B),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E293B),
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: Color(0xFFF8FAFC),
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.5,
+        ),
+        iconTheme: IconThemeData(color: Color(0xFFF8FAFC)),
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+        ),
+        color: const Color(0xFF1E293B),
+        margin: EdgeInsets.zero,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF334155),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: const BorderSide(color: Color(0xFF475569)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: const BorderSide(color: Color(0xFF475569)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: const BorderSide(color: primaryLight, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: const BorderSide(color: error, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+          borderSide: const BorderSide(color: error, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
+        labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryLight,
+          foregroundColor: const Color(0xFF0F172A),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(buttonRadius),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryLight,
+          side: const BorderSide(color: primaryLight, width: 1.5),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(buttonRadius),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: primaryLight,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(smallRadius),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.25,
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: const Color(0xFF334155),
+        selectedColor: const Color(0xFF0F766E),
+        checkmarkColor: primaryLight,
+        deleteIconColor: error,
+        labelStyle: const TextStyle(
+          color: Color(0xFFF8FAFC),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        secondaryLabelStyle: const TextStyle(color: primaryLight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(largeRadius),
+        ),
+        side: const BorderSide(color: Color(0xFF475569)),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF475569),
+        thickness: 1,
+        space: 0,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(largeRadius),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF1E293B),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to get theme-aware colors
+  static Color getThemeAwareColor(
+    BuildContext context,
+    Color lightColor,
+    Color darkColor,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? darkColor : lightColor;
+  }
+
+  // Helper method to get theme-aware text color
+  static Color getThemeAwareTextColor(BuildContext context) {
+    return Theme.of(context).colorScheme.onSurface;
+  }
+
+  // Helper method to get theme-aware icon color
+  static Color getThemeAwareIconColor(BuildContext context) {
+    return Theme.of(context).colorScheme.onSurface;
+  }
+
+  // Helper method to get success color based on theme
+  static Color getSuccessColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF34D399) : success;
+  }
+
+  // Helper method to get warning color based on theme
+  static Color getWarningColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFFFFB74D) : warning;
+  }
+
+  // Helper method to get error color based on theme
+  static Color getErrorColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFFF87171) : error;
+  }
 }

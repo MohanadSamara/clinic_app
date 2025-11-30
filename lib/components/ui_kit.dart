@@ -17,14 +17,16 @@ class HeroWelcomeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(AppTheme.paddingLarge),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.04),
+            colorScheme.primary.withValues(alpha: 0.08),
+            colorScheme.secondary.withValues(alpha: 0.04),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -42,20 +44,18 @@ class HeroWelcomeSection extends StatelessWidget {
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Theme.of(context).colorScheme.surface,
+                  color: colorScheme.surface,
                   boxShadow: AppTheme.softShadow,
                 ),
                 child: CircleAvatar(
                   radius: 32,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer,
+                  backgroundColor: colorScheme.primaryContainer,
                   child: Text(
                     userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: colorScheme.primary,
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -69,9 +69,9 @@ class HeroWelcomeSection extends StatelessWidget {
                     Text(
                       'Welcome back,',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -81,7 +81,7 @@ class HeroWelcomeSection extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: colorScheme.onSurface,
                             letterSpacing: -0.5,
                           ),
                     ),
@@ -92,7 +92,7 @@ class HeroWelcomeSection extends StatelessWidget {
                           Icon(
                             Icons.verified,
                             size: 18,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: colorScheme.primary,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -100,9 +100,7 @@ class HeroWelcomeSection extends StatelessWidget {
                               subtitle!,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
+                                    color: colorScheme.onSurfaceVariant
                                         .withValues(alpha: 0.8),
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -146,13 +144,15 @@ class CompactSpecialistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          color: colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -169,7 +169,7 @@ class CompactSpecialistCard extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: colorScheme.primaryContainer,
                   image: imageUrl != null
                       ? DecorationImage(
                           image: NetworkImage(imageUrl!),
@@ -179,11 +179,7 @@ class CompactSpecialistCard extends StatelessWidget {
                   boxShadow: AppTheme.softShadow,
                 ),
                 child: imageUrl == null
-                    ? Icon(
-                        Icons.person,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 28,
-                      )
+                    ? Icon(Icons.person, color: colorScheme.primary, size: 28)
                     : null,
               ),
               const SizedBox(width: 16),
@@ -195,7 +191,7 @@ class CompactSpecialistCard extends StatelessWidget {
                       'Dr. $name',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: colorScheme.onSurface,
                         letterSpacing: -0.25,
                       ),
                     ),
@@ -203,7 +199,7 @@ class CompactSpecialistCard extends StatelessWidget {
                     Text(
                       specialty,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.25,
                       ),
@@ -214,7 +210,7 @@ class CompactSpecialistCard extends StatelessWidget {
                         Icon(
                           Icons.star,
                           size: 16,
-                          color: Theme.of(context).colorScheme.secondary,
+                          color: colorScheme.secondary,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -222,17 +218,16 @@ class CompactSpecialistCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
+                                color: colorScheme.onSurface,
                               ),
                         ),
                         Text(
                           ' ($reviewCount)',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant
-                                    .withValues(alpha: 0.7),
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.7,
+                                ),
                                 fontWeight: FontWeight.w500,
                               ),
                         ),
@@ -244,9 +239,7 @@ class CompactSpecialistCard extends StatelessWidget {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -274,8 +267,9 @@ class CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = backgroundColor ?? Theme.of(context).colorScheme.primary;
-    final txtColor = textColor ?? Theme.of(context).colorScheme.surface;
+    final colorScheme = Theme.of(context).colorScheme;
+    final bgColor = backgroundColor ?? colorScheme.primary;
+    final txtColor = textColor ?? colorScheme.surface;
 
     return InkWell(
       onTap: onTap,
@@ -327,12 +321,14 @@ class EnhancedSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+          color: colorScheme.outline.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: AppTheme.softShadow,
@@ -341,16 +337,14 @@ class EnhancedSearchBar extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
+          color: colorScheme.onSurface,
           fontSize: 16,
           fontWeight: FontWeight.w400,
         ),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             fontSize: 16,
             fontWeight: FontWeight.w400,
           ),
@@ -358,9 +352,7 @@ class EnhancedSearchBar extends StatelessWidget {
               leading ??
               Icon(
                 Icons.search,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 size: 20,
               ),
           suffixIcon: trailing != null

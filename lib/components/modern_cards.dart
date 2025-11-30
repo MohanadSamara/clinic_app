@@ -42,7 +42,13 @@ class ModernStatsCard extends StatelessWidget {
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? color.withOpacity(0.9)
+                      : color,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -208,7 +214,11 @@ class _ModernActionCardState extends State<ModernActionCard>
                             ),
                             child: Icon(
                               widget.icon,
-                              color: widget.color,
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? widget.color.withOpacity(0.9)
+                                  : widget.color,
                               size: 28,
                             ),
                           ),
@@ -252,12 +262,12 @@ class _ModernActionCardState extends State<ModernActionCard>
                               child: Icon(
                                 Icons.arrow_forward_ios,
                                 color:
-                                    Theme.of(
-                                      context,
-                                    ).iconTheme.color?.withOpacity(0.6) ??
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.6),
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.8)
+                                    : Colors.black87,
                                 size: 16,
                               ),
                             ),
@@ -320,7 +330,13 @@ class ModernGridCard extends StatelessWidget {
                         AppTheme.borderRadiusLg,
                       ),
                     ),
-                    child: Icon(icon, size: 32, color: color),
+                    child: Icon(
+                      icon,
+                      size: 32,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? color.withOpacity(0.9)
+                          : color,
+                    ),
                   ),
                   if (badge != null) ...[
                     Positioned(
@@ -497,7 +513,13 @@ class ModernProgressCard extends StatelessWidget {
                       AppTheme.borderRadiusSm,
                     ),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(
+                    icon,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? color.withOpacity(0.9)
+                        : color,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
