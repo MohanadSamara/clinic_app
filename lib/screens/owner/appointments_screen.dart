@@ -645,12 +645,28 @@ class _AppointmentCard extends StatelessWidget {
         return colorScheme.primary;
       case 'en_route':
         return colorScheme.primaryContainer;
+      case 'arrived':
+        return colorScheme.inversePrimary;
+      case 'waiting':
+        return colorScheme.surfaceContainerHighest;
+      case 'on_hold':
+        return colorScheme.outline;
       case 'in_progress':
         return colorScheme.secondaryContainer;
       case 'completed':
         return colorScheme.primary;
       case 'cancelled':
         return colorScheme.error;
+      case 'no_show':
+        return colorScheme.errorContainer;
+      case 'rescheduled':
+        return colorScheme.tertiaryContainer;
+      case 'delayed':
+        return colorScheme.surfaceTint;
+      case 'paid':
+        return Colors.green.shade600;
+      case 'refunded':
+        return Colors.orange.shade600;
       default:
         return colorScheme.onSurfaceVariant;
     }
@@ -666,12 +682,28 @@ class _AppointmentCard extends StatelessWidget {
         return Icons.check_circle;
       case 'en_route':
         return Icons.directions_car;
+      case 'arrived':
+        return Icons.location_on;
+      case 'waiting':
+        return Icons.hourglass_empty;
+      case 'on_hold':
+        return Icons.pause_circle;
       case 'in_progress':
         return Icons.work;
       case 'completed':
         return Icons.done_all;
       case 'cancelled':
         return Icons.cancel;
+      case 'no_show':
+        return Icons.person_off;
+      case 'rescheduled':
+        return Icons.event_repeat;
+      case 'delayed':
+        return Icons.access_time;
+      case 'paid':
+        return Icons.payment;
+      case 'refunded':
+        return Icons.undo;
       default:
         return Icons.help;
     }

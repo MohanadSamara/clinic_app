@@ -1,6 +1,5 @@
 // lib/theme/app_theme.dart
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Comprehensive design system for Vet2U Clinic App
 /// Features calming medical tones, modern Material Design 3 principles,
@@ -73,7 +72,7 @@ class AppTheme {
   static const Color driverOffline = Color(0xFF9E9E9E);
 
   // ===== ENHANCED TYPOGRAPHY SYSTEM =====
-  static const String fontFamily = 'Inter'; // Modern, readable font
+  // static const String fontFamily = 'Inter'; // Modern, readable font - removed to avoid network loading
 
   // Font Sizes - Premium Scale
   static const double fontSizeXs = 12.0;
@@ -199,7 +198,6 @@ class AppTheme {
   // ===== LIGHT THEME =====
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    fontFamily: fontFamily,
     brightness: Brightness.light,
 
     // Color Scheme
@@ -252,7 +250,6 @@ class AppTheme {
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
-        fontFamily: fontFamily,
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
       ),
@@ -289,7 +286,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -308,7 +305,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -327,7 +324,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -345,7 +342,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -380,13 +377,13 @@ class AppTheme {
         vertical: spacingMd,
       ),
       labelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
         color: Color(0xFF5C677D), // onSurfaceVariant
       ),
       hintStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         color: Color(0xFF5C677D),
       ),
@@ -399,12 +396,12 @@ class AppTheme {
       selectedItemColor: const Color(0xFF2CB9B0), // primary
       unselectedItemColor: const Color(0xFF5C677D), // onSurfaceVariant
       selectedLabelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightMedium,
       ),
       unselectedLabelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightRegular,
       ),
@@ -417,12 +414,12 @@ class AppTheme {
       labelColor: const Color(0xFF2CB9B0), // primary
       unselectedLabelColor: const Color(0xFF5C677D), // onSurfaceVariant
       labelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
       ),
       unselectedLabelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightRegular,
       ),
@@ -433,105 +430,105 @@ class AppTheme {
     // Text Theme
     textTheme: TextTheme(
       displayLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSize4xl,
         fontWeight: fontWeightBold,
         color: neutral900,
         height: 1.2,
       ),
       displayMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSize3xl,
         fontWeight: fontWeightBold,
         color: neutral900,
         height: 1.2,
       ),
       displaySmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSize2xl,
         fontWeight: fontWeightBold,
         color: neutral900,
         height: 1.3,
       ),
       headlineLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
         color: neutral900,
         height: 1.3,
       ),
       headlineMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeLg,
         fontWeight: fontWeightSemiBold,
         color: neutral900,
         height: 1.4,
       ),
       headlineSmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightSemiBold,
         color: neutral900,
         height: 1.4,
       ),
       titleLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeLg,
         fontWeight: fontWeightMedium,
         color: neutral900,
         height: 1.4,
       ),
       titleMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
         color: neutral900,
         height: 1.5,
       ),
       titleSmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeSm,
         fontWeight: fontWeightMedium,
         color: neutral900,
         height: 1.5,
       ),
       bodyLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightRegular,
         color: neutral900,
         height: 1.5,
       ),
       bodyMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeSm,
         fontWeight: fontWeightRegular,
         color: neutral900,
         height: 1.5,
       ),
       bodySmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightRegular,
         color: neutral700,
         height: 1.5,
       ),
       labelLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
         color: neutral900,
         height: 1.4,
       ),
       labelMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeSm,
         fontWeight: fontWeightMedium,
         color: neutral900,
         height: 1.4,
       ),
       labelSmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightMedium,
         color: neutral700,
@@ -543,7 +540,7 @@ class AppTheme {
   // ===== DARK THEME =====
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
-    fontFamily: fontFamily,
+    
     brightness: Brightness.dark,
 
     // Color Scheme
@@ -596,7 +593,7 @@ class AppTheme {
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
       ),
@@ -633,7 +630,6 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -652,7 +648,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -671,7 +667,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -689,7 +685,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(borderRadiusMd),
         ),
         textStyle: const TextStyle(
-          fontFamily: fontFamily,
+          
           fontSize: fontSizeBase,
           fontWeight: fontWeightMedium,
         ),
@@ -724,13 +720,13 @@ class AppTheme {
         vertical: spacingMd,
       ),
       labelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
         color: Color(0xFFA2AEC5), // onSurfaceVariant
       ),
       hintStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         color: Color(0xFFA2AEC5),
       ),
@@ -742,12 +738,12 @@ class AppTheme {
       selectedItemColor: const Color(0xFF2CB9B0), // primary
       unselectedItemColor: const Color(0xFFA2AEC5), // onSurfaceVariant
       selectedLabelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightMedium,
       ),
       unselectedLabelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightRegular,
       ),
@@ -760,12 +756,12 @@ class AppTheme {
       labelColor: const Color(0xFF2CB9B0), // primary
       unselectedLabelColor: const Color(0xFFA2AEC5), // onSurfaceVariant
       labelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
       ),
       unselectedLabelStyle: const TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightRegular,
       ),
@@ -776,105 +772,105 @@ class AppTheme {
     // Text Theme
     textTheme: TextTheme(
       displayLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSize4xl,
         fontWeight: fontWeightBold,
         color: neutral50,
         height: 1.2,
       ),
       displayMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSize3xl,
         fontWeight: fontWeightBold,
         color: neutral50,
         height: 1.2,
       ),
       displaySmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSize2xl,
         fontWeight: fontWeightBold,
         color: neutral50,
         height: 1.3,
       ),
       headlineLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXl,
         fontWeight: fontWeightSemiBold,
         color: neutral50,
         height: 1.3,
       ),
       headlineMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeLg,
         fontWeight: fontWeightSemiBold,
         color: neutral50,
         height: 1.4,
       ),
       headlineSmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightSemiBold,
         color: neutral50,
         height: 1.4,
       ),
       titleLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeLg,
         fontWeight: fontWeightMedium,
         color: neutral50,
         height: 1.4,
       ),
       titleMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
         color: neutral50,
         height: 1.5,
       ),
       titleSmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeSm,
         fontWeight: fontWeightMedium,
         color: neutral50,
         height: 1.5,
       ),
       bodyLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightRegular,
         color: neutral50,
         height: 1.5,
       ),
       bodyMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeSm,
         fontWeight: fontWeightRegular,
         color: neutral50,
         height: 1.5,
       ),
       bodySmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightRegular,
         color: neutral300,
         height: 1.5,
       ),
       labelLarge: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeBase,
         fontWeight: fontWeightMedium,
         color: neutral50,
         height: 1.4,
       ),
       labelMedium: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeSm,
         fontWeight: fontWeightMedium,
         color: neutral50,
         height: 1.4,
       ),
       labelSmall: TextStyle(
-        fontFamily: fontFamily,
+        
         fontSize: fontSizeXs,
         fontWeight: fontWeightMedium,
         color: neutral300,
@@ -920,7 +916,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(borderRadiusMd),
     ),
     textStyle: const TextStyle(
-      fontFamily: fontFamily,
+      
       fontSize: fontSizeBase,
       fontWeight: fontWeightMedium,
     ),
@@ -937,7 +933,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(borderRadiusMd),
     ),
     textStyle: const TextStyle(
-      fontFamily: fontFamily,
+      
       fontSize: fontSizeBase,
       fontWeight: fontWeightMedium,
     ),
@@ -953,7 +949,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(borderRadiusMd),
     ),
     textStyle: const TextStyle(
-      fontFamily: fontFamily,
+      
       fontSize: fontSizeBase,
       fontWeight: fontWeightMedium,
     ),

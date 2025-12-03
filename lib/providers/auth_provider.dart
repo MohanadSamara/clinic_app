@@ -1,4 +1,6 @@
 // lib/providers/auth_provider.dart
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +22,30 @@ class AuthProvider extends ChangeNotifier {
 
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
+
+  // Web profile image storage
+  static Future<void> _saveWebProfileImage(
+    String userId,
+    List<int> imageData,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = base64Encode(imageData);
+    await prefs.setString('web_profile_image_$userId', encoded);
+  }
+
+  static Future<List<int>?> _loadWebProfileImage(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = prefs.getString('web_profile_image_$userId');
+    if (encoded != null) {
+      return base64Decode(encoded);
+    }
+    return null;
+  }
+
+  static Future<void> _deleteWebProfileImage(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('web_profile_image_$userId');
+  }
 
   User? get user => _user;
   bool get isLoggedIn => _user != null;
@@ -65,6 +91,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     String? phone,
     String role = 'owner',
+    String? area,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -92,6 +119,7 @@ class AuthProvider extends ChangeNotifier {
         password: password, // In production, hash this password
         phone: phone?.trim(),
         role: role,
+        area: area,
       );
 
       final id = await DBHelper.instance.insertUser(u.toMap());
@@ -292,9 +320,11 @@ class AuthProvider extends ChangeNotifier {
   Future<void> updateProfile({
     String? name,
     String? phone,
+    String? area,
     String? currentPassword,
     String? newPassword,
-    String? profileImage,
+    String? profileImagePath,
+    List<int>? profileImageBytes,
   }) async {
     if (_user == null) throw Exception('Not authenticated');
 
@@ -306,10 +336,24 @@ class AuthProvider extends ChangeNotifier {
       if (phone != null) {
         updates['phone'] = phone.trim().isEmpty ? null : phone.trim();
       }
-      if (profileImage != null) {
-        updates['profileImage'] = profileImage.trim().isEmpty
+      if (area != null) {
+        updates['area'] = area.trim().isEmpty ? null : area.trim();
+      }
+      if (kIsWeb && profileImageBytes != null) {
+        // For web, store image bytes
+        await _saveWebProfileImage(_user!.id!.toString(), profileImageBytes);
+        updates['profileImage'] = 'web_profile_image_${_user!.id}';
+      } else if (!kIsWeb && profileImagePath != null) {
+        // For mobile/desktop, store file path
+        updates['profileImage'] = profileImagePath.trim().isEmpty
             ? null
-            : profileImage.trim();
+            : profileImagePath.trim();
+      } else if (profileImageBytes == null && profileImagePath == null) {
+        // Clear profile image
+        if (kIsWeb) {
+          await _deleteWebProfileImage(_user!.id!.toString());
+        }
+        updates['profileImage'] = null;
       }
 
       // Handle password change
@@ -335,6 +379,7 @@ class AuthProvider extends ChangeNotifier {
         final updatedUser = _user!.copyWith(
           name: updates['name'] ?? _user!.name,
           phone: updates['phone'] ?? _user!.phone,
+          area: updates['area'] ?? _user!.area,
           password: updates['password'] ?? _user!.password,
           profileImage: updates['profileImage'] ?? _user!.profileImage,
         );
@@ -413,6 +458,7 @@ class AuthProvider extends ChangeNotifier {
     required String role,
     required String provider,
     required String providerId,
+    String? area,
   }) async {
     if (_pendingSocialUser == null) {
       throw Exception('No pending social registration');
@@ -442,6 +488,7 @@ class AuthProvider extends ChangeNotifier {
           role: role,
           provider: provider,
           providerId: providerId,
+          area: area,
         );
 
         final id = await DBHelper.instance.insertUser(localUser.toMap());
@@ -465,4 +512,16 @@ class AuthProvider extends ChangeNotifier {
 
   // Get pending social user data
   Map<String, dynamic>? get pendingSocialUser => _pendingSocialUser;
+
+  // Get profile image bytes for web
+  Future<Uint8List?> getProfileImageBytes() async {
+    if (!kIsWeb || _user == null || _user!.profileImage == null) return null;
+
+    if (_user!.profileImage!.startsWith('web_profile_image_')) {
+      final bytes = await _loadWebProfileImage(_user!.id!.toString());
+      return bytes != null ? Uint8List.fromList(bytes) : null;
+    }
+
+    return null;
+  }
 }

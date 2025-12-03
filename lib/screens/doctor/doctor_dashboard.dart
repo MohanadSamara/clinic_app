@@ -2,12 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/availability_provider.dart';
 import '../../models/service.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
@@ -23,6 +29,7 @@ import 'inventory_management_screen.dart';
 import 'profile_screen.dart';
 import 'medical_record_form_screen.dart';
 import 'document_upload_screen.dart';
+import 'van_selection_screen.dart';
 
 class DoctorDashboard extends StatefulWidget {
   const DoctorDashboard({super.key});
@@ -90,17 +97,81 @@ class _DoctorHomeScreen extends StatefulWidget {
   State<_DoctorHomeScreen> createState() => _DoctorHomeScreenState();
 }
 
-class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
+class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
+    with WidgetsBindingObserver {
   Service? _selectedService;
   User? _linkedDriver;
   bool _isLoading = false;
+  Timer? _autoSaveTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
+    _startAutoSaveTimer();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoSaveTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Save data when app goes to background or is inactive
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _saveDataBeforeExit();
+    }
+
+    // Update availability status based on app state
+    final authProvider = context.read<AuthProvider>();
+    final availabilityProvider = context.read<AvailabilityProvider>();
+    if (authProvider.user?.id != null) {
+      final newStatus = (state == AppLifecycleState.resumed)
+          ? 'online'
+          : 'offline';
+      availabilityProvider.updateUserAvailability(
+        authProvider.user!.id!,
+        newStatus,
+      );
+    }
+  }
+
+  void _startAutoSaveTimer() {
+    // Auto-save every 30 seconds
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _autoSaveData();
+      }
+    });
+  }
+
+  void _autoSaveData() {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final availabilityProvider = context.read<AvailabilityProvider>();
+
+      // Save current availability status
+      if (authProvider.user?.id != null) {
+        availabilityProvider.updateUserAvailability(
+          authProvider.user!.id!,
+          'online',
+        );
+      }
+
+      debugPrint('Auto-saved user data at ${DateTime.now()}');
+    } catch (e) {
+      debugPrint('Error during auto-save: $e');
+    }
   }
 
   Future<void> _loadData() async {
@@ -110,12 +181,16 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
     );
     final authProvider = context.read<AuthProvider>();
     final appointmentProvider = context.read<AppointmentProvider>();
+    final availabilityProvider = context.read<AvailabilityProvider>();
     final doctorId = authProvider.user?.id;
 
     await serviceProvider.loadServices();
+    await availabilityProvider.loadAvailabilityData();
     if (doctorId != null) {
       await appointmentProvider.loadAppointments(doctorId: doctorId);
       await _loadLinkedDriver();
+      // Set doctor as online when dashboard loads
+      await availabilityProvider.updateUserAvailability(doctorId, 'online');
     }
   }
 
@@ -153,6 +228,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final authProvider = Provider.of<AuthProvider>(context);
+    final availabilityProvider = Provider.of<AvailabilityProvider>(context);
     final user = authProvider.user;
     final serviceProvider = Provider.of<ServiceProvider>(context);
     final appointmentProvider = Provider.of<AppointmentProvider>(context);
@@ -206,13 +282,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.person_add),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const DoctorSelectionScreen()),
-            ),
-            tooltip: AppLocalizations.of(context)!.selectDriver,
-          ),
+          // Removed driver selection - admin handles linking
           IconButton(
             icon: Icon(
               Icons.logout,
@@ -225,7 +295,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
               Icons.close,
               color: Theme.of(context).colorScheme.onSurface,
             ),
-            onPressed: () => SystemNavigator.pop(),
+            onPressed: () => _closeApp(context),
             tooltip: AppLocalizations.of(context)!.closeApp,
           ),
         ],
@@ -263,6 +333,72 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Consumer<AvailabilityProvider>(
+                    builder: (context, availabilityProvider, child) {
+                      final currentUser = availabilityProvider.onlineUsers
+                          .firstWhere(
+                            (u) => u.id == user?.id,
+                            orElse: () =>
+                                user ??
+                                User(id: -1, name: '', email: '', password: ''),
+                          );
+                      final isOnline =
+                          currentUser.availabilityStatus == 'online';
+
+                      return Row(
+                        children: [
+                          Text(
+                            'Status: ',
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isOnline
+                                  ? Colors.green.withOpacity(0.2)
+                                  : Colors.grey.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isOnline ? Colors.green : Colors.grey,
+                              ),
+                            ),
+                            child: Text(
+                              isOnline ? 'Available' : 'Offline',
+                              style: TextStyle(
+                                color: isOnline
+                                    ? Colors.green.shade800
+                                    : Colors.grey.shade800,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Switch(
+                            value: isOnline,
+                            onChanged: (value) async {
+                              if (user?.id != null) {
+                                await availabilityProvider
+                                    .updateUserAvailability(
+                                      user!.id!,
+                                      value ? 'online' : 'offline',
+                                    );
+                              }
+                            },
+                            activeColor: Colors.green,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -595,6 +731,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Removed van selection - admin handles assignments
                 ModernActionCard(
                   title: 'Emergency Cases',
                   subtitle: 'Handle urgent situations',
@@ -625,6 +762,94 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen> {
         ],
       ),
     );
+  }
+
+  void _closeApp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Close App'),
+        content: const Text('Are you sure you want to close the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performAppExit();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Close App'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performAppExit() {
+    // Save any pending data before closing
+    _saveDataBeforeExit();
+
+    if (kIsWeb) {
+      // For web: Try to close the window (may not work due to browser security)
+      try {
+        html.window.close();
+      } catch (e) {
+        debugPrint('Unable to close web window: $e');
+        // Fallback: show message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please close this browser tab manually to exit the app',
+              ),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      // For mobile: SystemNavigator.pop() works on Android, on iOS it may not close but returns to home
+      try {
+        SystemNavigator.pop();
+      } catch (e) {
+        debugPrint('Unable to close app on mobile platform: $e');
+      }
+    } else {
+      // For desktop or other platforms: Show message since exit may not work reliably
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please close the application window manually to exit',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  void _saveDataBeforeExit() {
+    // Save any pending data before app closes
+    try {
+      // Update user availability to offline
+      final authProvider = context.read<AuthProvider>();
+      final availabilityProvider = context.read<AvailabilityProvider>();
+      if (authProvider.user?.id != null) {
+        availabilityProvider.updateUserAvailability(
+          authProvider.user!.id!,
+          'offline',
+        );
+      }
+
+      // Any other data saving logic can be added here
+      debugPrint('Data saved before app exit');
+    } catch (e) {
+      debugPrint('Error saving data before exit: $e');
+    }
   }
 
   void _showLanguageDialog(

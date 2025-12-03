@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import '../../providers/auth_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/availability_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/appointment.dart';
 import '../../models/driver_status.dart';
@@ -14,6 +21,8 @@ import '../../models/user.dart';
 import '../../db/db_helper.dart';
 import '../../components/modern_cards.dart';
 import 'doctor_selection_screen.dart';
+import 'van_selection_screen.dart';
+import 'driver_profile_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -22,7 +31,8 @@ class DriverDashboard extends StatefulWidget {
   State<DriverDashboard> createState() => _DriverDashboardState();
 }
 
-class _DriverDashboardState extends State<DriverDashboard> {
+class _DriverDashboardState extends State<DriverDashboard>
+    with WidgetsBindingObserver {
   final LocationService _locationService = LocationService();
   final MapController _mapController = MapController();
   List<Appointment> _assignedAppointments = [];
@@ -40,20 +50,78 @@ class _DriverDashboardState extends State<DriverDashboard> {
   DateTime? _lastStatusUpdate;
   static const Duration _statusUpdateThrottle = Duration(seconds: 30);
   final Map<String, String> _addressCache = {};
+  Timer? _autoSaveTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _locationService.addListener(_onLocationChanged);
     _loadDriverData();
+    _startAutoSaveTimer();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoSaveTimer?.cancel();
     _isDisposed = true;
     _locationService.removeListener(_onLocationChanged);
     _mapController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Save data when app goes to background or is inactive
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _saveDataBeforeExit();
+    }
+
+    // Update availability status based on app state
+    final authProvider = context.read<AuthProvider>();
+    final availabilityProvider = context.read<AvailabilityProvider>();
+    if (authProvider.user?.id != null) {
+      final newStatus = (state == AppLifecycleState.resumed)
+          ? 'online'
+          : 'offline';
+      availabilityProvider.updateUserAvailability(
+        authProvider.user!.id!,
+        newStatus,
+      );
+    }
+  }
+
+  void _startAutoSaveTimer() {
+    // Auto-save every 30 seconds
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted && !_isDisposed) {
+        _autoSaveData();
+      }
+    });
+  }
+
+  void _autoSaveData() {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final availabilityProvider = context.read<AvailabilityProvider>();
+
+      // Save current availability status
+      if (authProvider.user?.id != null) {
+        availabilityProvider.updateUserAvailability(
+          authProvider.user!.id!,
+          'online',
+        );
+      }
+
+      debugPrint('Auto-saved driver data at ${DateTime.now()}');
+    } catch (e) {
+      debugPrint('Error during driver auto-save: $e');
+    }
   }
 
   void _onLocationChanged() {
@@ -70,6 +138,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   Future<void> _loadDriverData() async {
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
+    final availabilityProvider = context.read<AvailabilityProvider>();
     if (authProvider.user?.id != null) {
       // Run database operations in parallel for better performance
       await Future.wait([
@@ -77,6 +146,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
         _loadDriverStatus(),
         _loadLinkedDoctor(),
       ]);
+
+      // Load availability data and set driver as online
+      await availabilityProvider.loadAvailabilityData();
+      await availabilityProvider.updateUserAvailability(
+        authProvider.user!.id!,
+        'online',
+      );
 
       // Load location separately as it may take longer (especially on web with API calls)
       _loadCurrentLocationAsync();
@@ -518,6 +594,68 @@ class _DriverDashboardState extends State<DriverDashboard> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
+          Consumer<AvailabilityProvider>(
+            builder: (context, availabilityProvider, child) {
+              final authProvider = context.read<AuthProvider>();
+              final user = authProvider.user;
+              final currentUser = availabilityProvider.onlineUsers.firstWhere(
+                (u) => u.id == user?.id,
+                orElse: () =>
+                    user ?? User(id: -1, name: '', email: '', password: ''),
+              );
+              final isOnline = currentUser.availabilityStatus == 'online';
+
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isOnline
+                          ? Colors.green.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isOnline ? Colors.green : Colors.grey,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          isOnline ? 'Online' : 'Offline',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: isOnline
+                                ? Colors.green.shade800
+                                : Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Switch(
+                          value: isOnline,
+                          onChanged: (value) async {
+                            if (user?.id != null) {
+                              await availabilityProvider.updateUserAvailability(
+                                user!.id!,
+                                value ? 'online' : 'offline',
+                              );
+                            }
+                          },
+                          activeColor: Colors.green,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
           Consumer<LocaleProvider>(
             builder: (context, localeProvider, child) {
               return IconButton(
@@ -544,12 +682,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
               );
             },
           ),
+          // Removed van and doctor selection - admin handles assignments
           IconButton(
-            icon: const Icon(Icons.person_add),
+            icon: const Icon(Icons.person),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const DoctorSelectionScreen()),
+              MaterialPageRoute(builder: (_) => const DriverProfileScreen()),
             ),
-            tooltip: 'Select Doctor',
+            tooltip: 'Profile',
           ),
           IconButton(
             icon: Icon(
@@ -564,6 +703,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
               color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () => context.read<AuthProvider>().logout(),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            onPressed: () => _closeApp(context),
+            tooltip: 'Close App',
           ),
         ],
       ),
@@ -1728,6 +1875,94 @@ class _DriverDashboardState extends State<DriverDashboard> {
   void _centerOnCurrentLocation() {
     if (_driverLat != null && _driverLng != null) {
       _mapController.move(LatLng(_driverLat!, _driverLng!), 15.0);
+    }
+  }
+
+  void _closeApp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Close App'),
+        content: const Text('Are you sure you want to close the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performAppExit();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Close App'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performAppExit() {
+    // Save any pending data before closing
+    _saveDataBeforeExit();
+
+    if (kIsWeb) {
+      // For web: Try to close the window (may not work due to browser security)
+      try {
+        html.window.close();
+      } catch (e) {
+        debugPrint('Unable to close web window: $e');
+        // Fallback: show message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please close this browser tab manually to exit the app',
+              ),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      // For mobile: SystemNavigator.pop() works on Android, on iOS it may not close but returns to home
+      try {
+        SystemNavigator.pop();
+      } catch (e) {
+        debugPrint('Unable to close app on mobile platform: $e');
+      }
+    } else {
+      // For desktop or other platforms: Show message since exit may not work reliably
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please close the application window manually to exit',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  void _saveDataBeforeExit() {
+    // Save any pending data before app closes
+    try {
+      // Update user availability to offline
+      final authProvider = context.read<AuthProvider>();
+      final availabilityProvider = context.read<AvailabilityProvider>();
+      if (authProvider.user?.id != null) {
+        availabilityProvider.updateUserAvailability(
+          authProvider.user!.id!,
+          'offline',
+        );
+      }
+
+      // Any other data saving logic can be added here
+      debugPrint('Data saved before app exit');
+    } catch (e) {
+      debugPrint('Error saving data before exit: $e');
     }
   }
 

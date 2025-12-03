@@ -104,7 +104,8 @@ class DocumentProvider extends ChangeNotifier {
     int? medicalRecordId,
   }) async {
     _isLoading = true;
-    notifyListeners();
+    // Use Future.microtask to avoid calling notifyListeners during build
+    Future.microtask(() => notifyListeners());
 
     try {
       List<Map<String, dynamic>> data;
@@ -147,7 +148,8 @@ class DocumentProvider extends ChangeNotifier {
     if (!_authProvider.isLoggedIn) return null;
 
     _isLoading = true;
-    notifyListeners();
+    // Use Future.microtask to avoid calling notifyListeners during build
+    Future.microtask(() => notifyListeners());
 
     try {
       // Determine file data source
@@ -251,7 +253,8 @@ class DocumentProvider extends ChangeNotifier {
       return null;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      // Use Future.microtask to avoid calling notifyListeners during build
+      Future.microtask(() => notifyListeners());
     }
   }
 

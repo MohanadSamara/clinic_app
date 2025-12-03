@@ -26,6 +26,19 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  String? _selectedArea;
+  final List<String> _ammanDistricts = [
+    'Amman Qasaba District',
+    'Al-Jami\'a District',
+    'Marka District',
+    'Al-Qweismeh District',
+    'Wadi Al-Sir District',
+    'Al-Jizah District',
+    'Sahab District',
+    'Dabouq District (new)',
+    'Naour District',
+  ];
+
   bool _isLoading = false;
   bool _showPasswordFields = false;
   String? _errorMessage;
@@ -44,6 +57,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       _nameController.text = user.name;
       _emailController.text = user.email;
       _phoneController.text = user.phone ?? '';
+      _selectedArea = user.area;
     }
 
     // Load doctor-specific data (simulated for now)
@@ -106,6 +120,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         phone: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
+        area: _selectedArea,
         currentPassword:
             _showPasswordFields && _currentPasswordController.text.isNotEmpty
             ? _currentPasswordController.text
@@ -475,6 +490,35 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                           }
                                           if (years > 50) {
                                             return 'Please enter a realistic number of years';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // Area Field
+                                      DropdownButtonFormField<String>(
+                                        value: _selectedArea,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Service Area',
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.location_on),
+                                          hintText: 'Select your service area',
+                                        ),
+                                        items: _ammanDistricts.map((district) {
+                                          return DropdownMenuItem<String>(
+                                            value: district,
+                                            child: Text(district),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedArea = value;
+                                          });
+                                        },
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Service area is required';
                                           }
                                           return null;
                                         },

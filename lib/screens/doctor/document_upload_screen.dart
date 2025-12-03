@@ -245,9 +245,18 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         // Get medical records for the selected pet
         List<MedicalRecord> availableRecords = [];
         if (_selectedPet != null) {
-          availableRecords = medicalProvider.getMedicalRecordsByPet(
-            _selectedPet!.id!,
-          );
+          availableRecords = medicalProvider
+              .getMedicalRecordsByPet(_selectedPet!.id!)
+              .toSet()
+              .toList(); // Ensure unique records
+        }
+
+        // Reset selected medical record if it's not in available records
+        if (_selectedMedicalRecord != null &&
+            !availableRecords.contains(_selectedMedicalRecord)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() => _selectedMedicalRecord = null);
+          });
         }
 
         return Card(
@@ -270,7 +279,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<MedicalRecord?>(
-                  initialValue: _selectedMedicalRecord,
+                  value: _selectedMedicalRecord,
                   hint: const Text('Select a medical record (optional)'),
                   items: [
                     const DropdownMenuItem<MedicalRecord?>(

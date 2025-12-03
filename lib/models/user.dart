@@ -10,8 +10,11 @@ class User {
   final String? provider; // e.g., 'google', 'facebook', 'email'
   final String? providerId; // ID from social provider
   final String? profileImage; // Path to profile image
+  final String? area; // Preferred area for doctors and drivers
   final int? linkedDoctorId; // For drivers: which doctor they work with
   final int? linkedDriverId; // For doctors: which driver works with them
+  final String availabilityStatus; // 'online', 'offline', 'busy', 'away'
+  final String? lastSeen; // ISO timestamp
 
   User({
     this.id,
@@ -23,8 +26,11 @@ class User {
     this.provider,
     this.providerId,
     this.profileImage,
+    this.area,
     this.linkedDoctorId,
     this.linkedDriverId,
+    this.availabilityStatus = 'offline',
+    this.lastSeen,
   });
 
   Map<String, dynamic> toMap() => {
@@ -37,8 +43,11 @@ class User {
     'provider': provider,
     'providerId': providerId,
     'profileImage': profileImage,
+    'area': area,
     'linked_doctor_id': linkedDoctorId,
     'linked_driver_id': linkedDriverId,
+    'availability_status': availabilityStatus,
+    'last_seen': lastSeen,
   };
 
   factory User.fromMap(Map<String, dynamic> m) => User(
@@ -51,12 +60,15 @@ class User {
     provider: m['provider']?.toString(),
     providerId: m['providerId']?.toString(),
     profileImage: m['profileImage']?.toString(),
+    area: m['area']?.toString(),
     linkedDoctorId: m['linked_doctor_id'] is int
         ? m['linked_doctor_id'] as int
         : null,
     linkedDriverId: m['linked_driver_id'] is int
         ? m['linked_driver_id'] as int
         : null,
+    availabilityStatus: m['availability_status']?.toString() ?? 'offline',
+    lastSeen: m['last_seen']?.toString(),
   );
 
   User copyWith({
@@ -69,8 +81,11 @@ class User {
     String? provider,
     String? providerId,
     String? profileImage,
+    String? area,
     int? linkedDoctorId,
     int? linkedDriverId,
+    String? availabilityStatus,
+    String? lastSeen,
   }) {
     return User(
       id: id ?? this.id,
@@ -82,8 +97,11 @@ class User {
       provider: provider ?? this.provider,
       providerId: providerId ?? this.providerId,
       profileImage: profileImage ?? this.profileImage,
+      area: area ?? this.area,
       linkedDoctorId: linkedDoctorId ?? this.linkedDoctorId,
       linkedDriverId: linkedDriverId ?? this.linkedDriverId,
+      availabilityStatus: availabilityStatus ?? this.availabilityStatus,
+      lastSeen: lastSeen ?? this.lastSeen,
     );
   }
 }

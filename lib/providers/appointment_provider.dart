@@ -8,8 +8,10 @@ import '../models/appointment.dart';
 import '../models/driver_status.dart';
 import '../models/service.dart';
 import '../providers/notification_provider.dart';
+import '../providers/payment_provider.dart';
 import '../models/pet.dart';
 import '../services/calendar_service.dart';
+import '../models/payment.dart';
 
 class AppointmentProvider extends ChangeNotifier {
   List<Appointment> _appointments = [];
@@ -147,6 +149,22 @@ class AppointmentProvider extends ChangeNotifier {
         notifyListeners();
       }
 
+      // Create payment record when doctor accepts appointment
+      if (status == 'accepted') {
+        final appointment = getAppointmentById(id);
+        if (appointment != null) {
+          await _createPaymentForAppointment(appointment);
+        }
+      }
+
+      // Process refund when appointment is canceled (after payment)
+      if (status == 'canceled') {
+        final appointment = getAppointmentById(id);
+        if (appointment != null) {
+          await _processRefundForCanceledAppointment(appointment);
+        }
+      }
+
       // Auto-assign driver when appointment is confirmed (only if no driver assigned)
       if (status == 'confirmed') {
         final appointment = getAppointmentById(id);
@@ -212,26 +230,21 @@ class AppointmentProvider extends ChangeNotifier {
     int doctorId,
   ) async {
     try {
-      // Get the linked driver for this doctor
-      final linkedDriverId = await _getLinkedDriverForDoctor(doctorId);
-
+      // Only assign doctor, driver must be assigned manually
       await DBHelper.instance.updateAppointment(appointmentId, {
         'doctor_id': doctorId,
-        'driver_id': linkedDriverId,
+        // 'driver_id': linkedDriverId, // Removed auto-assignment
       });
 
       final doctorName = await DBHelper.instance.getUserNameById(doctorId);
-      final driverName = linkedDriverId != null
-          ? await DBHelper.instance.getUserNameById(linkedDriverId)
-          : null;
 
       final index = _appointments.indexWhere((a) => a.id == appointmentId);
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
           doctorId: doctorId,
           doctorName: doctorName,
-          driverId: linkedDriverId,
-          driverName: driverName,
+          // driverId: linkedDriverId, // Removed auto-assignment
+          // driverName: driverName, // Removed auto-assignment
         );
         notifyListeners();
       }
@@ -243,14 +256,7 @@ class AppointmentProvider extends ChangeNotifier {
         'New appointment assigned',
       );
 
-      // Send notification to linked driver if exists
-      if (linkedDriverId != null) {
-        await _sendNotificationToDriver(
-          linkedDriverId,
-          appointmentId,
-          'New appointment assigned (linked to doctor)',
-        );
-      }
+      // Removed notification to linked driver - driver must be assigned manually
 
       return true;
     } catch (e) {
@@ -312,42 +318,7 @@ class AppointmentProvider extends ChangeNotifier {
       final appointment = getAppointmentById(appointmentId);
       if (appointment == null) return null;
 
-      // PRIORITY 1: Check if appointment's doctor has a linked driver
-      if (appointment.doctorId != null) {
-        final linkedDriverId = await _getLinkedDriverForDoctor(
-          appointment.doctorId!,
-        );
-        if (linkedDriverId != null) {
-          // Check if linked driver is available and nearby
-          final linkedDriverStatus = await DBHelper.instance.getDriverStatus(
-            linkedDriverId,
-          );
-          if (linkedDriverStatus != null) {
-            final driverStatus = DriverStatus.fromMap(linkedDriverStatus);
-            if (driverStatus.status.toLowerCase() == 'available') {
-              // Check if driver is nearby (within reasonable distance)
-              if (appointment.locationLat != null &&
-                  appointment.locationLng != null) {
-                final distance = _calculateDistance(
-                  appointment.locationLat!,
-                  appointment.locationLng!,
-                  driverStatus.latitude,
-                  driverStatus.longitude,
-                );
-                // Linked driver gets priority if within 10km
-                if (distance <= 10000) {
-                  return linkedDriverId;
-                }
-              } else {
-                // No location data, still prefer linked driver
-                return linkedDriverId;
-              }
-            }
-          }
-        }
-      }
-
-      // PRIORITY 2: Fall back to location-based selection
+      // Get all available drivers (no priority for linked drivers)
       // Get driver statuses for drivers that are linked to doctors
       final driverStatusesData = await DBHelper.instance
           .getLinkedDriverStatuses();
@@ -541,6 +512,100 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _createPaymentForAppointment(Appointment appointment) async {
+    try {
+      // Get service description
+      String serviceDescription = 'Veterinary Service';
+      if (appointment.serviceType != null) {
+        serviceDescription = appointment.serviceType!;
+      }
+
+      // Calculate tax (16% VAT)
+      final subtotal = appointment.price ?? 0.0;
+      final tax = subtotal * 0.16;
+      final total = subtotal + tax;
+
+      // Generate invoice number
+      final invoiceNumber =
+          'INV-${appointment.id}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+
+      final payment = Payment(
+        appointmentId: appointment.id!,
+        userId: appointment.ownerId,
+        subtotal: subtotal,
+        tax: tax,
+        total: total,
+        currency: 'JOD',
+        method: 'pending', // Will be updated when payment is processed
+        status: 'pending',
+        transactionId:
+            'TXN-${appointment.id}-${DateTime.now().millisecondsSinceEpoch}',
+        serviceDescription: serviceDescription,
+        invoiceNumber: invoiceNumber,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+
+      await DBHelper.instance.insertPayment(payment.toMap());
+      debugPrint('Payment record created for appointment ${appointment.id}');
+    } catch (e) {
+      debugPrint('Error creating payment for appointment: $e');
+    }
+  }
+
+  Future<void> _processRefundForCanceledAppointment(
+    Appointment appointment,
+  ) async {
+    try {
+      final paymentProvider = PaymentProvider();
+
+      // Get payments for this appointment
+      final payments = await paymentProvider.getPaymentsByAppointment(
+        appointment.id!,
+      );
+
+      // Find completed payment
+      final completedPayment = payments.where((p) => p.isCompleted).firstOrNull;
+
+      if (completedPayment != null) {
+        // Process full refund
+        final refundSuccess = await paymentProvider.processRefund(
+          paymentId: completedPayment.id!,
+          amount: completedPayment.total, // Full refund
+          reason: 'Appointment canceled',
+        );
+
+        if (refundSuccess) {
+          debugPrint(
+            'Refund processed successfully for canceled appointment ${appointment.id}',
+          );
+
+          // Send notification to owner about refund
+          await DBHelper.instance.insertNotification({
+            'user_id': appointment.ownerId,
+            'title': 'Appointment Canceled - Refund Processed',
+            'message':
+                'Your appointment has been canceled and a full refund of ${completedPayment.currency} ${completedPayment.total.toStringAsFixed(2)} has been processed.',
+            'type': 'appointment',
+            'is_read': 0,
+            'created_at': DateTime.now().toIso8601String(),
+            'data':
+                '{"appointment_id": ${appointment.id}, "refund_amount": ${completedPayment.total}, "payment_id": ${completedPayment.id}}',
+          });
+        } else {
+          debugPrint(
+            'Failed to process refund for appointment ${appointment.id}',
+          );
+        }
+      } else {
+        debugPrint(
+          'No completed payment found for canceled appointment ${appointment.id}',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error processing refund for canceled appointment: $e');
+    }
+  }
+
   Future<void> _scheduleAppointmentNotifications(
     Appointment appointment,
   ) async {
@@ -577,18 +642,28 @@ class AppointmentProvider extends ChangeNotifier {
 
 // Role-based permission checks
 const Map<String, Set<String>> _allowedTransitions = {
-  'pending': {'accepted', 'cancelled'},
-  'accepted': {'confirmed', 'cancelled'},
+  'pending': {'accepted', 'cancelled', 'rescheduled'},
+  'accepted': {'confirmed', 'cancelled', 'rescheduled'},
   'confirmed': {
     'en_route',
+    'arrived',
     'cancelled',
     'completed',
+    'no_show',
+    'paid',
   }, // Allow doctors to complete confirmed appointments
-  'en_route': {'in_progress', 'delayed', 'cancelled'},
+  'en_route': {'in_progress', 'arrived', 'delayed', 'cancelled'},
+  'arrived': {'waiting', 'in_progress', 'cancelled'},
+  'waiting': {'in_progress', 'on_hold', 'cancelled'},
+  'on_hold': {'waiting', 'in_progress', 'cancelled'},
   'in_progress': {'completed', 'cancelled'},
   'completed': {},
   'cancelled': {},
   'delayed': {'in_progress', 'cancelled'},
+  'no_show': {'rescheduled', 'cancelled'},
+  'rescheduled': {'pending', 'cancelled'},
+  'paid': {'completed', 'cancelled', 'refunded'},
+  'refunded': {'cancelled'},
 };
 
 bool canOwnerUpdateAppointment(String currentStatus, String newStatus) {
@@ -598,7 +673,33 @@ bool canOwnerUpdateAppointment(String currentStatus, String newStatus) {
     return newStatus == 'cancelled' || newStatus == 'rescheduled';
   }
   if (currentStatus == 'accepted') {
-    return newStatus == 'confirmed' || newStatus == 'cancelled';
+    return newStatus == 'confirmed' ||
+        newStatus == 'cancelled' ||
+        newStatus == 'rescheduled';
+  }
+  if (currentStatus == 'confirmed') {
+    return newStatus == 'cancelled' || newStatus == 'rescheduled';
+  }
+  if (currentStatus == 'arrived') {
+    return newStatus == 'cancelled';
+  }
+  if (currentStatus == 'waiting') {
+    return newStatus == 'cancelled';
+  }
+  if (currentStatus == 'on_hold') {
+    return newStatus == 'cancelled';
+  }
+  if (currentStatus == 'no_show') {
+    return newStatus == 'rescheduled' || newStatus == 'cancelled';
+  }
+  if (currentStatus == 'rescheduled') {
+    return newStatus == 'cancelled';
+  }
+  if (currentStatus == 'paid') {
+    return newStatus == 'cancelled';
+  }
+  if (currentStatus == 'refunded') {
+    return newStatus == 'cancelled';
   }
   return false;
 }

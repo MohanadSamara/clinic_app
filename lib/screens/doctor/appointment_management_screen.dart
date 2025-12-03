@@ -152,6 +152,7 @@ class _AppointmentManagementScreenState
               onAccept: () => _acceptAppointment(appointment),
               onReschedule: () => _rescheduleAppointment(appointment),
               onReject: () => _rejectAppointment(appointment),
+              onStart: () => _startAppointment(appointment),
               onComplete: () => _completeAppointment(appointment),
               onUpdateLocation: () => _updateAppointmentLocation(appointment),
             );
@@ -174,6 +175,17 @@ class _AppointmentManagementScreenState
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Appointment accepted')));
+    }
+  }
+
+  void _startAppointment(Appointment appointment) async {
+    final success = await context
+        .read<AppointmentProvider>()
+        .updateAppointmentStatus(appointment.id!, 'confirmed');
+    if (success) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appointment started')));
     }
   }
 
@@ -408,6 +420,7 @@ class _AppointmentCard extends StatelessWidget {
   final VoidCallback onAccept;
   final VoidCallback onReschedule;
   final VoidCallback onReject;
+  final VoidCallback onStart;
   final VoidCallback onComplete;
   final VoidCallback onUpdateLocation;
 
@@ -416,6 +429,7 @@ class _AppointmentCard extends StatelessWidget {
     required this.onAccept,
     required this.onReschedule,
     required this.onReject,
+    required this.onStart,
     required this.onComplete,
     required this.onUpdateLocation,
   });
@@ -515,6 +529,11 @@ class _AppointmentCard extends StatelessWidget {
                     style: TextButton.styleFrom(foregroundColor: Colors.red),
                     child: const Text('Reject'),
                   ),
+                ] else if (appointment.status == 'accepted') ...[
+                  ElevatedButton(
+                    onPressed: onStart,
+                    child: const Text('Start Appointment'),
+                  ),
                 ] else if (appointment.status == 'confirmed' ||
                     appointment.status == 'en_route' ||
                     appointment.status == 'in_progress') ...[
@@ -539,10 +558,30 @@ class _AppointmentCard extends StatelessWidget {
         return Colors.teal;
       case 'confirmed':
         return Colors.blue;
+      case 'en_route':
+        return Colors.lightBlue;
+      case 'arrived':
+        return Colors.indigo;
+      case 'waiting':
+        return Colors.amber;
+      case 'on_hold':
+        return Colors.deepOrange;
+      case 'in_progress':
+        return Colors.purple;
       case 'completed':
         return Colors.green;
       case 'cancelled':
         return Colors.red;
+      case 'no_show':
+        return Colors.redAccent;
+      case 'rescheduled':
+        return Colors.cyan;
+      case 'delayed':
+        return Colors.brown;
+      case 'paid':
+        return Colors.green.shade700;
+      case 'refunded':
+        return Colors.orange.shade700;
       default:
         return Colors.grey;
     }
@@ -556,10 +595,30 @@ class _AppointmentCard extends StatelessWidget {
         return Icons.thumb_up;
       case 'confirmed':
         return Icons.check_circle;
+      case 'en_route':
+        return Icons.directions_car;
+      case 'arrived':
+        return Icons.location_on;
+      case 'waiting':
+        return Icons.hourglass_empty;
+      case 'on_hold':
+        return Icons.pause_circle;
+      case 'in_progress':
+        return Icons.work;
       case 'completed':
         return Icons.done_all;
       case 'cancelled':
         return Icons.cancel;
+      case 'no_show':
+        return Icons.person_off;
+      case 'rescheduled':
+        return Icons.event_repeat;
+      case 'delayed':
+        return Icons.access_time;
+      case 'paid':
+        return Icons.payment;
+      case 'refunded':
+        return Icons.undo;
       default:
         return Icons.help;
     }

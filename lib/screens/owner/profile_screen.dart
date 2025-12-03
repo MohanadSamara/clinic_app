@@ -1,5 +1,7 @@
 // lib/screens/owner/profile_screen.dart
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -29,6 +31,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   bool _showPasswordFields = false;
   String? _errorMessage;
   File? _profileImage;
+  Uint8List? _profileImageBytes; // For web
   final ImagePicker _picker = ImagePicker();
 
   // Account settings
@@ -44,8 +47,21 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       _emailController.text = user.email;
       _phoneController.text = user.phone ?? '';
       if (user.profileImage != null && user.profileImage!.isNotEmpty) {
-        _profileImage = File(user.profileImage!);
+        if (kIsWeb && user.profileImage!.startsWith('web_profile_image_')) {
+          // Load web image bytes
+          _loadWebProfileImage();
+        } else if (!kIsWeb) {
+          _profileImage = File(user.profileImage!);
+        }
       }
+    }
+  }
+
+  Future<void> _loadWebProfileImage() async {
+    final authProvider = context.read<AuthProvider>();
+    _profileImageBytes = await authProvider.getProfileImageBytes();
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -93,7 +109,8 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             _showPasswordFields && _newPasswordController.text.isNotEmpty
             ? _newPasswordController.text
             : null,
-        profileImage: _profileImage?.path,
+        profileImagePath: kIsWeb ? null : _profileImage?.path,
+        profileImageBytes: kIsWeb ? _profileImageBytes : null,
       );
 
       if (mounted) {
@@ -125,9 +142,20 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       );
 
       if (pickedFile != null) {
-        setState(() {
-          _profileImage = File(pickedFile.path);
-        });
+        if (kIsWeb) {
+          // For web, read bytes
+          final bytes = await pickedFile.readAsBytes();
+          setState(() {
+            _profileImageBytes = bytes;
+            _profileImage = null; // Clear file for web
+          });
+        } else {
+          // For mobile/desktop, use file
+          setState(() {
+            _profileImage = File(pickedFile.path);
+            _profileImageBytes = null; // Clear bytes for mobile
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -300,10 +328,16 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       backgroundColor: Theme.of(
                                         context,
                                       ).colorScheme.primary,
-                                      backgroundImage: _profileImage != null
-                                          ? FileImage(_profileImage!)
-                                          : null,
-                                      child: _profileImage == null
+                                      backgroundImage:
+                                          kIsWeb && _profileImageBytes != null
+                                          ? MemoryImage(_profileImageBytes!)
+                                          : (!kIsWeb && _profileImage != null
+                                                ? FileImage(_profileImage!)
+                                                : null),
+                                      child:
+                                          (kIsWeb
+                                              ? _profileImageBytes == null
+                                              : _profileImage == null)
                                           ? Text(
                                               _nameController.text.isNotEmpty
                                                   ? _nameController.text

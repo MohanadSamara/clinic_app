@@ -37,6 +37,7 @@ class MedicalProvider extends ChangeNotifier {
       final data = await DBHelper.instance.getMedicalRecordsByPet(petId);
       _medicalRecords = data
           .map((item) => MedicalRecord.fromMap(item))
+          .toSet() // Ensure uniqueness
           .toList();
     } catch (e) {
       debugPrint('Error loading medical records by pet: $e');

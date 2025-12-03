@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Document {
   final int? id;
   final int petId;
@@ -52,7 +54,9 @@ class Document {
       'file_size': fileSize,
       'mime_type': mimeType,
       'checksum': checksum,
-      'audit_logs': auditLogs?.map((log) => log.toMap()).toList(),
+      'audit_logs': auditLogs != null
+          ? jsonEncode(auditLogs!.map((log) => log.toMap()).toList())
+          : null,
     };
   }
 
@@ -74,8 +78,8 @@ class Document {
       mimeType: map['mime_type'],
       checksum: map['checksum'],
       auditLogs: map['audit_logs'] != null
-          ? (map['audit_logs'] as List)
-                .map((log) => AuditLog.fromMap(log))
+          ? (jsonDecode(map['audit_logs'] as String) as List)
+                .map((log) => AuditLog.fromMap(log as Map<String, dynamic>))
                 .toList()
           : null,
     );

@@ -17,7 +17,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _pass = TextEditingController();
   final _phone = TextEditingController();
   String _selectedRole = 'owner';
+  String? _selectedArea;
   bool _loading = false;
+
+  final List<String> _ammanDistricts = [
+    'Amman Qasaba District',
+    'Al-Jami\'a District',
+    'Marka District',
+    'Al-Qweismeh District',
+    'Wadi Al-Sir District',
+    'Al-Jizah District',
+    'Sahab District',
+    'Dabouq District (new)',
+    'Naour District',
+  ];
 
   @override
   void dispose() {
@@ -170,9 +183,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onChanged: (value) {
                           setState(() {
                             _selectedRole = value!;
+                            // Reset area when role changes
+                            if (_selectedRole == 'owner' ||
+                                _selectedRole == 'admin') {
+                              _selectedArea = null;
+                            }
                           });
                         },
                       ),
+                      const SizedBox(height: 16),
+                      // Area selection for doctors and drivers
+                      if (_selectedRole == 'doctor' ||
+                          _selectedRole == 'driver')
+                        DropdownButtonFormField<String>(
+                          value: _selectedArea,
+                          decoration: InputDecoration(
+                            labelText: 'Service Area *',
+                            hintText: 'Select your service area',
+                            prefixIcon: Icon(
+                              Icons.location_on_outlined,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.arrow_drop_down,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          items: _ammanDistricts.map((district) {
+                            return DropdownMenuItem<String>(
+                              value: district,
+                              child: Text(district),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedArea = value;
+                            });
+                          },
+                          validator:
+                              (_selectedRole == 'doctor' ||
+                                  _selectedRole == 'driver')
+                              ? (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select a service area';
+                                  }
+                                  return null;
+                                }
+                              : null,
+                        ),
                       const SizedBox(height: 24),
 
                       // Primary action button
@@ -361,6 +419,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _showError('Password must be at least 6 characters long');
       return;
     }
+    if ((_selectedRole == 'doctor' || _selectedRole == 'driver') &&
+        (_selectedArea == null || _selectedArea!.isEmpty)) {
+      _showError('Please select a service area for your role');
+      return;
+    }
 
     setState(() => _loading = true);
     try {
@@ -370,6 +433,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _pass.text,
         phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
         role: _selectedRole,
+        area: _selectedArea,
       );
       if (mounted) {
         Navigator.pushReplacement(

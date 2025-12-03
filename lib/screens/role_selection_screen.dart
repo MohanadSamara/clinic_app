@@ -24,7 +24,20 @@ class RoleSelectionScreen extends StatefulWidget {
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   String? _selectedRole;
+  String? _selectedArea;
   bool _loading = false;
+
+  final List<String> _ammanDistricts = [
+    'Amman Qasaba District',
+    'Al-Jami\'a District',
+    'Marka District',
+    'Al-Qweismeh District',
+    'Wadi Al-Sir District',
+    'Al-Jizah District',
+    'Sahab District',
+    'Dabouq District (new)',
+    'Naour District',
+  ];
 
   final List<Map<String, String>> _roles = [
     {
@@ -118,6 +131,63 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 },
               ),
             ),
+            // Area selection for doctors and drivers
+            if (_selectedRole == 'doctor' || _selectedRole == 'driver') ...[
+              const SizedBox(height: 24),
+              Text(
+                'Service Area',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Select the area where you will provide services:',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedArea,
+                decoration: InputDecoration(
+                  labelText: 'Service Area *',
+                  hintText: 'Select your service area',
+                  prefixIcon: Icon(
+                    Icons.location_on_outlined,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: Icon(
+                  Icons.arrow_drop_down,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                items: _ammanDistricts.map((district) {
+                  return DropdownMenuItem<String>(
+                    value: district,
+                    child: Text(district),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedArea = value;
+                  });
+                },
+                validator:
+                    (_selectedRole == 'doctor' || _selectedRole == 'driver')
+                    ? (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a service area';
+                        }
+                        return null;
+                      }
+                    : null,
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -135,7 +205,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                       ),
                     )
                   : ElevatedButton(
-                      onPressed: _selectedRole != null
+                      onPressed:
+                          (_selectedRole != null &&
+                              ((_selectedRole != 'doctor' &&
+                                      _selectedRole != 'driver') ||
+                                  _selectedArea != null))
                           ? _completeRegistration
                           : null,
                       style: ElevatedButton.styleFrom(
@@ -170,6 +244,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         role: _selectedRole!,
         provider: widget.provider,
         providerId: widget.providerId,
+        area: _selectedArea,
       );
 
       if (mounted) {

@@ -46,7 +46,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 17,
+      version: 25,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -275,6 +275,249 @@ class DBHelper {
         );
       }
     }
+    if (oldVersion < 18) {
+      // Add availability_status and last_seen columns to users table for real-time availability tracking
+      try {
+        await db.execute(
+          'ALTER TABLE users ADD COLUMN availability_status TEXT DEFAULT "offline"',
+        );
+        await db.execute('ALTER TABLE users ADD COLUMN last_seen TEXT');
+        debugPrint(
+          'Added availability_status and last_seen columns to users table',
+        );
+      } catch (e) {
+        debugPrint('Error adding availability columns to users table: $e');
+      }
+    }
+    if (oldVersion < 19) {
+      // Update payments table to new structure with invoice details
+      try {
+        // Add new columns to payments table
+        await db.execute('ALTER TABLE payments ADD COLUMN user_id INTEGER');
+        await db.execute(
+          'ALTER TABLE payments ADD COLUMN subtotal REAL DEFAULT 0.0',
+        );
+        await db.execute(
+          'ALTER TABLE payments ADD COLUMN tax REAL DEFAULT 0.0',
+        );
+        await db.execute(
+          'ALTER TABLE payments ADD COLUMN total REAL DEFAULT 0.0',
+        );
+        await db.execute(
+          'ALTER TABLE payments ADD COLUMN currency TEXT DEFAULT "JOD"',
+        );
+        await db.execute(
+          'ALTER TABLE payments ADD COLUMN payment_intent_id TEXT',
+        );
+        await db.execute('ALTER TABLE payments ADD COLUMN invoice_number TEXT');
+        await db.execute(
+          'ALTER TABLE payments ADD COLUMN service_description TEXT',
+        );
+        await db.execute('ALTER TABLE payments ADD COLUMN completed_at TEXT');
+
+        // Update existing records to have user_id from appointments
+        await db.execute('''
+          UPDATE payments
+          SET user_id = (SELECT owner_id FROM appointments WHERE appointments.id = payments.appointment_id),
+              subtotal = amount / 1.16,
+              tax = amount - (amount / 1.16),
+              total = amount,
+              service_description = 'Veterinary Service'
+          WHERE user_id IS NULL
+        ''');
+
+        debugPrint('Updated payments table to new structure');
+      } catch (e) {
+        debugPrint('Error updating payments table: $e');
+      }
+    }
+    if (oldVersion < 20) {
+      // Ensure payments table has all required columns (fix for failed migrations)
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(payments)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        // Add missing columns if they don't exist
+        if (!columns.contains('user_id')) {
+          await db.execute('ALTER TABLE payments ADD COLUMN user_id INTEGER');
+        }
+        if (!columns.contains('subtotal')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN subtotal REAL DEFAULT 0.0',
+          );
+        }
+        if (!columns.contains('tax')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN tax REAL DEFAULT 0.0',
+          );
+        }
+        if (!columns.contains('total')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN total REAL DEFAULT 0.0',
+          );
+        }
+        if (!columns.contains('currency')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN currency TEXT DEFAULT "JOD"',
+          );
+        }
+        if (!columns.contains('payment_intent_id')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN payment_intent_id TEXT',
+          );
+        }
+        if (!columns.contains('invoice_number')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN invoice_number TEXT',
+          );
+        }
+        if (!columns.contains('service_description')) {
+          await db.execute(
+            'ALTER TABLE payments ADD COLUMN service_description TEXT',
+          );
+        }
+        if (!columns.contains('completed_at')) {
+          await db.execute('ALTER TABLE payments ADD COLUMN completed_at TEXT');
+        }
+
+        // Update any records that still have NULL values
+        await db.execute('''
+          UPDATE payments
+          SET user_id = COALESCE(user_id, (SELECT owner_id FROM appointments WHERE appointments.id = payments.appointment_id)),
+              subtotal = COALESCE(subtotal, amount / 1.16),
+              tax = COALESCE(tax, amount - (amount / 1.16)),
+              total = COALESCE(total, amount),
+              currency = COALESCE(currency, 'JOD'),
+              service_description = COALESCE(service_description, 'Veterinary Service')
+          WHERE user_id IS NULL OR subtotal IS NULL OR tax IS NULL OR total IS NULL
+        ''');
+
+        debugPrint('Ensured payments table has all required columns');
+      } catch (e) {
+        debugPrint('Error ensuring payments table columns: $e');
+      }
+    }
+    if (oldVersion < 21) {
+      // Final fix for payments table - ensure all columns exist and are properly populated
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(payments)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        // Force add user_id column if it doesn't exist (this should fix the issue)
+        if (!columns.contains('user_id')) {
+          await db.execute('ALTER TABLE payments ADD COLUMN user_id INTEGER');
+          debugPrint('Added user_id column to payments table');
+        }
+
+        // Ensure all other columns exist
+        final requiredColumns = {
+          'subtotal': 'REAL DEFAULT 0.0',
+          'tax': 'REAL DEFAULT 0.0',
+          'total': 'REAL DEFAULT 0.0',
+          'currency': 'TEXT DEFAULT "JOD"',
+          'payment_intent_id': 'TEXT',
+          'invoice_number': 'TEXT',
+          'service_description': 'TEXT',
+          'completed_at': 'TEXT',
+        };
+
+        for (final entry in requiredColumns.entries) {
+          if (!columns.contains(entry.key)) {
+            await db.execute(
+              'ALTER TABLE payments ADD COLUMN ${entry.key} ${entry.value}',
+            );
+            debugPrint('Added ${entry.key} column to payments table');
+          }
+        }
+
+        // Populate user_id for existing records if missing
+        await db.execute('''
+          UPDATE payments
+          SET user_id = (SELECT owner_id FROM appointments WHERE appointments.id = payments.appointment_id)
+          WHERE user_id IS NULL
+        ''');
+
+        // Populate other fields for existing records
+        await db.execute('''
+          UPDATE payments
+          SET subtotal = COALESCE(subtotal, ROUND(amount / 1.16, 2)),
+              tax = COALESCE(tax, ROUND(amount - (amount / 1.16), 2)),
+              total = COALESCE(total, amount),
+              currency = COALESCE(currency, 'JOD'),
+              service_description = COALESCE(service_description, 'Veterinary Service')
+          WHERE subtotal IS NULL OR tax IS NULL OR total IS NULL
+        ''');
+
+        debugPrint('Completed payments table migration to version 21');
+      } catch (e) {
+        debugPrint('Error in version 21 migration: $e');
+      }
+    }
+    if (oldVersion < 22) {
+      // Force fix for payments table user_id column
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(payments)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('user_id')) {
+          await db.execute('ALTER TABLE payments ADD COLUMN user_id INTEGER');
+          debugPrint('Added user_id column to payments table in version 22');
+
+          // Populate user_id for existing records
+          await db.execute('''
+            UPDATE payments
+            SET user_id = (SELECT owner_id FROM appointments WHERE appointments.id = payments.appointment_id)
+            WHERE user_id IS NULL
+          ''');
+        }
+
+        debugPrint('Completed payments table migration to version 22');
+      } catch (e) {
+        debugPrint('Error in version 22 migration: $e');
+      }
+    }
+    if (oldVersion < 23) {
+      // Final fix for payments table - ensure all columns exist and are properly populated
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(payments)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        // Ensure user_id column exists
+        if (!columns.contains('user_id')) {
+          await db.execute('ALTER TABLE payments ADD COLUMN user_id INTEGER');
+          debugPrint('Added user_id column to payments table in version 23');
+        }
+
+        // Populate user_id for existing records if missing
+        await db.execute('''
+          UPDATE payments
+          SET user_id = (SELECT owner_id FROM appointments WHERE appointments.id = payments.appointment_id)
+          WHERE user_id IS NULL
+        ''');
+
+        debugPrint('Completed payments table migration to version 23');
+      } catch (e) {
+        debugPrint('Error in version 23 migration: $e');
+      }
+    }
+    if (oldVersion < 24) {
+      // Add area column to vans table
+      try {
+        await db.execute('ALTER TABLE vans ADD COLUMN area TEXT');
+        debugPrint('Added area column to vans table in version 24');
+      } catch (e) {
+        debugPrint('Error adding area column to vans table: $e');
+      }
+    }
+    if (oldVersion < 25) {
+      // Add area column to users table
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN area TEXT');
+        debugPrint('Added area column to users table in version 25');
+      } catch (e) {
+        debugPrint('Error adding area column to users table: $e');
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -295,8 +538,11 @@ class DBHelper {
         provider TEXT,
         providerId TEXT,
         profileImage TEXT,
+        area TEXT,
         linked_doctor_id INTEGER,
-        linked_driver_id INTEGER
+        linked_driver_id INTEGER,
+        availability_status TEXT DEFAULT 'offline',
+        last_seen TEXT
       );
     ''');
 
@@ -425,10 +671,19 @@ class DBHelper {
       CREATE TABLE payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         appointment_id INTEGER,
+        user_id INTEGER,
         amount REAL,
+        subtotal REAL DEFAULT 0.0,
+        tax REAL DEFAULT 0.0,
+        total REAL DEFAULT 0.0,
+        currency TEXT DEFAULT "JOD",
         method TEXT,
         status TEXT,
         transaction_id TEXT,
+        payment_intent_id TEXT,
+        invoice_number TEXT,
+        service_description TEXT,
+        completed_at TEXT,
         created_at TEXT
       );
     ''');
@@ -443,6 +698,7 @@ class DBHelper {
         capacity INTEGER DEFAULT 1,
         status TEXT DEFAULT 'available',
         description TEXT,
+        area TEXT,
         assigned_driver_id INTEGER,
         assigned_doctor_id INTEGER,
         created_at TEXT,
@@ -1060,6 +1316,27 @@ class DBHelper {
       whereArgs: [appointmentId],
       orderBy: 'created_at DESC',
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getPaymentsByUser(int userId) async {
+    final db = await instance.database;
+    return await db.query(
+      'payments',
+      where: 'user_id=?',
+      whereArgs: [userId],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getPaymentById(int paymentId) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'payments',
+      where: 'id=?',
+      whereArgs: [paymentId],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
   }
 
   Future<List<Map<String, dynamic>>> getAllPayments() async {

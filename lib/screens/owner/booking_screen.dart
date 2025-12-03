@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
+import '../../providers/availability_provider.dart';
 import '../../db/db_helper.dart';
 import '../../models/appointment.dart';
 import '../../models/service.dart';
@@ -66,6 +67,7 @@ class _BookingScreenState extends State<BookingScreen> {
       context.read<AppointmentProvider>().loadServices();
       _loadUserPets();
       _loadDoctors();
+      context.read<AvailabilityProvider>().loadAvailabilityData();
     });
   }
 
@@ -425,6 +427,227 @@ class _BookingScreenState extends State<BookingScreen> {
                                       },
                                     ),
                                   ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Clinic Availability Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1000),
+                          builder: (context, availabilityValue, child) {
+                            return Opacity(
+                              opacity: availabilityValue,
+                              child: Transform.translate(
+                                offset: Offset(
+                                  -30 * (1 - availabilityValue),
+                                  0,
+                                ),
+                                child: Consumer<AvailabilityProvider>(
+                                  builder: (context, availabilityProvider, child) {
+                                    final availablePairs =
+                                        availabilityProvider.availablePairs;
+                                    if (availablePairs.isEmpty) {
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                        ),
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .errorContainer
+                                              .withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .error
+                                                .withOpacity(0.3),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.warning,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
+                                              size: 24,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                'No doctors available at the moment. Please check back later.',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.error,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                      ),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.3),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.medical_services,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                                size: 24,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Available Teams',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            '${availablePairs.length} doctor${availablePairs.length == 1 ? '' : 's'} available for home visits',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: availablePairs.map((
+                                              pair,
+                                            ) {
+                                              final doctor = pair['doctor']!;
+                                              final driver = pair['driver']!;
+                                              return Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .primary
+                                                        .withOpacity(0.3),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.person,
+                                                      size: 16,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      'Dr. ${doctor.name}',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            color:
+                                                                Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .primary,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Icon(
+                                                      Icons.directions_car,
+                                                      size: 16,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.secondary,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      driver.name,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            color:
+                                                                Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .secondary,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             );
@@ -941,25 +1164,12 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
-    // Get linked driver for the selected doctor
-    int? linkedDriverId;
-    try {
-      final dbHelper = DBHelper.instance;
-      final doctorData = await dbHelper.getUserById(_selectedDoctor!.id!);
-      if (doctorData != null) {
-        final doctor = User.fromMap(doctorData);
-        linkedDriverId = doctor.linkedDriverId;
-      }
-    } catch (e) {
-      debugPrint('Error getting linked driver: $e');
-      // Continue without linked driver - will use auto-assignment later
-    }
-
+    // Driver assignment will be handled manually by admin or through separate assignment process
     final appointment = Appointment(
       ownerId: authProvider.user!.id!,
       petId: _selectedPet!.id!, // Use selected pet ID
       doctorId: _selectedDoctor!.id!, // Required doctor ID
-      driverId: linkedDriverId, // Auto-assign linked driver if available
+      driverId: null, // No auto-assignment - driver must be assigned manually
       serviceType: _selectedService!.name,
       description: _descriptionController.text,
       scheduledAt: scheduledDateTime.toIso8601String(),

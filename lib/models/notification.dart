@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Notification {
   final int? id;
   final int userId;
@@ -25,7 +27,7 @@ class Notification {
       'message': message,
       'type': type,
       'created_at': createdAt,
-      'data': data,
+      'data': data != null ? jsonEncode(data) : null,
     };
   }
 
@@ -37,7 +39,7 @@ class Notification {
       message: map['message'],
       type: map['type'],
       createdAt: map['created_at'],
-      data: map['data'],
+      data: map['data'] != null ? jsonDecode(map['data'] as String) : null,
     );
   }
 }

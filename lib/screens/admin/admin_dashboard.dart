@@ -7,6 +7,8 @@ import 'service_management_screen.dart';
 import 'reporting_screen.dart';
 import 'compliance_screen.dart';
 import 'data_management_screen.dart';
+import 'van_management_screen.dart';
+import 'area_management_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -54,9 +56,9 @@ class AdminDashboard extends StatelessWidget {
             const SizedBox(height: 16),
             Expanded(
               child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
                 children: [
                   _buildFunctionCard(
                     context,
@@ -110,6 +112,28 @@ class AdminDashboard extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const DataManagementScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFunctionCard(
+                    context,
+                    'Van Management',
+                    Icons.directions_car,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const VanManagementScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFunctionCard(
+                    context,
+                    'Area Management',
+                    Icons.location_on,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AreaManagementScreen(),
                       ),
                     ),
                   ),

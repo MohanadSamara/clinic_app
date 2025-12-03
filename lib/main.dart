@@ -16,10 +16,12 @@ import 'providers/locale_provider.dart';
 import 'providers/payment_provider.dart';
 import 'providers/document_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/van_provider.dart';
+import 'providers/availability_provider.dart';
+import 'models/van.dart';
 import 'services/notification_service.dart';
-import 'screens/role_based_home.dart';
+import 'screens/loading_screen.dart';
 import 'theme/app_theme.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +37,57 @@ void main() async {
   final authProvider = AuthProvider();
   await authProvider.initialize();
 
+  // Initialize sample vans for testing
+  await _initializeSampleVans();
+
   runApp(MyApp(authProvider: authProvider));
+}
+
+Future<void> _initializeSampleVans() async {
+  try {
+    final vanProvider = VanProvider();
+    await vanProvider.loadVans();
+
+    // Only add sample vans if none exist
+    if (vanProvider.vans.isEmpty) {
+      final sampleVans = [
+        Van(
+          name: "Vet Van Alpha",
+          licensePlate: "VET-001",
+          model: "Ford Transit",
+          capacity: 2,
+          status: "available",
+          description: "Primary emergency response van",
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+        Van(
+          name: "Vet Van Beta",
+          licensePlate: "VET-002",
+          model: "Mercedes Sprinter",
+          capacity: 1,
+          status: "available",
+          description: "Secondary service van",
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+        Van(
+          name: "Emergency Van",
+          licensePlate: "EMG-001",
+          model: "VW Crafter",
+          capacity: 3,
+          status: "available",
+          description: "Heavy-duty emergency van",
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      ];
+
+      for (final van in sampleVans) {
+        await vanProvider.addVan(van);
+      }
+      debugPrint('Sample vans initialized successfully');
+    }
+  } catch (e) {
+    debugPrint('Error initializing sample vans: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -62,6 +114,14 @@ class MyApp extends StatelessWidget {
               previous ?? DocumentProvider(auth),
         ),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => VanProvider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = AvailabilityProvider();
+            provider.startStatusUpdates();
+            return provider;
+          },
+        ),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, child) {
@@ -75,18 +135,10 @@ class MyApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [Locale('en'), Locale('ar')],
-            theme: AppTheme.lightTheme.copyWith(
-              textTheme: GoogleFonts.interTextTheme(
-                AppTheme.lightTheme.textTheme,
-              ),
-            ),
-            darkTheme: AppTheme.darkTheme.copyWith(
-              textTheme: GoogleFonts.interTextTheme(
-                AppTheme.darkTheme.textTheme,
-              ),
-            ),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
-            home: const RoleBasedHome(),
+            home: const LoadingScreen(),
           );
         },
       ),

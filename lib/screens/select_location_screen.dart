@@ -168,17 +168,19 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
       point.latitude,
       point.longitude,
     );
-    setState(() {
-      _selectedAddress = address;
-      _showManualAddressInput =
-          address != null &&
-          (address.contains('not available on web') ||
-              address.contains('Unable to retrieve') ||
-              address.contains('No address found'));
-      if (_showManualAddressInput) {
-        _addressController.text = '';
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _selectedAddress = address;
+        _showManualAddressInput =
+            address != null &&
+            (address.contains('not available on web') ||
+                address.contains('Unable to retrieve') ||
+                address.contains('No address found'));
+        if (_showManualAddressInput) {
+          _addressController.text = '';
+        }
+      });
+    }
   }
 
   void _confirmLocation() {

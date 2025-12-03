@@ -24,6 +24,8 @@ import 'driver_tracking_screen.dart';
 import 'doctor_selection_screen.dart';
 import 'profile_screen.dart';
 import 'medical_documents_screen.dart';
+import 'payment_history_screen.dart';
+import '../notification_preferences_screen.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -361,6 +363,17 @@ class _OwnerHomeScreen extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const MedicalDocumentsScreen(),
+                    ),
+                  ),
+                ),
+                _ServiceCard(
+                  icon: Icons.payment,
+                  title: 'Payments',
+                  subtitle: 'View history',
+                  color: Colors.green,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentHistoryScreen(),
                     ),
                   ),
                 ),
@@ -1119,13 +1132,10 @@ class _OwnerProfileScreen extends StatelessWidget {
                   icon: Icons.settings,
                   color: colorScheme.tertiary,
                   onTap: () {
-                    // TODO: Implement settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          AppLocalizations.of(context)!.settingsComingSoon,
-                        ),
-                        backgroundColor: colorScheme.error,
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const NotificationPreferencesScreen(),
                       ),
                     );
                   },
