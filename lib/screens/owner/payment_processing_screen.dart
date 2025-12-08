@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../models/payment.dart';
+import '../../db/db_helper.dart';
 
 class PaymentProcessingScreen extends StatefulWidget {
   final Payment payment;
@@ -411,6 +412,17 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
     );
   }
 
+  Future<bool> _confirmCashPayment(int paymentId) async {
+    try {
+      // Just update the payment method to cash, status remains pending until completion
+      await DBHelper.instance.updatePayment(paymentId, {'method': 'cash'});
+      return true;
+    } catch (e) {
+      debugPrint('Error confirming cash payment: $e');
+      return false;
+    }
+  }
+
   Future<void> _processPayment() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -428,16 +440,19 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
           cardHolderName: _cardHolderController.text,
         );
       } else {
-        success = await context.read<PaymentProvider>().processCashPayment(
-          widget.payment.id!,
-        );
+        // For cash payments, just update the payment method (payment processed upon arrival)
+        success = await _confirmCashPayment(widget.payment.id!);
       }
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment completed successfully!'),
+            SnackBar(
+              content: Text(
+                _selectedMethod == 'cash'
+                    ? 'Cash payment confirmed. Payment will be collected upon service delivery.'
+                    : 'Payment completed successfully!',
+              ),
               backgroundColor: Colors.green,
             ),
           );

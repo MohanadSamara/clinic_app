@@ -199,10 +199,14 @@ class _DriverDashboardState extends State<DriverDashboard>
                   .map((a) => Appointment.fromMap(a))
                   .where(
                     (apt) =>
+                        apt.status != 'pending' &&
                         apt.status != 'completed' &&
                         apt.status != 'cancelled' &&
                         apt.locationLat != null &&
-                        apt.locationLng != null,
+                        apt.locationLng != null &&
+                        // Hide online appointments until payment is completed
+                        !(apt.paymentMethod == 'online' &&
+                            apt.status != 'paid'),
                   )
                   .toList()
                 ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));

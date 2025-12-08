@@ -4,6 +4,7 @@ import '../../providers/payment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/payment.dart';
 import '../../components/ui_kit.dart';
+import '../../services/pdf_service.dart';
 import 'payment_processing_screen.dart';
 
 class PaymentHistoryScreen extends StatefulWidget {
@@ -551,11 +552,44 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     }
   }
 
-  void _downloadInvoice(Payment payment) {
-    // TODO: Implement invoice download
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invoice download feature coming soon')),
-    );
+  Future<void> _downloadInvoice(Payment payment) async {
+    try {
+      // Generate and save the PDF
+      final filePath = await PdfService.generateInvoicePdf(payment);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Invoice downloaded successfully'),
+            action: SnackBarAction(
+              label: 'Open',
+              onPressed: () async {
+                // Try to open the file (this will work on mobile)
+                // On desktop, users can find it in their documents folder
+                try {
+                  await PdfService.shareInvoicePdf(payment);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('File saved to Documents folder'),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to download invoice: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _requestRefund(Payment payment) {

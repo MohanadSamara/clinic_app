@@ -17,6 +17,7 @@ class Appointment {
   final double? locationLat;
   final double? locationLng;
   final String? calendarEventId;
+  final String? paymentMethod; // 'online', 'cash'
 
   Appointment({
     this.id,
@@ -36,6 +37,7 @@ class Appointment {
     this.locationLat,
     this.locationLng,
     this.calendarEventId,
+    this.paymentMethod,
   });
 
   Map<String, dynamic> toMap() => {
@@ -54,6 +56,7 @@ class Appointment {
     'location_lat': locationLat,
     'location_lng': locationLng,
     'calendar_event_id': calendarEventId,
+    'payment_method': paymentMethod,
   };
 
   factory Appointment.fromMap(Map<String, dynamic> m) => Appointment(
@@ -78,6 +81,7 @@ class Appointment {
         ? (m['location_lng'] as num).toDouble()
         : null,
     calendarEventId: m['calendar_event_id']?.toString(),
+    paymentMethod: m['payment_method']?.toString(),
   );
 
   Appointment copyWith({
@@ -98,6 +102,7 @@ class Appointment {
     double? locationLat,
     double? locationLng,
     String? calendarEventId,
+    String? paymentMethod,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -117,6 +122,7 @@ class Appointment {
       locationLat: locationLat ?? this.locationLat,
       locationLng: locationLng ?? this.locationLng,
       calendarEventId: calendarEventId ?? this.calendarEventId,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 }

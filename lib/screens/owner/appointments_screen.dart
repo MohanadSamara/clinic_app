@@ -269,9 +269,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add to Calendar'),
+        title: const Text('Confirm Appointment'),
         content: const Text(
-          'Are you sure you want to add this appointment to your calendar?',
+          'Are you sure you want to confirm this appointment? It will be added to your calendar after payment.',
         ),
         actions: [
           TextButton(
@@ -280,7 +280,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Yes, Add'),
+            child: const Text('Yes, Confirm'),
           ),
         ],
       ),
@@ -291,9 +291,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
           .read<AppointmentProvider>()
           .updateAppointmentStatus(appointment.id!, 'confirmed');
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment added to calendar')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Appointment confirmed')));
       }
     }
   }
@@ -528,7 +528,7 @@ class _AppointmentCard extends StatelessWidget {
                       child: const Text('Add to Calendar'),
                     ),
                   ],
-                  if (appointment.status == 'confirmed') ...[
+                  if (appointment.status == 'paid') ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,

@@ -46,7 +46,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 25,
+      version: 27,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -518,6 +518,41 @@ class DBHelper {
         debugPrint('Error adding area column to users table: $e');
       }
     }
+    if (oldVersion < 26) {
+      // Add payment_method column to appointments table
+      try {
+        await db.execute(
+          'ALTER TABLE appointments ADD COLUMN payment_method TEXT',
+        );
+        debugPrint(
+          'Added payment_method column to appointments table in version 26',
+        );
+      } catch (e) {
+        debugPrint(
+          'Error adding payment_method column to appointments table: $e',
+        );
+      }
+    }
+    // Ensure payment_method column exists (for databases that might have missed the migration)
+    if (oldVersion < 27) {
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(appointments)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('payment_method')) {
+          await db.execute(
+            'ALTER TABLE appointments ADD COLUMN payment_method TEXT',
+          );
+          debugPrint(
+            'Added payment_method column to appointments table in version 27',
+          );
+        }
+      } catch (e) {
+        debugPrint(
+          'Error ensuring payment_method column exists in appointments table: $e',
+        );
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -580,7 +615,8 @@ class DBHelper {
         urgency_level TEXT,
         location_lat REAL,
         location_lng REAL,
-        calendar_event_id TEXT
+        calendar_event_id TEXT,
+        payment_method TEXT
       );
     ''');
 
@@ -1100,6 +1136,13 @@ class DBHelper {
 
   Future<List<Map<String, dynamic>>> getAppointmentsByOwner(int ownerId) async {
     return await getAppointments(ownerId: ownerId);
+  }
+
+  Future<Map<String, dynamic>?> getAppointmentById(int id) async {
+    final db = await instance.database;
+    final res = await db.query('appointments', where: 'id=?', whereArgs: [id]);
+    if (res.isNotEmpty) return res.first;
+    return null;
   }
 
   Future<int> updateAppointmentStatus(int id, String status) async {

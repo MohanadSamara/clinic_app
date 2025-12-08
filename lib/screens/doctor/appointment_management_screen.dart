@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/medical_provider.dart';
+import '../../providers/payment_provider.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
 import '../select_location_screen.dart';
@@ -155,6 +156,7 @@ class _AppointmentManagementScreenState
               onStart: () => _startAppointment(appointment),
               onComplete: () => _completeAppointment(appointment),
               onUpdateLocation: () => _updateAppointmentLocation(appointment),
+              onMarkPaymentReceived: () => _markPaymentReceived(appointment),
             );
           },
         );
@@ -260,7 +262,35 @@ class _AppointmentManagementScreenState
     );
 
     if (treatmentDetails != null) {
-      // Mark appointment as completed
+      // For cash payments, process payment first and set status to 'paid'
+      if (appointment.paymentMethod == 'cash') {
+        final paymentProvider = context.read<PaymentProvider>();
+        final payments = await paymentProvider.getPaymentsByAppointment(
+          appointment.id!,
+        );
+        final pendingPayment = payments
+            .where((p) => p.status == 'pending')
+            .firstOrNull;
+        if (pendingPayment != null) {
+          final paymentSuccess = await paymentProvider.processCashPayment(
+            pendingPayment.id!,
+          );
+          if (paymentSuccess) {
+            // Set status to 'paid' after successful payment processing
+            await context.read<AppointmentProvider>().updateAppointmentStatus(
+              appointment.id!,
+              'paid',
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Payment processing failed')),
+            );
+            return;
+          }
+        }
+      }
+
+      // Mark appointment as completed (for online, it's already 'paid')
       final success = await context
           .read<AppointmentProvider>()
           .updateAppointmentStatus(appointment.id!, 'completed');
@@ -301,6 +331,37 @@ class _AppointmentManagementScreenState
             ),
           );
         }
+      }
+    }
+  }
+
+  void _markPaymentReceived(Appointment appointment) async {
+    if (appointment.paymentMethod != 'cash') return;
+
+    final paymentProvider = context.read<PaymentProvider>();
+    final payments = await paymentProvider.getPaymentsByAppointment(
+      appointment.id!,
+    );
+    final pendingPayment = payments
+        .where((p) => p.status == 'pending')
+        .firstOrNull;
+    if (pendingPayment != null) {
+      final success = await paymentProvider.processCashPayment(
+        pendingPayment.id!,
+      );
+      if (success) {
+        // Set status to 'paid'
+        await context.read<AppointmentProvider>().updateAppointmentStatus(
+          appointment.id!,
+          'paid',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment marked as received')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to process payment')),
+        );
       }
     }
   }
@@ -423,6 +484,7 @@ class _AppointmentCard extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onComplete;
   final VoidCallback onUpdateLocation;
+  final VoidCallback onMarkPaymentReceived;
 
   const _AppointmentCard({
     required this.appointment,
@@ -432,6 +494,7 @@ class _AppointmentCard extends StatelessWidget {
     required this.onStart,
     required this.onComplete,
     required this.onUpdateLocation,
+    required this.onMarkPaymentReceived,
   });
   @override
   Widget build(BuildContext context) {
@@ -534,9 +597,19 @@ class _AppointmentCard extends StatelessWidget {
                     onPressed: onStart,
                     child: const Text('Start Appointment'),
                   ),
+                ] else if (appointment.paymentMethod == 'cash' &&
+                    (appointment.status == 'confirmed' ||
+                        appointment.status == 'en_route' ||
+                        appointment.status == 'arrived' ||
+                        appointment.status == 'in_progress')) ...[
+                  ElevatedButton(
+                    onPressed: onMarkPaymentReceived,
+                    child: const Text('Mark Payment Received'),
+                  ),
                 ] else if (appointment.status == 'confirmed' ||
                     appointment.status == 'en_route' ||
-                    appointment.status == 'in_progress') ...[
+                    appointment.status == 'in_progress' ||
+                    appointment.status == 'paid') ...[
                   ElevatedButton(
                     onPressed: onComplete,
                     child: const Text('Mark Complete'),

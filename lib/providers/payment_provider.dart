@@ -130,6 +130,20 @@ class PaymentProvider extends ChangeNotifier {
         );
       }
 
+      // Check if appointment has been accepted by a doctor before allowing payment
+      final appointmentData = await DBHelper.instance.getAppointmentById(
+        _payments[index].appointmentId,
+      );
+      final appointment = appointmentData != null
+          ? Appointment.fromMap(appointmentData)
+          : null;
+
+      if (appointment == null || appointment.doctorId == null) {
+        throw Exception(
+          'Cannot process payment: Appointment must be accepted by a doctor first',
+        );
+      }
+
       // Update appointment status to 'paid'
       final appointmentProvider = AppointmentProvider();
       await appointmentProvider.updateAppointmentStatus(
@@ -191,12 +205,22 @@ class PaymentProvider extends ChangeNotifier {
         );
       }
 
-      // Update appointment status to 'paid'
-      final appointmentProvider = AppointmentProvider();
-      await appointmentProvider.updateAppointmentStatus(
+      // Check if appointment has been accepted by a doctor before allowing payment
+      final appointmentData = await DBHelper.instance.getAppointmentById(
         _payments[index].appointmentId,
-        'paid',
       );
+      final appointment = appointmentData != null
+          ? Appointment.fromMap(appointmentData)
+          : null;
+
+      if (appointment == null || appointment.doctorId == null) {
+        throw Exception(
+          'Cannot process payment: Appointment must be accepted by a doctor first',
+        );
+      }
+
+      // For cash payments, do not update appointment status here as it's called upon completion
+      // Appointment status is already 'completed' when cash payment is processed
 
       notifyListeners();
       return true;

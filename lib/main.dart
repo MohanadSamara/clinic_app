@@ -20,6 +20,7 @@ import 'providers/van_provider.dart';
 import 'providers/availability_provider.dart';
 import 'models/van.dart';
 import 'services/notification_service.dart';
+import 'services/calendar_service.dart';
 import 'screens/loading_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -28,6 +29,9 @@ void main() async {
 
   // Initialize Firebase globally
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize calendar service
+  await CalendarService.initialize();
 
   // Initialize notification service
   final notificationService = NotificationService();

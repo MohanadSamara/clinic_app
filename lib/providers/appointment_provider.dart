@@ -165,30 +165,72 @@ class AppointmentProvider extends ChangeNotifier {
         }
       }
 
-      // Auto-assign driver when appointment is confirmed (only if no driver assigned)
-      if (status == 'confirmed') {
+      // Driver assignment moved to 'paid' status for both payment methods
+
+      // Handle driver assignment based on payment method and status
+      if (status == 'accepted') {
         final appointment = getAppointmentById(id);
-        if (appointment != null && appointment.driverId == null) {
-          final availableDriverId = await _getAvailableDriver(id);
-          if (availableDriverId != null) {
-            await assignDriverToAppointment(id, availableDriverId);
+        if (appointment != null &&
+            appointment.driverId == null &&
+            appointment.doctorId != null) {
+          // For cash payments, assign driver immediately upon acceptance
+          if (appointment.paymentMethod == 'cash') {
+            final availableDriverId = await _getAvailableDriver(id);
+            if (availableDriverId != null) {
+              await assignDriverToAppointment(id, availableDriverId);
+            }
           }
+          // For online payments, driver assignment happens after payment completion
+        }
+      }
+
+      // Handle paid appointments - assign driver after payment completion
+      if (status == 'paid') {
+        final appointment = getAppointmentById(id);
+        if (appointment != null &&
+            appointment.driverId == null &&
+            appointment.doctorId != null) {
+          // For online payments, assign driver after payment completion
+          if (appointment.paymentMethod == 'online') {
+            final availableDriverId = await _getAvailableDriver(id);
+            if (availableDriverId != null) {
+              await assignDriverToAppointment(id, availableDriverId);
+            }
+          }
+          // For cash payments, driver is assigned on 'accepted' status, not here
         }
 
-        // Sync confirmed appointment to calendar
-        if (appointment != null) {
+        // Sync paid appointment to calendar (ensure it's added even if already confirmed)
+        if (appointment != null && appointment.calendarEventId == null) {
           try {
-            final calendarSuccess =
+            final calendarEventId =
                 await CalendarService.addAppointmentToCalendar(appointment);
-            if (calendarSuccess) {
-              debugPrint('Appointment ${appointment.id} synced to calendar');
+            if (calendarEventId != null) {
+              // Update appointment with calendar event ID
+              await DBHelper.instance.updateAppointment(appointment.id!, {
+                'calendar_event_id': calendarEventId,
+              });
+              // Update local appointment
+              final index = _appointments.indexWhere(
+                (a) => a.id == appointment.id,
+              );
+              if (index != -1) {
+                _appointments[index] = _appointments[index].copyWith(
+                  calendarEventId: calendarEventId,
+                );
+              }
+              debugPrint(
+                'Appointment ${appointment.id} synced to calendar after payment with event ID: $calendarEventId',
+              );
             } else {
               debugPrint(
-                'Failed to sync appointment ${appointment.id} to calendar',
+                'Failed to sync appointment ${appointment.id} to calendar after payment',
               );
             }
           } catch (e) {
-            debugPrint('Error syncing appointment to calendar: $e');
+            debugPrint(
+              'Error syncing appointment to calendar after payment: $e',
+            );
           }
         }
       }
@@ -270,6 +312,35 @@ class AppointmentProvider extends ChangeNotifier {
     int driverId,
   ) async {
     try {
+      // Check database to ensure appointment has been accepted by doctor before assigning driver
+      final db = await DBHelper.instance.database;
+      final appointmentData = await db.query(
+        'appointments',
+        where: 'id = ?',
+        whereArgs: [appointmentId],
+      );
+      if (appointmentData.isEmpty) {
+        debugPrint('Appointment not found');
+        return false;
+      }
+
+      final appointment = appointmentData.first;
+      if (appointment['doctor_id'] == null) {
+        debugPrint(
+          'Cannot assign driver: Appointment must be accepted by doctor first',
+        );
+        return false;
+      }
+
+      if (appointment['status'] != 'accepted' &&
+          appointment['status'] != 'confirmed' &&
+          appointment['status'] != 'paid') {
+        debugPrint(
+          'Cannot assign driver: Appointment status must be accepted or later',
+        );
+        return false;
+      }
+
       // Get driver name
       final driverName = await DBHelper.instance.getUserNameById(driverId);
 
@@ -536,7 +607,9 @@ class AppointmentProvider extends ChangeNotifier {
         tax: tax,
         total: total,
         currency: 'JOD',
-        method: 'pending', // Will be updated when payment is processed
+        method:
+            appointment.paymentMethod ??
+            'cash', // Set to appointment's payment method
         status: 'pending',
         transactionId:
             'TXN-${appointment.id}-${DateTime.now().millisecondsSinceEpoch}',

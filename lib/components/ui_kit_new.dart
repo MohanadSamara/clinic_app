@@ -122,6 +122,7 @@ class HeroWelcomeSection extends StatelessWidget {
 class CompactSpecialistCard extends StatelessWidget {
   final String name;
   final String specialty;
+  final String? area;
   final double rating;
   final int reviewCount;
   final String? imageUrl;
@@ -131,6 +132,7 @@ class CompactSpecialistCard extends StatelessWidget {
     super.key,
     required this.name,
     required this.specialty,
+    this.area,
     required this.rating,
     required this.reviewCount,
     this.imageUrl,
@@ -193,6 +195,29 @@ class CompactSpecialistCard extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (area != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Serves: $area',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       children: [

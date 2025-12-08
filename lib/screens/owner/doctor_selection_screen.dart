@@ -209,6 +209,7 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                               return CompactSpecialistCard(
                                 name: doctor.name,
                                 specialty: 'Veterinary Medicine',
+                                area: doctor.area ?? 'Not specified',
                                 rating: 4.8,
                                 reviewCount: 42,
                                 onTap: () => _selectDoctor(doctor),

@@ -47,6 +47,7 @@ class _BookingScreenState extends State<BookingScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   String _urgencyLevel = 'routine';
+  String _paymentMethod = 'online'; // Default to online payment
 
   bool _shareLocation = false;
   bool _locating = false;
@@ -1057,6 +1058,100 @@ class _BookingScreenState extends State<BookingScreen> {
                           },
                         ),
                         const SizedBox(height: 24),
+                        // Payment Method Section
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1300),
+                          builder: (context, paymentValue, child) {
+                            return Opacity(
+                              opacity: paymentValue,
+                              child: Transform.translate(
+                                offset: Offset(30 * (1 - paymentValue), 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Payment Method',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Choose how you would like to pay for this appointment',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline
+                                              .withOpacity(0.3),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          RadioListTile<String>(
+                                            title: const Text('Pay Online'),
+                                            subtitle: const Text(
+                                              'Secure payment with card',
+                                            ),
+                                            value: 'online',
+                                            groupValue: _paymentMethod,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _paymentMethod = value!;
+                                              });
+                                            },
+                                            activeColor: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                          ),
+                                          const Divider(),
+                                          RadioListTile<String>(
+                                            title: const Text('Pay on Arrival'),
+                                            subtitle: const Text(
+                                              'Pay cash when service is provided',
+                                            ),
+                                            value: 'cash',
+                                            groupValue: _paymentMethod,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _paymentMethod = value!;
+                                              });
+                                            },
+                                            activeColor: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
                         // Description Section
                         TweenAnimationBuilder<double>(
                           tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -1178,6 +1273,7 @@ class _BookingScreenState extends State<BookingScreen> {
       urgencyLevel: _urgencyLevel,
       locationLat: _lat,
       locationLng: _lng,
+      paymentMethod: _paymentMethod,
     );
 
     final success = await context.read<AppointmentProvider>().bookAppointment(
