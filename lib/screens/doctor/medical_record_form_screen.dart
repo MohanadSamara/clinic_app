@@ -9,6 +9,10 @@ import '../../models/medical_record.dart';
 import '../../models/pet.dart';
 import '../../models/appointment.dart';
 import '../../models/document.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import '../../l10n/app_localizations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class MedicalRecordFormScreen extends StatefulWidget {
   final MedicalRecord? record;
@@ -88,7 +92,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Add Supporting Documents',
+                AppLocalizations.of(context)!.addSupportingDocuments,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -96,7 +100,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Upload medical documents, lab results, or images related to this record',
+                AppLocalizations.of(context)!.uploadDocumentsDescription,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(
                     context,
@@ -114,7 +118,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         Navigator.of(context).pop(); // Close form screen
                       },
                       icon: const Icon(Icons.skip_next),
-                      label: const Text('Skip for Now'),
+                      label: Text(AppLocalizations.of(context)!.skipForNow),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -125,7 +129,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         _navigateToFileUpload();
                       },
                       icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload Files'),
+                      label: Text(AppLocalizations.of(context)!.uploadFiles),
                     ),
                   ),
                 ],
@@ -216,8 +220,8 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
           SnackBar(
             content: Text(
               widget.record == null
-                  ? 'Medical record added successfully'
-                  : 'Medical record updated successfully',
+                  ? AppLocalizations.of(context)!.medicalRecordAdded
+                  : AppLocalizations.of(context)!.medicalRecordUpdated,
             ),
           ),
         );
@@ -253,7 +257,11 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Medical Record' : 'Add Medical Record'),
+        title: Text(
+          isEditing
+              ? AppLocalizations.of(context)!.editMedicalRecord
+              : AppLocalizations.of(context)!.addMedicalRecord,
+        ),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -264,7 +272,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
         builder: (context, animationValue, child) {
           return Opacity(
             opacity: animationValue,
-            child: Transform.translate(
+            child: Translations.get(
               offset: Offset(0, 20 * (1 - animationValue)),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -280,15 +288,19 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, headerValue, child) {
                           return Opacity(
                             opacity: headerValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(-30 * (1 - headerValue), 0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     isEditing
-                                        ? 'Edit Medical Record'
-                                        : 'Add Medical Record',
+                                        ? AppLocalizations.of(
+                                            context,
+                                          )!.editMedicalRecord
+                                        : AppLocalizations.of(
+                                            context,
+                                          )!.addMedicalRecord,
                                     style: Theme.of(context)
                                         .textTheme
                                         .headlineMedium
@@ -301,7 +313,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Pet: $petName',
+                                    '${AppLocalizations.of(context)!.petLabel}: $petName',
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
                                           color: Theme.of(context)
@@ -325,7 +337,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, dateValue, child) {
                           return Opacity(
                             opacity: dateValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - dateValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -345,7 +357,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Visit Date',
+                                        AppLocalizations.of(context)!.visitDate,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -415,7 +427,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, diagnosisValue, child) {
                           return Opacity(
                             opacity: diagnosisValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(-30 * (1 - diagnosisValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -443,7 +455,9 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Diagnosis',
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.diagnosis,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .titleMedium
@@ -460,17 +474,23 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                       TextFormField(
                                         controller: _diagnosisController,
                                         maxLines: 3,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Describe the diagnosis...',
-                                          border: OutlineInputBorder(),
+                                        decoration: InputDecoration(
+                                          hintText: AppLocalizations.of(
+                                            context,
+                                          )!.diagnosisHint,
+                                          border: const OutlineInputBorder(),
                                         ),
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return 'Diagnosis is required';
+                                            return AppLocalizations.of(
+                                              context,
+                                            )!.diagnosisRequired;
                                           }
                                           if (value.trim().length < 10) {
-                                            return 'Please provide a detailed diagnosis';
+                                            return AppLocalizations.of(
+                                              context,
+                                            )!.diagnosisDetailed;
                                           }
                                           return null;
                                         },
@@ -492,7 +512,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, treatmentValue, child) {
                           return Opacity(
                             opacity: treatmentValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - treatmentValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -520,7 +540,9 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Treatment',
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.treatment,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .titleMedium
@@ -537,18 +559,23 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                       TextFormField(
                                         controller: _treatmentController,
                                         maxLines: 4,
-                                        decoration: const InputDecoration(
-                                          hintText:
-                                              'Describe the treatment provided...',
-                                          border: OutlineInputBorder(),
+                                        decoration: InputDecoration(
+                                          hintText: AppLocalizations.of(
+                                            context,
+                                          )!.treatmentHint,
+                                          border: const OutlineInputBorder(),
                                         ),
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return 'Treatment is required';
+                                            return AppLocalizations.of(
+                                              context,
+                                            )!.treatmentRequired;
                                           }
                                           if (value.trim().length < 10) {
-                                            return 'Please provide detailed treatment information';
+                                            return AppLocalizations.of(
+                                              context,
+                                            )!.treatmentDetailed;
                                           }
                                           return null;
                                         },
@@ -570,7 +597,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, prescriptionValue, child) {
                           return Opacity(
                             opacity: prescriptionValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(-30 * (1 - prescriptionValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -598,7 +625,9 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Prescription (Optional)',
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.prescriptionOptional,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .titleMedium
@@ -615,10 +644,11 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                       TextFormField(
                                         controller: _prescriptionController,
                                         maxLines: 3,
-                                        decoration: const InputDecoration(
-                                          hintText:
-                                              'List prescribed medications and dosages...',
-                                          border: OutlineInputBorder(),
+                                        decoration: InputDecoration(
+                                          hintText: AppLocalizations.of(
+                                            context,
+                                          )!.prescriptionHint,
+                                          border: const OutlineInputBorder(),
                                         ),
                                       ),
                                     ],
@@ -638,7 +668,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, notesValue, child) {
                           return Opacity(
                             opacity: notesValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - notesValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -666,7 +696,9 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Additional Notes (Optional)',
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.additionalNotesOptional,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .titleMedium
@@ -683,10 +715,11 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                       TextFormField(
                                         controller: _notesController,
                                         maxLines: 3,
-                                        decoration: const InputDecoration(
-                                          hintText:
-                                              'Any additional observations or follow-up instructions...',
-                                          border: OutlineInputBorder(),
+                                        decoration: InputDecoration(
+                                          hintText: AppLocalizations.of(
+                                            context,
+                                          )!.notesHint,
+                                          border: const OutlineInputBorder(),
                                         ),
                                       ),
                                     ],
@@ -732,7 +765,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                         builder: (context, buttonValue, child) {
                           return Opacity(
                             opacity: buttonValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(0, 20 * (1 - buttonValue)),
                               child: Column(
                                 children: [
@@ -757,8 +790,12 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
                                             )
                                           : Text(
                                               isEditing
-                                                  ? 'Update Record'
-                                                  : 'Save Record',
+                                                  ? AppLocalizations.of(
+                                                      context,
+                                                    )!.updateRecord
+                                                  : AppLocalizations.of(
+                                                      context,
+                                                    )!.saveRecord,
                                             ),
                                     ),
                                   ),

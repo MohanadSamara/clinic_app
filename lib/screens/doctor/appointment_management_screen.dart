@@ -8,6 +8,10 @@ import '../../providers/payment_provider.dart';
 import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
 import '../select_location_screen.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import '../../l10n/app_localizations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class AppointmentManagementScreen extends StatefulWidget {
   const AppointmentManagementScreen({super.key});
@@ -47,24 +51,33 @@ class _AppointmentManagementScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Appointment Management'),
+        title: Text(AppLocalizations.of(context)!.appointmentManagement),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Today', icon: Icon(Icons.today)),
-            Tab(text: 'Upcoming', icon: Icon(Icons.schedule)),
-            Tab(text: 'Completed', icon: Icon(Icons.check_circle)),
+          tabs: [
+            Tab(
+              text: AppLocalizations.of(context)!.today,
+              icon: Icon(Icons.today),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.upcoming,
+              icon: Icon(Icons.schedule),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.completed,
+              icon: Icon(Icons.check_circle),
+            ),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.sort),
-            tooltip: 'Sorted by date & time',
+            tooltip: AppLocalizations.of(context)!.sortedByDateTime,
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text(
-                    'Appointments are automatically sorted by date and time',
+                    AppLocalizations.of(context)!.appointmentsAutoSorted,
                   ),
                 ),
               );
@@ -135,7 +148,9 @@ class _AppointmentManagementScreenState
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No ${filter} appointments',
+                  AppLocalizations.of(
+                    context,
+                  )!.noAppointments.replaceAll('{filter}', filter),
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
               ],
@@ -174,9 +189,11 @@ class _AppointmentManagementScreenState
           doctorId: authProvider.user!.id!,
         );
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Appointment accepted')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.appointmentAccepted),
+        ),
+      );
     }
   }
 
@@ -185,16 +202,20 @@ class _AppointmentManagementScreenState
         .read<AppointmentProvider>()
         .updateAppointmentStatus(appointment.id!, 'confirmed');
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Appointment started')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.appointmentStarted),
+        ),
+      );
     }
   }
 
   void _rescheduleAppointment(Appointment appointment) {
     // TODO: Implement reschedule dialog
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reschedule feature coming soon')),
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.rescheduleComingSoon),
+      ),
     );
   }
 
@@ -203,9 +224,11 @@ class _AppointmentManagementScreenState
         .read<AppointmentProvider>()
         .updateAppointmentStatus(appointment.id!, 'cancelled');
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Appointment rejected')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.appointmentRejected),
+        ),
+      );
     }
   }
 
@@ -234,7 +257,9 @@ class _AppointmentManagementScreenState
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location updated successfully')),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.locationUpdated),
+            ),
           );
           // Reload appointments
           final authProvider = context.read<AuthProvider>();
@@ -245,7 +270,9 @@ class _AppointmentManagementScreenState
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to update location')),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.locationUpdateFailed),
+            ),
           );
         }
       }
@@ -283,7 +310,11 @@ class _AppointmentManagementScreenState
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Payment processing failed')),
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)!.paymentProcessingFailed,
+                ),
+              ),
             );
             return;
           }
@@ -318,15 +349,17 @@ class _AppointmentManagementScreenState
 
         if (recordSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Appointment completed and treatment record saved'),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.appointmentCompletedRecordSaved,
+              ),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Appointment completed but failed to save treatment record',
+                AppLocalizations.of(context)!.appointmentCompletedRecordFailed,
               ),
             ),
           );
@@ -356,11 +389,19 @@ class _AppointmentManagementScreenState
           'paid',
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment marked as received')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.paymentMarkedAsReceived,
+            ),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to process payment')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.paymentProcessingFailedGeneral,
+            ),
+          ),
         );
       }
     }
@@ -396,49 +437,55 @@ class _TreatmentCompletionDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Complete Appointment & Record Treatment'),
+      title: Text(
+        AppLocalizations.of(context)!.completeAppointmentAndRecordTreatment,
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Appointment: ${widget.appointment.serviceType}',
+              '${AppLocalizations.of(context)!.appointmentServiceType}: ${widget.appointment.serviceType}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _diagnosisController,
-              decoration: const InputDecoration(
-                labelText: 'Diagnosis *',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.diagnosisRequired,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _treatmentController,
-              decoration: const InputDecoration(
-                labelText: 'Treatment Provided *',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(
+                  context,
+                )!.treatmentProvidedRequired,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 3,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _prescriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Prescription (Optional)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(
+                  context,
+                )!.prescriptionOptionalShort,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Additional Notes',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.additionalNotes,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
@@ -455,8 +502,12 @@ class _TreatmentCompletionDialogState
             if (_diagnosisController.text.isEmpty ||
                 _treatmentController.text.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please fill in diagnosis and treatment'),
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.pleaseFillInDiagnosisAndTreatment,
+                  ),
                 ),
               );
               return;
@@ -469,7 +520,7 @@ class _TreatmentCompletionDialogState
               'notes': _notesController.text,
             });
           },
-          child: const Text('Complete & Save'),
+          child: Text(AppLocalizations.of(context)!.completeAndSave),
         ),
       ],
     );
@@ -531,12 +582,12 @@ class _AppointmentCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Scheduled: ${appointment.scheduledAt}',
+                        '${AppLocalizations.of(context)!.scheduledAt}: ${appointment.scheduledAt}',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       if (appointment.address != null)
                         Text(
-                          'Location: ${appointment.address}',
+                          '${AppLocalizations.of(context)!.locationLabel}: ${appointment.address}',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                     ],
@@ -566,7 +617,7 @@ class _AppointmentCard extends StatelessWidget {
                 appointment.description!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Description: ${appointment.description}',
+                '${AppLocalizations.of(context)!.descriptionLabel}: ${appointment.description}',
                 style: TextStyle(color: Colors.grey[700]),
               ),
             ],
@@ -578,33 +629,27 @@ class _AppointmentCard extends StatelessWidget {
                     appointment.locationLng == null) ...[
                   TextButton(
                     onPressed: onUpdateLocation,
-                    child: const Text('Set Location'),
+                    child: Text(AppLocalizations.of(context)!.setLocation),
                   ),
                 ],
                 if (appointment.status == 'pending') ...[
-                  TextButton(onPressed: onAccept, child: const Text('Accept')),
+                  TextButton(
+                    onPressed: onAccept,
+                    child: Text(AppLocalizations.of(context)!.accept),
+                  ),
                   TextButton(
                     onPressed: onReschedule,
-                    child: const Text('Reschedule'),
+                    child: Text(AppLocalizations.of(context)!.reschedule),
                   ),
                   TextButton(
                     onPressed: onReject,
                     style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('Reject'),
+                    child: Text(AppLocalizations.of(context)!.reject),
                   ),
                 ] else if (appointment.status == 'accepted') ...[
                   ElevatedButton(
                     onPressed: onStart,
-                    child: const Text('Start Appointment'),
-                  ),
-                ] else if (appointment.paymentMethod == 'cash' &&
-                    (appointment.status == 'confirmed' ||
-                        appointment.status == 'en_route' ||
-                        appointment.status == 'arrived' ||
-                        appointment.status == 'in_progress')) ...[
-                  ElevatedButton(
-                    onPressed: onMarkPaymentReceived,
-                    child: const Text('Mark Payment Received'),
+                    child: Text(AppLocalizations.of(context)!.startAppointment),
                   ),
                 ] else if (appointment.status == 'confirmed' ||
                     appointment.status == 'en_route' ||
@@ -612,7 +657,7 @@ class _AppointmentCard extends StatelessWidget {
                     appointment.status == 'paid') ...[
                   ElevatedButton(
                     onPressed: onComplete,
-                    child: const Text('Mark Complete'),
+                    child: Text(AppLocalizations.of(context)!.markComplete),
                   ),
                 ],
               ],

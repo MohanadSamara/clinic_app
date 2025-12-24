@@ -1,16 +1,16 @@
 # clinic_app
 
-A new Flutter project.
+تطبيق Flutter جديد.
 
-## Getting Started
+## البدء
 
-This project is a starting point for a Flutter application.
+هذا المشروع هو نقطة بداية لتطبيق Flutter.
 
-A few resources to get you started if this is your first Flutter project:
+بعض الموارد للبدء إذا كان هذا مشروع Flutter الأول لك:
 
 - [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
 - [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+للحصول على مساعدة في البدء مع تطوير Flutter، عرض
+[الوثائق عبر الإنترنت](https://docs.flutter.dev/)، التي تقدم دروسًا،
+عينات، إرشادات حول تطوير الهواتف المحمولة، ومرجع API كامل.

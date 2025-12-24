@@ -15,6 +15,7 @@ class NotificationProvider extends ChangeNotifier {
     NotificationType.followup: true,
     NotificationType.clinicArrival: true,
     NotificationType.appointment: true,
+    NotificationType.urgentCase: true,
     NotificationType.general: true,
   };
 
@@ -264,3 +265,10 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 }
+
+
+
+
+
+
+

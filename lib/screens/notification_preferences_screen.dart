@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/notification_provider.dart';
 import '../theme/app_theme.dart';
-import '../l10n/app_localizations.dart';
+
 import '../models/app_notification.dart';
+import '../../translations.dart';
 
 class NotificationPreferencesScreen extends StatelessWidget {
   const NotificationPreferencesScreen({super.key});
@@ -12,7 +13,7 @@ class NotificationPreferencesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.notificationsAndReminders),
+        title: Text(context.tr('notificationsAndReminders')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -334,3 +335,10 @@ class NotificationPreferencesScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+

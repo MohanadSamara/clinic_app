@@ -20,7 +20,7 @@ import '../../models/medical_record.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
 import '../../db/db_helper.dart';
-import '../../l10n/app_localizations.dart';
+
 import '../../components/modern_cards.dart';
 import '../../screens/owner/doctor_selection_screen.dart';
 import 'appointment_management_screen.dart';
@@ -30,6 +30,9 @@ import 'profile_screen.dart';
 import 'medical_record_form_screen.dart';
 import 'document_upload_screen.dart';
 import 'van_selection_screen.dart';
+import 'schedule_settings_screen.dart';
+import 'emergency_cases_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 class DoctorDashboard extends StatefulWidget {
   const DoctorDashboard({super.key});
@@ -70,15 +73,15 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.schedule),
-            label: AppLocalizations.of(context)!.appointments,
+            label: AppLocalizations.of(context)!.manageAppointments,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.medical_services),
-            label: AppLocalizations.of(context)!.treatments,
+            label: AppLocalizations.of(context)!.recordTreatments,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory),
-            label: AppLocalizations.of(context)!.inventory,
+            label: AppLocalizations.of(context)!.inventoryManagement,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
@@ -277,8 +280,8 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 ),
                 onPressed: () => themeProvider.toggleTheme(),
                 tooltip: themeProvider.isDarkMode
-                    ? 'Switch to Light Mode'
-                    : 'Switch to Dark Mode',
+                    ? AppLocalizations.of(context)!.switchToLightMode
+                    : AppLocalizations.of(context)!.switchToDarkMode,
               );
             },
           ),
@@ -328,7 +331,9 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                     ),
                   ),
                   Text(
-                    'Dr. ${user?.name ?? 'Doctor'}',
+                    AppLocalizations.of(context)!.doctorNameWithText(
+                      user?.name ?? AppLocalizations.of(context)!.doctor,
+                    ),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -350,7 +355,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                       return Row(
                         children: [
                           Text(
-                            'Status: ',
+                            '${AppLocalizations.of(context)!.status}: ',
                             style: Theme.of(context).textTheme.bodyLarge
                                 ?.copyWith(
                                   color: Theme.of(
@@ -373,7 +378,9 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                               ),
                             ),
                             child: Text(
-                              isOnline ? 'Available' : 'Offline',
+                              isOnline
+                                  ? AppLocalizations.of(context)!.online
+                                  : AppLocalizations.of(context)!.offline,
                               style: TextStyle(
                                 color: isOnline
                                     ? Colors.green.shade800
@@ -469,7 +476,9 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                       ] else ...[
                         DropdownButtonFormField<Service>(
                           decoration: InputDecoration(
-                            labelText: 'Choose Service',
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.selectService,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -550,7 +559,9 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      'Linked Driver',
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.linkedDriver,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium
@@ -583,7 +594,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                                 if (_linkedDriver!.phone != null) ...[
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Phone: ${_linkedDriver!.phone}',
+                                    '${AppLocalizations.of(context)!.phoneLabel}: ${_linkedDriver!.phone}',
                                     style: TextStyle(
                                       color: Theme.of(
                                         context,
@@ -604,7 +615,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    'ACTIVE',
+                                    AppLocalizations.of(context)!.active,
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
@@ -632,7 +643,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 children: [
                   Expanded(
                     child: ModernStatsCard(
-                      title: 'Today\'s Appointments',
+                      title: AppLocalizations.of(context)!.todaysAppointments,
                       value: todaysAppointments.toString(),
                       icon: Icons.calendar_today,
                       color: colorScheme.primary,
@@ -641,7 +652,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                   const SizedBox(width: 16),
                   Expanded(
                     child: ModernStatsCard(
-                      title: 'Completed',
+                      title: AppLocalizations.of(context)!.completed,
                       value: completedAppointments.toString(),
                       icon: Icons.check_circle,
                       color: colorScheme.secondary,
@@ -657,7 +668,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Text(
-                'Quick Actions',
+                AppLocalizations.of(context)!.quickActions,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -672,8 +683,10 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 ModernActionCard(
-                  title: 'Manage Appointments',
-                  subtitle: 'View and update patient schedules',
+                  title: AppLocalizations.of(context)!.manageAppointments,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.viewAndUpdatePatientSchedules,
                   icon: Icons.calendar_today,
                   color: colorScheme.primary,
                   onTap: () => Navigator.of(context).push(
@@ -684,8 +697,10 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Record Treatments',
-                  subtitle: 'Document medical procedures',
+                  title: AppLocalizations.of(context)!.recordTreatments,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.documentMedicalProcedures,
                   icon: Icons.medical_services,
                   color: colorScheme.secondary,
                   onTap: () => Navigator.of(context).push(
@@ -696,8 +711,10 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Inventory Management',
-                  subtitle: 'Check supplies and medications',
+                  title: AppLocalizations.of(context)!.inventoryManagement,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.checkSuppliesAndMedications,
                   icon: Icons.inventory,
                   color: colorScheme.tertiary,
                   onTap: () => Navigator.of(context).push(
@@ -708,8 +725,10 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Medical Records',
-                  subtitle: 'View and manage patient records',
+                  title: AppLocalizations.of(context)!.medicalRecords,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.viewAndManagePatientRecords,
                   icon: Icons.medical_services,
                   color: colorScheme.secondary,
                   onTap: () => Navigator.of(context).push(
@@ -720,8 +739,10 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Upload Documents',
-                  subtitle: 'Upload treatment documents and reports',
+                  title: AppLocalizations.of(context)!.uploadDocuments,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.uploadTreatmentDocumentsAndReports,
                   icon: Icons.upload_file,
                   color: colorScheme.primary,
                   onTap: () => Navigator.of(context).push(
@@ -733,11 +754,17 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                 const SizedBox(height: 12),
                 // Removed van selection - admin handles assignments
                 ModernActionCard(
-                  title: 'Emergency Cases',
-                  subtitle: 'Handle urgent situations',
+                  title: AppLocalizations.of(context)!.urgentCases,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.approveAndManageUrgentServiceRequests,
                   icon: Icons.emergency,
                   color: colorScheme.error,
-                  onTap: () => _showEmergencyQueue(context),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const EmergencyCasesScreen(),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
               ]),
@@ -748,32 +775,18 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
     );
   }
 
-  void _showEmergencyQueue(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Emergency Cases'),
-        content: const Text('View and manage emergency appointments'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _closeApp(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Close App'),
-        content: const Text('Are you sure you want to close the app?'),
+        title: Text(AppLocalizations.of(context)!.closeApp),
+        content: Text(
+          AppLocalizations.of(context)!.areYouSureYouWantToCloseTheApp,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -781,7 +794,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
               _performAppExit();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Close App'),
+            child: Text(AppLocalizations.of(context)!.closeApp),
           ),
         ],
       ),
@@ -801,9 +814,11 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
         // Fallback: show message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Please close this browser tab manually to exit the app',
+                AppLocalizations.of(
+                  context,
+                )!.pleaseCloseThisBrowserTabManuallyToExitTheApp,
               ),
               duration: Duration(seconds: 5),
             ),
@@ -821,9 +836,11 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
       // For desktop or other platforms: Show message since exit may not work reliably
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Please close the application window manually to exit',
+              AppLocalizations.of(
+                context,
+              )!.pleaseCloseTheApplicationWindowManuallyToExit,
             ),
             duration: Duration(seconds: 5),
           ),
@@ -859,24 +876,26 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
+        title: Text(AppLocalizations.of(context)!.selectLanguage),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
-              title: const Text('English'),
+              title: Text(AppLocalizations.of(context)!.english),
               onTap: () {
                 localeProvider.setLocale(const Locale('en'));
+
                 Navigator.of(context).pop();
               },
               selected: localeProvider.locale.languageCode == 'en',
             ),
             ListTile(
               leading: const Text('🇸🇦', style: TextStyle(fontSize: 24)),
-              title: const Text('العربية'),
+              title: Text(AppLocalizations.of(context)!.arabic),
               onTap: () {
                 localeProvider.setLocale(const Locale('ar'));
+
                 Navigator.of(context).pop();
               },
               selected: localeProvider.locale.languageCode == 'ar',
@@ -886,7 +905,7 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
         ],
       ),
@@ -920,13 +939,13 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Medical Records'),
+        title: Text(AppLocalizations.of(context)!.medicalRecordsScreen),
         elevation: 0,
         backgroundColor: colorScheme.surface,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Add Medical Record',
+            tooltip: AppLocalizations.of(context)!.addMedicalRecord,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const MedicalRecordFormScreen(),
@@ -963,7 +982,7 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No medical records found',
+                            AppLocalizations.of(context)!.noMedicalRecords,
                             style: TextStyle(
                               fontSize: 18,
                               color: colorScheme.onSurface.withOpacity(0.6),
@@ -972,7 +991,9 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Add medical records for your patients',
+                            AppLocalizations.of(
+                              context,
+                            )!.addMedicalRecordsForYourPatients,
                             style: TextStyle(
                               fontSize: 14,
                               color: colorScheme.onSurfaceVariant,
@@ -988,7 +1009,9 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
                               ),
                             ),
                             icon: const Icon(Icons.add),
-                            label: const Text('Add First Record'),
+                            label: Text(
+                              AppLocalizations.of(context)!.addFirstRecord,
+                            ),
                           ),
                         ],
                       ),
@@ -1062,14 +1085,12 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Medical Record'),
-        content: const Text(
-          'Are you sure you want to delete this medical record? This action cannot be undone.',
-        ),
+        title: Text(AppLocalizations.of(context)!.deleteMedicalRecord),
+        content: Text(AppLocalizations.of(context)!.confirmDeleteMedicalRecord),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -1079,14 +1100,18 @@ class _MedicalRecordsScreenState extends State<_MedicalRecordsScreen> {
                   .deleteMedicalRecord(record.id!);
               if (success && mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Medical record deleted successfully'),
+                  SnackBar(
+                    content: Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.medicalRecordDeletedSuccessfully,
+                    ),
                   ),
                 );
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -1152,7 +1177,7 @@ class _MedicalRecordCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pet ID: ${record.petId}',
+                        '${AppLocalizations.of(context)!.petId}: ${record.petId}',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.bold,
@@ -1181,9 +1206,15 @@ class _MedicalRecordCard extends StatelessWidget {
                         break;
                     }
                   },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text(AppLocalizations.of(context)!.edit),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(AppLocalizations.of(context)!.delete),
+                    ),
                   ],
                 ),
               ],
@@ -1193,7 +1224,7 @@ class _MedicalRecordCard extends StatelessWidget {
             // Diagnosis Section
             _buildDetailSection(
               context,
-              'Diagnosis',
+              AppLocalizations.of(context)!.diagnosis,
               record.diagnosis,
               Icons.local_hospital,
               colorScheme.errorContainer,
@@ -1205,7 +1236,7 @@ class _MedicalRecordCard extends StatelessWidget {
             // Treatment Section
             _buildDetailSection(
               context,
-              'Treatment',
+              AppLocalizations.of(context)!.treatment,
               record.treatment,
               Icons.healing,
               colorScheme.secondaryContainer,
@@ -1218,7 +1249,7 @@ class _MedicalRecordCard extends StatelessWidget {
               const SizedBox(height: 16),
               _buildDetailSection(
                 context,
-                'Prescription',
+                AppLocalizations.of(context)!.prescription,
                 record.prescription!,
                 Icons.medication,
                 colorScheme.primaryContainer,
@@ -1231,7 +1262,7 @@ class _MedicalRecordCard extends StatelessWidget {
               const SizedBox(height: 16),
               _buildDetailSection(
                 context,
-                'Additional Notes',
+                AppLocalizations.of(context)!.additionalNotes,
                 record.notes!,
                 Icons.note,
                 colorScheme.tertiaryContainer,
@@ -1301,7 +1332,7 @@ class _DoctorProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(AppLocalizations.of(context)!.profile),
         elevation: 0,
         backgroundColor: colorScheme.surface,
       ),
@@ -1334,14 +1365,14 @@ class _DoctorProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Dr. ${user?.name ?? 'Doctor'}',
+                    '${AppLocalizations.of(context)!.doctorNameWithText}: ${user?.name ?? AppLocalizations.of(context)!.doctor}',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
                     ),
                   ),
                   Text(
-                    user?.email ?? 'No email',
+                    user?.email ?? AppLocalizations.of(context)!.noEmail,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -1357,8 +1388,8 @@ class _DoctorProfileScreen extends StatelessWidget {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 ModernActionCard(
-                  title: 'Professional Information',
-                  subtitle: 'Update your credentials',
+                  title: AppLocalizations.of(context)!.professionalInformation,
+                  subtitle: AppLocalizations.of(context)!.updateYourCredentials,
                   icon: Icons.medical_services,
                   color: colorScheme.primary,
                   onTap: () {
@@ -1371,8 +1402,9 @@ class _DoctorProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Phone: ${user?.phone ?? 'Not set'}',
-                  subtitle: 'Contact number',
+                  title:
+                      '${AppLocalizations.of(context)!.phoneLabel}: ${user?.phone ?? AppLocalizations.of(context)!.notSet}',
+                  subtitle: AppLocalizations.of(context)!.contactNumber,
                   icon: Icons.phone,
                   color: colorScheme.secondary,
                   onTap: () {
@@ -1382,32 +1414,32 @@ class _DoctorProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Schedule Settings',
-                  subtitle: 'Working hours and availability',
+                  title: AppLocalizations.of(context)!.scheduleSettings,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.workingHoursAndAvailability,
                   icon: Icons.schedule,
                   color: colorScheme.tertiary,
-                  onTap: () {
-                    // TODO: Implement schedule settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Schedule settings coming soon'),
-                        backgroundColor: colorScheme.error,
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ScheduleSettingsScreen(),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ModernActionCard(
-                  title: 'Notifications',
-                  subtitle: 'Alert preferences',
+                  title: AppLocalizations.of(context)!.notifications,
+                  subtitle: AppLocalizations.of(context)!.alertPreferences,
                   icon: Icons.notifications,
                   color: colorScheme.primary,
                   onTap: () {
                     // TODO: Implement notification settings
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text(
-                          'Notification settings coming soon',
+                        content: Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.notificationSettingsComingSoon,
                         ),
                         backgroundColor: colorScheme.error,
                       ),
@@ -1447,7 +1479,7 @@ class _DoctorProfileScreen extends StatelessWidget {
                           const SizedBox(width: 16),
                           Expanded(
                             child: Text(
-                              'Sign Out',
+                              AppLocalizations.of(context)!.signOut,
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w600,

@@ -6,6 +6,7 @@ enum NotificationType {
   followup,
   clinicArrival,
   appointment,
+  urgentCase,
   general,
 }
 
@@ -93,3 +94,10 @@ class AppNotification {
     );
   }
 }
+
+
+
+
+
+
+

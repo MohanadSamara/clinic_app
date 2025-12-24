@@ -5,8 +5,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'providers/admin_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider.dart';
+import 'providers/service_request_provider.dart';
 import 'providers/appointment_provider.dart';
 import 'providers/pet_provider.dart';
 import 'providers/medical_provider.dart';
@@ -18,33 +20,47 @@ import 'providers/document_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/van_provider.dart';
 import 'providers/availability_provider.dart';
+import 'providers/schedule_provider.dart';
 import 'models/van.dart';
 import 'services/notification_service.dart';
 import 'services/calendar_service.dart';
 import 'screens/loading_screen.dart';
-import 'theme/app_theme.dart';
+import 'theme/vet_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase globally
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    // Initialize Firebase globally
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // Initialize calendar service
-  await CalendarService.initialize();
+    // Initialize calendar service
+    await CalendarService.initialize();
 
-  // Initialize notification service
-  final notificationService = NotificationService();
-  await notificationService.initialize();
+    // Initialize notification service
+    final notificationService = NotificationService();
+    await notificationService.initialize();
 
-  // Initialize auth provider to check for existing session
-  final authProvider = AuthProvider();
-  await authProvider.initialize();
+    // Initialize auth provider to check for existing session
+    final authProvider = AuthProvider();
+    await authProvider.initialize();
 
-  // Initialize sample vans for testing
-  await _initializeSampleVans();
+    // Initialize sample vans for testing
+    await _initializeSampleVans();
 
-  runApp(MyApp(authProvider: authProvider));
+    runApp(MyApp(authProvider: authProvider));
+  } catch (e, stackTrace) {
+    debugPrint('Error in main: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Fallback to basic app without providers
+    runApp(
+      MaterialApp(
+        home: Scaffold(body: Center(child: Text('Error initializing app: $e'))),
+      ),
+    );
+  }
 }
 
 Future<void> _initializeSampleVans() async {
@@ -104,7 +120,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
+        ChangeNotifierProvider(create: (_) => ServiceRequestProvider()),
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => PetProvider()),
@@ -126,6 +144,7 @@ class MyApp extends StatelessWidget {
             return provider;
           },
         ),
+        ChangeNotifierProvider(create: (_) => ScheduleProvider()),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, child) {
@@ -138,9 +157,22 @@ class MyApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: const [Locale('en'), Locale('ar')],
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            supportedLocales: const [
+              Locale('en'), // English
+              Locale('ar'), // Arabic
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              // Check if the current device locale is supported
+              for (final supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode == locale?.languageCode) {
+                  return supportedLocale;
+                }
+              }
+              // If device locale is not supported, use English as default
+              return const Locale('en');
+            },
+            theme: VetTheme.light(),
+            darkTheme: VetTheme.dark(),
             themeMode: themeProvider.themeMode,
             home: const LoadingScreen(),
           );

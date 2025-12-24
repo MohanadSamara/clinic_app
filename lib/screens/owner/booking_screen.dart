@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:io' show Platform;
-import '../../l10n/app_localizations.dart';
+
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
@@ -15,7 +15,9 @@ import '../../models/service.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
 import '../select_location_screen.dart';
-import '../../l10n/app_localizations.dart';
+import '../../../translations.dart';
+import 'package:clinic_app/translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class BookingScreen extends StatefulWidget {
   final Service? selectedService;
@@ -163,10 +165,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.bookAppointment),
+        title: Text(context.tr('bookAppointment')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -179,7 +180,7 @@ class _BookingScreenState extends State<BookingScreen> {
             builder: (context, animationValue, child) {
               return Opacity(
                 opacity: animationValue,
-                child: Transform.translate(
+                child: Translations.get(
                   offset: Offset(0, 20 * (1 - animationValue)),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
@@ -193,13 +194,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, headerValue, child) {
                             return Opacity(
                               opacity: headerValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(-30 * (1 - headerValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.scheduleVisit,
+                                      context.tr('scheduleVisit'),
                                       style: Theme.of(context)
                                           .textTheme
                                           .headlineMedium
@@ -212,7 +213,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      l10n.bookVetCare,
+                                      context.tr('bookVetCare'),
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyLarge
@@ -237,13 +238,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, dateValue, child) {
                             return Opacity(
                               opacity: dateValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(30 * (1 - dateValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.selectDate,
+                                      context.tr('selectDate'),
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleLarge
@@ -342,13 +343,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, timeValue, child) {
                             return Opacity(
                               opacity: timeValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(-30 * (1 - timeValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.selectTime,
+                                      context.tr('selectTime'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -375,7 +376,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   ? _selectedTime!.format(
                                                       context,
                                                     )
-                                                  : l10n.selectTime,
+                                                  : context.tr('selectTime'),
                                             ),
                                           ),
                                         ),
@@ -395,13 +396,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, serviceValue, child) {
                             return Opacity(
                               opacity: serviceValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(30 * (1 - serviceValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.selectService,
+                                      context.tr('selectService'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -410,7 +411,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<Service>(
                                       value: _selectedService,
-                                      hint: Text(l10n.chooseService),
+                                      hint: Text(context.tr('chooseService')),
                                       items: appointmentProvider.services.map((
                                         service,
                                       ) {
@@ -441,7 +442,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, availabilityValue, child) {
                             return Opacity(
                               opacity: availabilityValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(
                                   -30 * (1 - availabilityValue),
                                   0,
@@ -483,7 +484,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Text(
-                                                'No doctors available at the moment. Please check back later.',
+                                                context.tr(
+                                                  'noDoctorsAvailableAtTheMomentPleaseCheckBackLater',
+                                                ),
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .bodyMedium
@@ -532,7 +535,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                               ),
                                               const SizedBox(width: 12),
                                               Text(
-                                                'Available Teams',
+                                                context.tr('availableTeams'),
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .titleMedium
@@ -548,7 +551,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                           ),
                                           const SizedBox(height: 12),
                                           Text(
-                                            '${availablePairs.length} doctor${availablePairs.length == 1 ? '' : 's'} available for home visits',
+                                            '${availablePairs.length} ${context.tr('doctorsAvailableForHomeVisits')}',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyMedium
@@ -600,7 +603,12 @@ class _BookingScreenState extends State<BookingScreen> {
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      'Dr. ${doctor.name}',
+                                                      context.tr(
+                                                        'doctorNamePrefix',
+                                                        args: {
+                                                          'name': doctor.name,
+                                                        },
+                                                      ),
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodySmall
@@ -662,13 +670,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, doctorValue, child) {
                             return Opacity(
                               opacity: doctorValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(-30 * (1 - doctorValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.selectDoctor,
+                                      context.tr('selectDoctor'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -711,7 +719,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              '${l10n.dr} ${_selectedDoctor!.name}',
+                                              '${context.tr('dr')} ${_selectedDoctor!.name}',
                                               style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w500,
@@ -732,7 +740,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   _selectedDoctorId = null;
                                                 });
                                               },
-                                              child: Text(l10n.change),
+                                              child: Text(context.tr('change')),
                                             ),
                                           ],
                                         ),
@@ -759,7 +767,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                           ),
                                         ),
                                         child: Text(
-                                          l10n.noDoctorsAvailable,
+                                          context.tr('noDoctorsAvailable'),
                                           style: TextStyle(
                                             color:
                                                 Theme.of(context).brightness ==
@@ -771,11 +779,16 @@ class _BookingScreenState extends State<BookingScreen> {
                                       )
                                     else
                                       DropdownButtonFormField<User>(
-                                        hint: Text(l10n.chooseDoctor),
+                                        hint: Text(context.tr('chooseDoctor')),
                                         items: _doctors.map((doctor) {
                                           return DropdownMenuItem(
                                             value: doctor,
-                                            child: Text('Dr. ${doctor.name}'),
+                                            child: Text(
+                                              context.tr(
+                                                'doctorNamePrefix',
+                                                args: {'name': doctor.name},
+                                              ),
+                                            ),
                                           );
                                         }).toList(),
                                         onChanged: (doctor) {
@@ -784,7 +797,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                           });
                                         },
                                         validator: (value) => value == null
-                                            ? l10n.chooseDoctor
+                                            ? context.tr('chooseDoctor')
                                             : null,
                                       ),
                                   ],
@@ -801,13 +814,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, petValue, child) {
                             return Opacity(
                               opacity: petValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(30 * (1 - petValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.selectPet,
+                                      context.tr('selectPet'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -816,7 +829,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<Pet>(
                                       initialValue: _selectedPet,
-                                      hint: Text(l10n.choosePet),
+                                      hint: Text(context.tr('choosePet')),
                                       items: _userPets.map((pet) {
                                         return DropdownMenuItem(
                                           value: pet,
@@ -830,8 +843,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                           _selectedPet = pet;
                                         });
                                       },
-                                      validator: (value) =>
-                                          value == null ? l10n.choosePet : null,
+                                      validator: (value) => value == null
+                                          ? context.tr('choosePet')
+                                          : null,
                                     ),
                                   ],
                                 ),
@@ -847,13 +861,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, urgencyValue, child) {
                             return Opacity(
                               opacity: urgencyValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(-30 * (1 - urgencyValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.urgencyLevel,
+                                      context.tr('urgencyLevel'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -865,15 +879,15 @@ class _BookingScreenState extends State<BookingScreen> {
                                       items: [
                                         DropdownMenuItem(
                                           value: 'routine',
-                                          child: Text(l10n.routine),
+                                          child: Text(context.tr('routine')),
                                         ),
                                         DropdownMenuItem(
                                           value: 'urgent',
-                                          child: Text(l10n.urgent),
+                                          child: Text(context.tr('urgent')),
                                         ),
                                         DropdownMenuItem(
                                           value: 'emergency',
-                                          child: Text(l10n.emergency),
+                                          child: Text(context.tr('emergency')),
                                         ),
                                       ],
                                       onChanged: (value) {
@@ -885,7 +899,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                     const SizedBox(height: 24),
                                     if (_urgencyLevel != 'routine') ...[
                                       SwitchListTile(
-                                        title: Text(l10n.shareCurrentLocation),
+                                        title: Text(
+                                          context.tr('shareCurrentLocation'),
+                                        ),
                                         value: _shareLocation,
                                         onChanged: (v) {
                                           setState(() {
@@ -916,18 +932,39 @@ class _BookingScreenState extends State<BookingScreen> {
                                                       Icons.my_location,
                                                     ),
                                               label: Text(
-                                                l10n.getCurrentLocation,
+                                                context.tr(
+                                                  'getCurrentLocation',
+                                                ),
                                               ),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Text(
                                                 _locError != null
-                                                    ? 'Error: $_locError'
+                                                    ? context.tr(
+                                                        'locationError',
+                                                        args: {
+                                                          'error': _locError!,
+                                                        },
+                                                      )
                                                     : (_lat != null &&
                                                           _lng != null)
-                                                    ? 'Lat: ${_lat!.toStringAsFixed(5)}, Lng: ${_lng!.toStringAsFixed(5)}'
-                                                    : 'Not captured yet',
+                                                    ? context.tr(
+                                                        'coordinatesFormat',
+                                                        args: {
+                                                          'lat': _lat!
+                                                              .toStringAsFixed(
+                                                                5,
+                                                              ),
+                                                          'lng': _lng!
+                                                              .toStringAsFixed(
+                                                                5,
+                                                              ),
+                                                        },
+                                                      )
+                                                    : context.tr(
+                                                        'locationNotCaptured',
+                                                      ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -950,13 +987,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, locationValue, child) {
                             return Opacity(
                               opacity: locationValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(-30 * (1 - locationValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n.appointmentLocation,
+                                      context.tr('appointmentLocation'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -967,7 +1004,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      l10n.locationDescription,
+                                      context.tr('locationDescription'),
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Theme.of(context)
@@ -1003,8 +1040,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                         decoration: InputDecoration(
                                           labelText:
                                               _addressController.text.isEmpty
-                                              ? l10n.clickMapIcon
-                                              : l10n.selectedLocation,
+                                              ? context.tr('clickMapIcon')
+                                              : context.tr('selectedLocation'),
                                           border: InputBorder.none,
                                           contentPadding: const EdgeInsets.all(
                                             16,
@@ -1040,7 +1077,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 8),
                                         child: Text(
-                                          l10n.locationRequired,
+                                          context.tr('locationRequired'),
                                           style: TextStyle(
                                             color:
                                                 Theme.of(context).brightness ==
@@ -1065,13 +1102,13 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, paymentValue, child) {
                             return Opacity(
                               opacity: paymentValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(30 * (1 - paymentValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Payment Method',
+                                      context.tr('paymentMethod'),
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -1082,7 +1119,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Choose how you would like to pay for this appointment',
+                                      context.tr(
+                                        'chooseHowYouWouldLikeToPayForThisAppointment',
+                                      ),
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Theme.of(context)
@@ -1110,9 +1149,13 @@ class _BookingScreenState extends State<BookingScreen> {
                                       child: Column(
                                         children: [
                                           RadioListTile<String>(
-                                            title: const Text('Pay Online'),
-                                            subtitle: const Text(
-                                              'Secure payment with card',
+                                            title: Text(
+                                              context.tr('payOnline'),
+                                            ),
+                                            subtitle: Text(
+                                              context.tr(
+                                                'securePaymentWithCard',
+                                              ),
                                             ),
                                             value: 'online',
                                             groupValue: _paymentMethod,
@@ -1127,9 +1170,13 @@ class _BookingScreenState extends State<BookingScreen> {
                                           ),
                                           const Divider(),
                                           RadioListTile<String>(
-                                            title: const Text('Pay on Arrival'),
-                                            subtitle: const Text(
-                                              'Pay cash when service is provided',
+                                            title: Text(
+                                              context.tr('payOnArrival'),
+                                            ),
+                                            subtitle: Text(
+                                              context.tr(
+                                                'payCashWhenServiceIsProvided',
+                                              ),
                                             ),
                                             value: 'cash',
                                             groupValue: _paymentMethod,
@@ -1159,7 +1206,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, detailsValue, child) {
                             return Opacity(
                               opacity: detailsValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(30 * (1 - detailsValue), 0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1167,7 +1214,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                     TextField(
                                       controller: _descriptionController,
                                       decoration: InputDecoration(
-                                        labelText: l10n.descriptionOptional,
+                                        labelText: context.tr(
+                                          'descriptionOptional',
+                                        ),
                                         border: OutlineInputBorder(),
                                       ),
                                       maxLines: 3,
@@ -1185,7 +1234,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           builder: (context, buttonValue, child) {
                             return Opacity(
                               opacity: buttonValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(0, 20 * (1 - buttonValue)),
                                 child: SizedBox(
                                   width: double.infinity,
@@ -1196,7 +1245,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                         vertical: 16,
                                       ),
                                     ),
-                                    child: Text(l10n.bookAppointmentButton),
+                                    child: Text(
+                                      context.tr('bookAppointmentButton'),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1216,21 +1267,20 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _bookAppointment() async {
-    final l10n = AppLocalizations.of(context)!;
     if (_selectedService == null ||
         _selectedTime == null ||
         _selectedPet == null ||
         _selectedDoctor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.pleaseSelectServiceTimePetDoctor)),
+        SnackBar(content: Text(context.tr('pleaseSelectServiceTimePetDoctor'))),
       );
       return;
     }
 
     if (_lat == null || _lng == null || _addressController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectLocation)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('pleaseSelectLocation'))),
+      );
       return;
     }
 
@@ -1238,7 +1288,7 @@ class _BookingScreenState extends State<BookingScreen> {
     if (authProvider.user?.id == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.pleaseLoginFirst)));
+      ).showSnackBar(SnackBar(content: Text(context.tr('pleaseLoginFirst'))));
       return;
     }
 
@@ -1254,7 +1304,7 @@ class _BookingScreenState extends State<BookingScreen> {
         _shareLocation &&
         (_lat == null || _lng == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please capture your location')),
+        SnackBar(content: Text(context.tr('pleaseCaptureYourLocation'))),
       );
       return;
     }
@@ -1282,13 +1332,13 @@ class _BookingScreenState extends State<BookingScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.appointmentBookedSuccessfully)),
+        SnackBar(content: Text(context.tr('appointmentBookedSuccessfully'))),
       );
       Navigator.of(context).pop();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.failedToBookAppointment)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('failedToBookAppointment'))),
+      );
     }
   }
 

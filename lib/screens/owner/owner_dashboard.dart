@@ -1,6 +1,5 @@
 // lib/screens/owner/owner_dashboard.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -8,15 +7,13 @@ import '../../providers/locale_provider.dart';
 import '../../providers/medical_provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/appointment_provider.dart';
-import '../../models/medical_record.dart';
+import '../../providers/service_request_provider.dart';
 import '../../models/service_request.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
 import '../../components/modern_cards.dart';
-import '../../components/ui_kit.dart';
-import '../../theme/app_theme.dart';
 import '../../services/location_service.dart';
-import '../../l10n/app_localizations.dart';
+
 import 'pet_management_screen.dart';
 import 'booking_screen.dart';
 import 'appointments_screen.dart';
@@ -26,6 +23,8 @@ import 'profile_screen.dart';
 import 'medical_documents_screen.dart';
 import 'payment_history_screen.dart';
 import '../notification_preferences_screen.dart';
+import '../../../translations.dart';
+import '../../widgets/language_toggle.dart';
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -42,7 +41,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     const PetManagementScreen(),
     const BookingScreen(),
     const AppointmentsScreen(),
-    const _OwnerProfileScreen(),
+    const OwnerProfileScreen(),
   ];
 
   @override
@@ -86,27 +85,27 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
-            label: AppLocalizations.of(context)!.home,
+            label: context.tr('home'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.pets_outlined),
             activeIcon: Icon(Icons.pets),
-            label: AppLocalizations.of(context)!.pets,
+            label: context.tr('pets'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             activeIcon: Icon(Icons.calendar_today),
-            label: AppLocalizations.of(context)!.book,
+            label: context.tr('book'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.schedule_outlined),
             activeIcon: Icon(Icons.schedule),
-            label: AppLocalizations.of(context)!.appointments,
+            label: context.tr('appointments'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: AppLocalizations.of(context)!.profile,
+            label: context.tr('profile'),
           ),
         ],
       ),
@@ -126,23 +125,12 @@ class _OwnerHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Vet2U Dashboard'),
+        title: Text(context.tr('vet2UDashboard')),
         elevation: 0,
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
-          Consumer<LocaleProvider>(
-            builder: (context, localeProvider, child) {
-              return IconButton(
-                icon: Icon(
-                  Icons.language,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                onPressed: () => _showLanguageDialog(context, localeProvider),
-                tooltip: AppLocalizations.of(context)!.changeLanguage,
-              );
-            },
-          ),
+          const LanguageToggle(),
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return IconButton(
@@ -152,95 +140,563 @@ class _OwnerHomeScreen extends StatelessWidget {
                 ),
                 onPressed: () => themeProvider.toggleTheme(),
                 tooltip: themeProvider.isDarkMode
-                    ? 'Switch to Light Mode'
-                    : 'Switch to Dark Mode',
+                    ? context.tr('switchToLightMode')
+                    : context.tr('switchToDarkMode'),
               );
             },
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // First card: User Info
-            Card(
-              elevation: 2,
-              color: colorScheme.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+            // Hero Section - Extended
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary.withOpacity(0.9),
+                    colorScheme.primary.withOpacity(0.7),
+                    colorScheme.secondary.withOpacity(0.5),
+                    colorScheme.tertiary.withOpacity(0.3),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: colorScheme.primary,
-                      child: Text(
-                        user?.name?.substring(0, 1).toUpperCase() ?? 'U',
-                        style: TextStyle(
-                          color: colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.name ?? 'Pet Owner',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hero Image Banner - Extended
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.network(
+                          'https://images.unsplash.com/photo-1552728089-57bdde30beb3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
+                          width: double.infinity,
+                          height: 240,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              width: double.infinity,
+                              height: 240,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    colorScheme.primary.withOpacity(0.8),
+                                    colorScheme.secondary.withOpacity(0.6),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                          ),
-                          Text(
-                            user?.email ?? 'No email',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: colorScheme.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 8),
-                          Consumer<PetProvider>(
-                            builder: (context, petProvider, _) {
-                              final petCount = petProvider.pets.length;
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    colorScheme.onPrimary,
+                                  ),
                                 ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: double.infinity,
+                                height: 240,
                                 decoration: BoxDecoration(
-                                  color: petCount == 0
-                                      ? colorScheme.tertiaryContainer
-                                            .withOpacity(0.7)
-                                      : colorScheme.primaryContainer
-                                            .withOpacity(0.7),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      colorScheme.primary.withOpacity(0.8),
+                                      colorScheme.secondary.withOpacity(0.6),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Text(
-                                  petCount == 0
-                                      ? 'No Pets Yet'
-                                      : '$petCount Pets Registered',
-                                  style: Theme.of(context).textTheme.bodySmall
+                                child: Center(
+                                  child: Icon(
+                                    Icons.pets,
+                                    size: 60,
+                                    color: colorScheme.onPrimary.withOpacity(
+                                      0.8,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 20,
+                        left: 20,
+                        right: 20,
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: colorScheme.onPrimary.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.tr(
+                                  'welcomeBackUser',
+                                  args: {
+                                    'name':
+                                        user?.name?.split(' ').first ??
+                                        context.tr('petOwner'),
+                                  },
+                                ),
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary,
+                                      height: 1.2,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                context.tr('trustedPartnerPetCare'),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                context.tr('compassionateVeterinaryCare'),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant
+                                          .withOpacity(0.8),
+                                      height: 1.5,
+                                    ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary.withOpacity(
+                                        0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: colorScheme.primary.withOpacity(
+                                          0.3,
+                                        ),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.star,
+                                          color: colorScheme.primary,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          context.tr('rating'),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: colorScheme.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.secondary.withOpacity(
+                                        0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: colorScheme.secondary
+                                            .withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.people,
+                                          color: colorScheme.secondary,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          context.tr('happyPets'),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: colorScheme.secondary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Key Statistics
+                  Consumer2<PetProvider, AppointmentProvider>(
+                    builder: (context, petProvider, appointmentProvider, _) {
+                      final petCount = petProvider.pets.length;
+                      final upcomingAppointments = appointmentProvider
+                          .appointments
+                          .where(
+                            (apt) =>
+                                apt.ownerId == user?.id &&
+                                DateTime.tryParse(
+                                      apt.scheduledAt ?? '',
+                                    )?.isAfter(DateTime.now()) ==
+                                    true,
+                          )
+                          .length;
+                      final completedServices = appointmentProvider.appointments
+                          .where(
+                            (apt) =>
+                                apt.ownerId == user?.id &&
+                                apt.status == 'completed',
+                          )
+                          .length;
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _HeroStatCard(
+                            value: petCount.toString(),
+                            label: context.tr('pets'),
+                            icon: Icons.pets,
+                            color: colorScheme.onPrimary,
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: colorScheme.onPrimary.withOpacity(0.3),
+                          ),
+                          _HeroStatCard(
+                            value: upcomingAppointments.toString(),
+                            label: context.tr('upcoming'),
+                            icon: Icons.calendar_today,
+                            color: colorScheme.onPrimary,
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: colorScheme.onPrimary.withOpacity(0.3),
+                          ),
+                          _HeroStatCard(
+                            value: completedServices.toString(),
+                            label: context.tr('completed'),
+                            icon: Icons.check_circle,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Call-to-Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const DoctorSelectionScreen(),
+                              ),
+                            ),
+                            icon: Icon(
+                              Icons.calendar_today,
+                              color: colorScheme.primary,
+                            ),
+                            label: Text(context.tr('bookAVisit')),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.onPrimary,
+                              foregroundColor: colorScheme.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: colorScheme.onPrimary.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showEmergencyDialog(context),
+                            icon: Icon(
+                              Icons.emergency,
+                              color: colorScheme.onPrimary,
+                            ),
+                            label: Text(context.tr('emergency')),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              side: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Enhanced Success Stories Section
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.onPrimary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.onPrimary.withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: colorScheme.onPrimary.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.star,
+                                color: colorScheme.onPrimary,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              context.tr('successStories'),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onPrimary,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Multiple success stories in a carousel-like layout
+                        _SuccessStoryCard(
+                          imageUrl:
+                              'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                          quote:
+                              '"${context.tr('vet2U')} ${context.tr('savedMyCatEmergency')}"',
+                          author: 'Sarah M., ${context.tr('happyPetOwner')}',
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(height: 16),
+                        _SuccessStoryCard(
+                          imageUrl:
+                              'https://images.unsplash.com/photo-1548124853-8d0e16544a01?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                          quote: '"${context.tr('mobileVetServiceAmazing')}"',
+                          author: 'James K., ${context.tr('dogLover')}',
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(height: 16),
+                        _SuccessStoryCard(
+                          imageUrl:
+                              'https://images.unsplash.com/photo-1574158622682-e40e69881006?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                          quote:
+                              '"${context.tr('affordableProfessionalCaring')}"',
+                          author: 'Maria R., ${context.tr('petParent')}',
+                          colorScheme: colorScheme,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Rest of the content with padding
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // First card: User Info
+                  Card(
+                    elevation: 2,
+                    color: colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: colorScheme.primary,
+                            child: Text(
+                              user?.name?.substring(0, 1).toUpperCase() ?? 'U',
+                              style: TextStyle(
+                                color: colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user?.name ?? context.tr('petOwner'),
+                                  style: Theme.of(context).textTheme.titleLarge
                                       ?.copyWith(
-                                        color: petCount == 0
-                                            ? colorScheme.onTertiaryContainer
-                                            : colorScheme.onPrimaryContainer,
-                                        fontWeight: FontWeight.w500,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.onSurface,
                                       ),
                                 ),
-                              );
-                            },
+                                Text(
+                                  user?.email ?? context.tr('noEmail'),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Consumer<PetProvider>(
+                                  builder: (context, petProvider, _) {
+                                    final petCount = petProvider.pets.length;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: petCount == 0
+                                            ? colorScheme.tertiaryContainer
+                                                  .withOpacity(0.7)
+                                            : colorScheme.primaryContainer
+                                                  .withOpacity(0.7),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        petCount == 0
+                                            ? context.tr('noPetsYet')
+                                            : context.tr(
+                                                'petsRegistered',
+                                                args: {
+                                                  'count': petCount.toString(),
+                                                },
+                                              ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: petCount == 0
+                                                  ? colorScheme
+                                                        .onTertiaryContainer
+                                                  : colorScheme
+                                                        .onPrimaryContainer,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
@@ -263,7 +719,9 @@ class _OwnerHomeScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasPets ? 'Book a visit' : 'Add your first pet',
+                          hasPets
+                              ? context.tr('bookAVisit')
+                              : context.tr('addYourFirstPet'),
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
                                 fontWeight: FontWeight.w600,
@@ -273,8 +731,8 @@ class _OwnerHomeScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           hasPets
-                              ? 'Schedule an appointment for your pets'
-                              : 'Register your pets to start booking visits.',
+                              ? context.tr('scheduleAppointmentForPets')
+                              : context.tr('registerPetsToStartBooking'),
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
@@ -304,7 +762,9 @@ class _OwnerHomeScreen extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              hasPets ? 'Book Appointment' : 'Add Pet',
+                              hasPets
+                                  ? context.tr('bookAppointment')
+                                  : context.tr('addPet'),
                             ),
                           ),
                         ),
@@ -318,7 +778,7 @@ class _OwnerHomeScreen extends StatelessWidget {
 
             // Third section: Services grid
             Text(
-              'Services',
+              context.tr('services'),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colorScheme.onSurface,
@@ -335,8 +795,8 @@ class _OwnerHomeScreen extends StatelessWidget {
               children: [
                 _ServiceCard(
                   icon: Icons.calendar_today,
-                  title: 'Booking',
-                  subtitle: 'Schedule appointments',
+                  title: context.tr('booking'),
+                  subtitle: context.tr('scheduleAppointments'),
                   color: colorScheme.primary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -346,8 +806,8 @@ class _OwnerHomeScreen extends StatelessWidget {
                 ),
                 _ServiceCard(
                   icon: Icons.medical_services,
-                  title: 'Records',
-                  subtitle: 'Medical history',
+                  title: context.tr('records'),
+                  subtitle: context.tr('medicalHistory'),
                   color: colorScheme.secondary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -357,8 +817,8 @@ class _OwnerHomeScreen extends StatelessWidget {
                 ),
                 _ServiceCard(
                   icon: Icons.file_download,
-                  title: 'Documents',
-                  subtitle: 'Download files',
+                  title: context.tr('documents'),
+                  subtitle: context.tr('downloadFiles'),
                   color: colorScheme.tertiary,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -368,8 +828,8 @@ class _OwnerHomeScreen extends StatelessWidget {
                 ),
                 _ServiceCard(
                   icon: Icons.payment,
-                  title: 'Payments',
-                  subtitle: 'View history',
+                  title: context.tr('payments'),
+                  subtitle: context.tr('viewHistory'),
                   color: Colors.green,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -379,8 +839,8 @@ class _OwnerHomeScreen extends StatelessWidget {
                 ),
                 _ServiceCard(
                   icon: Icons.emergency,
-                  title: 'Emergency',
-                  subtitle: 'Urgent care',
+                  title: context.tr('emergency'),
+                  subtitle: context.tr('urgentCare'),
                   color: colorScheme.error,
                   onTap: () => _showEmergencyDialog(context),
                 ),
@@ -390,7 +850,7 @@ class _OwnerHomeScreen extends StatelessWidget {
 
             // Fourth section: Quick Actions
             Text(
-              'Quick Actions',
+              context.tr('quickActions'),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colorScheme.onSurface,
@@ -399,7 +859,7 @@ class _OwnerHomeScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _ActionButton(
               icon: Icons.pets,
-              label: 'Manage Pets',
+              label: context.tr('managePets'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const PetManagementScreen(),
@@ -409,7 +869,7 @@ class _OwnerHomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _ActionButton(
               icon: Icons.location_on,
-              label: 'Track Service',
+              label: context.tr('trackService'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const DriverTrackingScreen(),
@@ -419,7 +879,7 @@ class _OwnerHomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _ActionButton(
               icon: Icons.schedule,
-              label: 'View Appointments',
+              label: context.tr('viewAppointments'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const AppointmentsScreen(),
@@ -435,21 +895,23 @@ class _OwnerHomeScreen extends StatelessWidget {
   void _showEmergencyDialog(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final petProvider = Provider.of<PetProvider>(context, listen: false);
+    final serviceRequestProvider = Provider.of<ServiceRequestProvider>(
+      context,
+      listen: false,
+    );
     final user = authProvider.user;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLoginFirst)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('pleaseLoginFirst'))));
       return;
     }
 
     if (petProvider.pets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.pleaseAddPetFirst),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('pleaseAddPetFirst'))));
       return;
     }
 
@@ -460,20 +922,23 @@ class _OwnerHomeScreen extends StatelessWidget {
         pets: petProvider.pets,
         onSubmit: (serviceRequest) async {
           try {
-            // TODO: Create service request provider and integrate
-            // For now, just show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)!.emergencyRequestSent,
-                ),
-                backgroundColor: Colors.green,
-              ),
+            final success = await serviceRequestProvider.createServiceRequest(
+              serviceRequest,
             );
+            if (success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(context.tr('emergencyRequestSent')),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else {
+              throw Exception('Failed to create service request');
+            }
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to send emergency request: $e'),
+                content: Text('${context.tr('failedSendEmergency')}: $e'),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -490,24 +955,26 @@ class _OwnerHomeScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.selectLanguage),
+        title: Text(context.tr('selectLanguage')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
-              title: Text(AppLocalizations.of(context)!.english),
+              title: Text(context.tr('english')),
               onTap: () {
                 localeProvider.setLocale(const Locale('en'));
+
                 Navigator.of(context).pop();
               },
               selected: localeProvider.locale.languageCode == 'en',
             ),
             ListTile(
               leading: const Text('🇸🇦', style: TextStyle(fontSize: 24)),
-              title: Text(AppLocalizations.of(context)!.arabic),
+              title: Text(context.tr('arabic')),
               onTap: () {
                 localeProvider.setLocale(const Locale('ar'));
+
                 Navigator.of(context).pop();
               },
               selected: localeProvider.locale.languageCode == 'ar',
@@ -517,7 +984,7 @@ class _OwnerHomeScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)!.cancel),
+            child: Text(context.tr('cancel')),
           ),
         ],
       ),
@@ -580,6 +1047,53 @@ class _ServiceCard extends StatelessWidget {
   }
 }
 
+class _HeroStatCard extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _HeroStatCard({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2), width: 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: color.withOpacity(0.8)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -630,6 +1144,122 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+class _SuccessStoryCard extends StatelessWidget {
+  final String imageUrl;
+  final String quote;
+  final String author;
+  final ColorScheme colorScheme;
+
+  const _SuccessStoryCard({
+    required this.imageUrl,
+    required this.quote,
+    required this.author,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            imageUrl,
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      colorScheme.primary,
+                    ),
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.pets, color: colorScheme.primary, size: 40),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.onPrimary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.onPrimary.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.format_quote,
+                      color: colorScheme.onPrimary.withOpacity(0.7),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        quote,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onPrimary.withOpacity(0.9),
+                          fontStyle: FontStyle.italic,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.person,
+                      color: colorScheme.onPrimary.withOpacity(0.6),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      author,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onPrimary.withOpacity(0.7),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class EmergencyRequestDialog extends StatefulWidget {
   final User user;
   final List<Pet> pets;
@@ -660,17 +1290,15 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
 
   Future<void> _submitEmergencyRequest() async {
     if (_selectedPet == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseSelectPet)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('pleaseSelectPet'))));
       return;
     }
 
     if (_descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.pleaseDescribeEmergency),
-        ),
+        SnackBar(content: Text(context.tr('pleaseDescribeEmergency'))),
       );
       return;
     }
@@ -695,7 +1323,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
       final serviceRequest = ServiceRequest(
         ownerId: widget.user.id!,
         petId: _selectedPet!.id!,
-        requestType: 'urgent',
+        requestType: 'emergency',
         description: _descriptionController.text.trim(),
         latitude: latitude,
         longitude: longitude,
@@ -708,9 +1336,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${AppLocalizations.of(context)!.failedSendEmergency}: $e',
-          ),
+          content: Text('${context.tr('failedSendEmergency')}: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -730,7 +1356,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
           Icon(Icons.emergency, color: colorScheme.error),
           const SizedBox(width: 8),
           Text(
-            AppLocalizations.of(context)!.emergencyRequest,
+            context.tr('emergencyRequest'),
             style: TextStyle(
               color: colorScheme.error,
               fontWeight: FontWeight.bold,
@@ -744,7 +1370,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppLocalizations.of(context)!.selectPetNeedingCare,
+              context.tr('selectPetNeedingCare'),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: colorScheme.onSurface,
@@ -773,11 +1399,11 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
                 );
               }).toList(),
               onChanged: (pet) => setState(() => _selectedPet = pet),
-              hint: Text(AppLocalizations.of(context)!.choosePet),
+              hint: Text(context.tr('choosePet')),
             ),
             const SizedBox(height: 16),
             Text(
-              AppLocalizations.of(context)!.describeEmergency,
+              context.tr('describeEmergency'),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: colorScheme.onSurface,
@@ -788,7 +1414,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
               controller: _descriptionController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.describeSymptoms,
+                hintText: context.tr('describeSymptoms'),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -809,7 +1435,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
                 ),
                 Expanded(
                   child: Text(
-                    AppLocalizations.of(context)!.shareLocationResponders,
+                    context.tr('shareLocationResponders'),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -831,7 +1457,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!.emergencyWarning,
+                      context.tr('emergencyWarning'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.error,
                         fontWeight: FontWeight.w500,
@@ -847,7 +1473,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: Text(AppLocalizations.of(context)!.cancel),
+          child: Text(context.tr('cancel')),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _submitEmergencyRequest,
@@ -866,7 +1492,7 @@ class _EmergencyRequestDialogState extends State<EmergencyRequestDialog> {
                     ),
                   ),
                 )
-              : Text(AppLocalizations.of(context)!.sendEmergencyRequest),
+              : Text(context.tr('sendEmergencyRequest')),
         ),
       ],
     );
@@ -897,7 +1523,7 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.medicalHistory)),
+      appBar: AppBar(title: Text(context.tr('medicalHistory'))),
       body: Consumer2<MedicalProvider, PetProvider>(
         builder: (context, medicalProvider, petProvider, child) {
           if (medicalProvider.isLoading || petProvider.isLoading) {
@@ -919,7 +1545,7 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    AppLocalizations.of(context)!.noMedicalRecords,
+                    context.tr('noMedicalRecords'),
                     style: TextStyle(
                       color: colorScheme.onSurface.withOpacity(0.6),
                     ),
@@ -934,10 +1560,10 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
             itemCount: records.length,
             itemBuilder: (context, index) {
               final record = records[index];
-              final pet = petProvider.pets.cast().firstWhere(
+              final matchingPets = petProvider.pets.where(
                 (p) => p.id == record.petId,
-                orElse: () => null,
               );
+              final pet = matchingPets.isNotEmpty ? matchingPets.first : null;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -958,7 +1584,8 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              pet?.name ?? 'Pet ID: ${record.petId}',
+                              pet?.name ??
+                                  '${context.tr('petId')}: ${record.petId}',
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
@@ -976,24 +1603,21 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildDetailRow(
-                        AppLocalizations.of(context)!.diagnosis,
+                        context.tr('diagnosis'),
                         record.diagnosis,
                       ),
                       _buildDetailRow(
-                        AppLocalizations.of(context)!.treatment,
+                        context.tr('treatment'),
                         record.treatment,
                       ),
                       if (record.prescription != null &&
                           record.prescription!.isNotEmpty)
                         _buildDetailRow(
-                          AppLocalizations.of(context)!.prescription,
+                          context.tr('prescription'),
                           record.prescription!,
                         ),
                       if (record.notes != null && record.notes!.isNotEmpty)
-                        _buildDetailRow(
-                          AppLocalizations.of(context)!.notes,
-                          record.notes!,
-                        ),
+                        _buildDetailRow(context.tr('notes'), record.notes!),
                     ],
                   ),
                 ),
@@ -1024,177 +1648,6 @@ class _MedicalHistoryScreenState extends State<_MedicalHistoryScreen> {
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OwnerProfileScreen extends StatelessWidget {
-  const _OwnerProfileScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.user;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.profile),
-        elevation: 0,
-        backgroundColor: colorScheme.surface,
-      ),
-      body: CustomScrollView(
-        slivers: [
-          // Profile Header
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.primary.withOpacity(0.1),
-                    colorScheme.surface,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: colorScheme.primary,
-                    child: Text(
-                      user?.name?.substring(0, 1).toUpperCase() ?? 'U',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    user?.name ?? 'Pet Owner',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  Text(
-                    user?.email ?? 'No email',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Profile Details
-          SliverPadding(
-            padding: const EdgeInsets.all(24),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                ModernActionCard(
-                  title: AppLocalizations.of(context)!.personalInformation,
-                  subtitle: AppLocalizations.of(context)!.updateDetails,
-                  icon: Icons.person,
-                  color: colorScheme.primary,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const OwnerProfileScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                ModernActionCard(
-                  title: 'Phone: ${user?.phone ?? 'Not set'}',
-                  subtitle: AppLocalizations.of(context)!.contactNumber,
-                  icon: Icons.phone,
-                  color: colorScheme.secondary,
-                  onTap: () {
-                    // TODO: Implement phone update
-                  },
-                  showArrow: false,
-                ),
-                const SizedBox(height: 12),
-                ModernActionCard(
-                  title: AppLocalizations.of(context)!.accountSettings,
-                  subtitle: AppLocalizations.of(context)!.notificationsPrivacy,
-                  icon: Icons.settings,
-                  color: colorScheme.tertiary,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const NotificationPreferencesScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: colorScheme.error.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  color: colorScheme.error.withOpacity(0.05),
-                  child: InkWell(
-                    onTap: () => authProvider.logout(),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: colorScheme.error.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.logout,
-                              color: colorScheme.error,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              AppLocalizations.of(context)!.signOut,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.error,
-                                  ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? colorScheme.onSurfaceVariant
-                                : Colors.black87,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ]),
             ),
           ),
         ],

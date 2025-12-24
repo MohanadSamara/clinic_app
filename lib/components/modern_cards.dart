@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../../translations.dart';
 
 /// Modern card components for the Vet2U app redesign
 /// Implements the new design system with improved visual hierarchy

@@ -12,6 +12,7 @@ import '../providers/payment_provider.dart';
 import '../models/pet.dart';
 import '../services/calendar_service.dart';
 import '../models/payment.dart';
+import '../models/location_data.dart';
 
 class AppointmentProvider extends ChangeNotifier {
   List<Appointment> _appointments = [];
@@ -389,21 +390,61 @@ class AppointmentProvider extends ChangeNotifier {
       final appointment = getAppointmentById(appointmentId);
       if (appointment == null) return null;
 
-      // Get all available drivers (no priority for linked drivers)
-      // Get driver statuses for drivers that are linked to doctors
+      // Get all available drivers (linked to doctors)
       final driverStatusesData = await DBHelper.instance
           .getLinkedDriverStatuses();
-      final driverStatuses = driverStatusesData
+      final allDriverStatuses = driverStatusesData
           .map((data) => DriverStatus.fromMap(data))
           .where((status) => status.status.toLowerCase() == 'available')
           .toList();
 
-      if (driverStatuses.isEmpty) return null;
+      if (allDriverStatuses.isEmpty) return null;
 
       // If appointment has no location, return first available driver
       if (appointment.locationLat == null || appointment.locationLng == null) {
-        return driverStatuses.first.driverId;
+        return allDriverStatuses.first.driverId;
       }
+
+      // Try district-based assignment first
+      final appointmentDistrict = AmmanDistricts.getNearestDistrict(
+        appointment.locationLat!,
+        appointment.locationLng!,
+      );
+
+      List<DriverStatus> prioritizedDrivers = [];
+
+      if (appointmentDistrict != null) {
+        // Get drivers whose linked doctors are in the same district
+        for (final driverStatus in allDriverStatuses) {
+          final doctorData = await DBHelper.instance.getUserById(
+            driverStatus.driverId,
+          );
+          if (doctorData != null) {
+            final linkedDoctorId = doctorData['linked_doctor_id'] as int?;
+            if (linkedDoctorId != null) {
+              final doctor = await DBHelper.instance.getUserById(
+                linkedDoctorId,
+              );
+              if (doctor != null) {
+                final doctorArea = doctor['area'] as String?;
+                if (doctorArea != null) {
+                  final doctorDistrict = AmmanDistricts.getDistrictBySubArea(
+                    doctorArea,
+                  );
+                  if (doctorDistrict?.name == appointmentDistrict.name) {
+                    prioritizedDrivers.add(driverStatus);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // If no drivers in same district, use all available drivers
+      final driverStatuses = prioritizedDrivers.isNotEmpty
+          ? prioritizedDrivers
+          : allDriverStatuses;
 
       // Calculate distances and find closest driver
       DriverStatus? closestDriver;
@@ -782,3 +823,10 @@ bool canDoctorUpdateAppointment(String currentStatus, String newStatus) {
   final allowed = _allowedTransitions[currentStatus] ?? {};
   return allowed.contains(newStatus);
 }
+
+
+
+
+
+
+

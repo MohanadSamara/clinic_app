@@ -1,14 +1,16 @@
 // lib/screens/owner/doctor_selection_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../db/db_helper.dart';
 import '../../models/user.dart';
 import '../../models/service.dart';
-import '../../components/modern_cards.dart';
+import '../../models/location_data.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
+import '../../providers/locale_provider.dart';
+import '../../../translations.dart';
 import 'booking_screen.dart';
+import 'dart:math';
 
 class DoctorSelectionScreen extends StatefulWidget {
   final Service? selectedService;
@@ -34,6 +36,7 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
   String _selectedSpecialty = 'All';
   double _minRating = 0.0;
   bool _availableOnly = false;
+  String? _selectedDistrict;
 
   @override
   void initState() {
@@ -51,10 +54,66 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
         doctors.add(User.fromMap(userData));
       }
 
+      // Get owner's selected district
+      District? ownerDistrict;
+      if (_selectedDistrict != null) {
+        ownerDistrict = AmmanDistricts.getDistrictByName(_selectedDistrict!);
+      }
+
+      // Filter doctors to only those in the same district as the owner
+      final filteredDoctors = doctors.where((doctor) {
+        if (ownerDistrict == null)
+          return true; // If owner has no district, show all doctors
+        if (doctor.area == null) return false;
+        final doctorDistrict =
+            AmmanDistricts.getDistrictBySubArea(doctor.area!) ??
+            AmmanDistricts.getDistrictByName(doctor.area!);
+        return doctorDistrict != null &&
+            doctorDistrict.name == ownerDistrict.name;
+      }).toList();
+
+      // Sort filtered doctors by proximity within the district
+      if (ownerDistrict != null) {
+        filteredDoctors.sort((a, b) {
+          final aDistrict = a.area != null
+              ? AmmanDistricts.getDistrictBySubArea(a.area!)
+              : null;
+          final bDistrict = b.area != null
+              ? AmmanDistricts.getDistrictBySubArea(b.area!)
+              : null;
+
+          // Sort by distance within the same district
+          final aDistance =
+              (aDistrict != null &&
+                  aDistrict.centerLat != null &&
+                  aDistrict.centerLng != null)
+              ? _calculateDistance(
+                  ownerDistrict!.centerLat,
+                  ownerDistrict!.centerLng,
+                  aDistrict.centerLat!,
+                  aDistrict.centerLng!,
+                )
+              : double.infinity;
+          final bDistance =
+              (bDistrict != null &&
+                  bDistrict.centerLat != null &&
+                  bDistrict.centerLng != null)
+              ? _calculateDistance(
+                  ownerDistrict!.centerLat,
+                  ownerDistrict!.centerLng,
+                  bDistrict.centerLat!,
+                  bDistrict.centerLng!,
+                )
+              : double.infinity;
+
+          return aDistance.compareTo(bDistance);
+        });
+      }
+
       if (mounted) {
         setState(() {
-          _doctors = doctors;
-          _filteredDoctors = doctors;
+          _doctors = filteredDoctors;
+          _filteredDoctors = filteredDoctors;
           _isLoading = false;
         });
       }
@@ -100,7 +159,7 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Doctor'),
+        title: Text(context.tr('selectDoctor')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -110,8 +169,8 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
           : Column(
               children: [
                 SectionHeader(
-                  title: 'Choose a Doctor',
-                  subtitle: 'Select a vet based on your pet and service',
+                  title: context.tr('chooseDoctor'),
+                  subtitle: context.tr('selectDoctor'),
                 ),
                 // Search and Filter Bar
                 Container(
@@ -119,10 +178,40 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                   color: Theme.of(context).colorScheme.surface,
                   child: Column(
                     children: [
+                      // District Selection
+                      DropdownButtonFormField<String>(
+                        value: _selectedDistrict,
+                        decoration: InputDecoration(
+                          labelText: context.tr('selectDistrict'),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: [
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text(context.tr('selectDistrict')),
+                          ),
+                          ...AmmanDistricts.allDistricts.map((district) {
+                            return DropdownMenuItem<String>(
+                              value: district.name,
+                              child: Text(district.name),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedDistrict = value;
+                          });
+                          _loadDoctors();
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       // Search Bar
                       TextField(
-                        decoration: const InputDecoration(
-                          hintText: 'Search doctors...',
+                        decoration: InputDecoration(
+                          hintText: context.tr('searchDoctors'),
                           prefixIcon: Icon(Icons.search),
                           filled: true,
                           fillColor: Colors.white,
@@ -141,9 +230,9 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: _selectedSpecialty,
-                              decoration: const InputDecoration(
-                                labelText: 'Specialty',
-                                contentPadding: EdgeInsets.symmetric(
+                              decoration: InputDecoration(
+                                labelText: context.tr('specialty'),
+                                contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 8,
                                 ),
@@ -206,10 +295,21 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                             itemCount: _filteredDoctors.length,
                             itemBuilder: (context, index) {
                               final doctor = _filteredDoctors[index];
+                              final doctorDistrict = doctor.area != null
+                                  ? AmmanDistricts.getDistrictBySubArea(
+                                          doctor.area!,
+                                        ) ??
+                                        AmmanDistricts.getDistrictByName(
+                                          doctor.area!,
+                                        )
+                                  : null;
                               return CompactSpecialistCard(
                                 name: doctor.name,
                                 specialty: 'Veterinary Medicine',
-                                area: doctor.area ?? 'Not specified',
+                                area:
+                                    doctorDistrict?.name ??
+                                    doctor.area ??
+                                    'Not specified',
                                 rating: 4.8,
                                 reviewCount: 42,
                                 onTap: () => _selectDoctor(doctor),
@@ -221,6 +321,27 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
               ],
             ),
     );
+  }
+
+  double _calculateDistance(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const double earthRadius = 6371000; // meters
+    final double dLat = (lat2 - lat1) * (pi / 180);
+    final double dLng = (lng2 - lng1) * (pi / 180);
+
+    final double a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c;
   }
 
   void _selectDoctor(User doctor) {

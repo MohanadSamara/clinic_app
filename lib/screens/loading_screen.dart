@@ -1,7 +1,9 @@
 // lib/screens/loading_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../translations.dart';
 import 'role_based_home.dart';
+import '../../translations.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -100,7 +102,7 @@ class _LoadingScreenState extends State<LoadingScreen>
               const SizedBox(height: 32),
               // App title
               Text(
-                'Vet2U',
+                context.tr('vet2U'),
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,
@@ -109,11 +111,11 @@ class _LoadingScreenState extends State<LoadingScreen>
               const SizedBox(height: 16),
               // Subtitle
               Text(
-                'Your Pet\'s Health Companion',
+                context.tr('yourPetsHealthCompanion'),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onPrimaryContainer.withOpacity(0.8),
+                  ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                 ),
               ),
               const SizedBox(height: 48),
@@ -123,7 +125,7 @@ class _LoadingScreenState extends State<LoadingScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'Loading...',
+                context.tr('loading'),
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),

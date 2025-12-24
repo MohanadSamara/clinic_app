@@ -9,7 +9,11 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/notification_provider.dart';
+
 import '../notification_preferences_screen.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class OwnerProfileScreen extends StatefulWidget {
   const OwnerProfileScreen({super.key});
@@ -115,7 +119,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
+          SnackBar(content: Text(context.tr('profileUpdatedSuccessfully'))),
         );
         Navigator.of(context).pop();
       }
@@ -159,9 +163,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.tr('errorPickingImage')}: $e')),
+        );
       }
     }
   }
@@ -170,7 +174,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose Image Source'),
+        title: Text(context.tr('chooseImageSource')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -179,7 +183,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                 Icons.camera_alt,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              title: const Text('Camera'),
+              title: Text(context.tr('camera')),
               onTap: () {
                 Navigator.of(context).pop();
                 _pickImage(ImageSource.camera);
@@ -190,7 +194,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                 Icons.photo_library,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              title: const Text('Gallery'),
+              title: Text(context.tr('gallery')),
               onTap: () {
                 Navigator.of(context).pop();
                 _pickImage(ImageSource.gallery);
@@ -207,16 +211,16 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(context.tr('logout')),
+        content: Text(context.tr('confirmLogout')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Logout'),
+            child: Text(context.tr('logout')),
           ),
         ],
       ),
@@ -235,9 +239,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error logging out: $e')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${context.tr('errorLoggingOut')}: $e')),
+            );
           });
         }
       }
@@ -248,7 +252,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: Text(context.tr('myProfile')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -259,7 +263,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         builder: (context, animationValue, child) {
           return Opacity(
             opacity: animationValue,
-            child: Transform.translate(
+            child: Translations.get(
               offset: Offset(0, 20 * (1 - animationValue)),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -275,7 +279,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, headerValue, child) {
                           return Opacity(
                             opacity: headerValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(-30 * (1 - headerValue), 0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,7 +322,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, avatarValue, child) {
                           return Opacity(
                             opacity: avatarValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - avatarValue), 0),
                               child: Center(
                                 child: Column(
@@ -363,7 +367,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                           context,
                                         ).colorScheme.primary,
                                       ),
-                                      label: const Text('Change Photo'),
+                                      label: Text(context.tr('changePhoto')),
                                     ),
                                   ],
                                 ),
@@ -381,7 +385,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, formValue, child) {
                           return Opacity(
                             opacity: formValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(-30 * (1 - formValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -503,7 +507,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, passwordValue, child) {
                           return Opacity(
                             opacity: passwordValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - passwordValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -662,7 +666,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, settingsValue, child) {
                           return Opacity(
                             opacity: settingsValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(-30 * (1 - settingsValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -728,7 +732,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         builder:
                                             (context, localeProvider, child) {
                                               return ListTile(
-                                                title: const Text('Language'),
+                                                title: Text(
+                                                  context.tr('language'),
+                                                ),
                                                 subtitle: Text(
                                                   localeProvider!
                                                               .locale
@@ -772,7 +778,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
                                       // Biometric Authentication
                                       SwitchListTile(
-                                        title: const Text('Biometric Login'),
+                                        title: Text(
+                                          context.tr('biometricLogin'),
+                                        ),
                                         subtitle: const Text(
                                           'Use fingerprint or face unlock',
                                         ),
@@ -807,7 +815,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                       Consumer<ThemeProvider>(
                                         builder: (context, themeProvider, child) {
                                           return SwitchListTile(
-                                            title: const Text('Dark Mode'),
+                                            title: Text(context.tr('darkMode')),
                                             subtitle: const Text(
                                               'Switch between light and dark themes',
                                             ),
@@ -896,7 +904,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, buttonValue, child) {
                           return Opacity(
                             opacity: buttonValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(0, 20 * (1 - buttonValue)),
                               child: Column(
                                 children: [
@@ -919,7 +927,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Text('Save Changes'),
+                                          : Text(context.tr('saveChanges')),
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -933,7 +941,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                           vertical: 16,
                                         ),
                                       ),
-                                      child: const Text('Cancel'),
+                                      child: Text(context.tr('cancel')),
                                     ),
                                   ),
                                 ],
@@ -951,7 +959,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         builder: (context, dangerValue, child) {
                           return Opacity(
                             opacity: dangerValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(0, 20 * (1 - dangerValue)),
                               child: Card(
                                 elevation: 0,
@@ -1004,7 +1012,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                               context,
                                             ).colorScheme.error,
                                           ),
-                                          label: const Text('Logout'),
+                                          label: Text(context.tr('logout')),
                                           style: OutlinedButton.styleFrom(
                                             side: BorderSide(
                                               color: Theme.of(
@@ -1046,7 +1054,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                               context,
                                             ).colorScheme.primary,
                                           ),
-                                          label: const Text('Export My Data'),
+                                          label: Text(
+                                            context.tr('exportMyData'),
+                                          ),
                                           style: OutlinedButton.styleFrom(
                                             side: BorderSide(
                                               color: Theme.of(
@@ -1085,7 +1095,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                           icon: const Icon(
                                             Icons.delete_forever,
                                           ),
-                                          label: const Text('Delete Account'),
+                                          label: Text(
+                                            context.tr('deleteAccount'),
+                                          ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Theme.of(
                                               context,

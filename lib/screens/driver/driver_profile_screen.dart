@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart';
+import '../../models/location_data.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
+import '../../translations.dart';
 
 class DriverProfileScreen extends StatefulWidget {
   const DriverProfileScreen({super.key});
@@ -27,17 +29,30 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   final _confirmPasswordController = TextEditingController();
 
   String? _selectedArea;
-  final List<String> _ammanDistricts = [
-    'Amman Qasaba District',
-    'Al-Jami\'a District',
-    'Marka District',
-    'Al-Qweismeh District',
-    'Wadi Al-Sir District',
-    'Al-Jizah District',
-    'Sahab District',
-    'Dabouq District (new)',
-    'Naour District',
-  ];
+
+  List<String> get _ammanDistricts {
+    final locale = Localizations.localeOf(context);
+    final isArabic = locale.languageCode == 'ar';
+
+    return AmmanDistricts.allDistricts.map((district) {
+      return isArabic ? district.arabicName : '${district.name} District';
+    }).toList();
+  }
+
+  // Get the display value for the selected area
+  String? get _selectedAreaDisplay {
+    if (_selectedArea == null) return null;
+
+    final locale = Localizations.localeOf(context);
+    final isArabic = locale.languageCode == 'ar';
+
+    final district = AmmanDistricts.getDistrictByName(_selectedArea!);
+    if (district != null) {
+      return isArabic ? district.arabicName : '${district.name} District';
+    }
+
+    return _selectedArea;
+  }
 
   bool _isLoading = false;
   bool _showPasswordFields = false;
@@ -110,7 +125,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
       // Check if password change is requested
       if (_showPasswordFields && _newPasswordController.text.isNotEmpty) {
         if (_newPasswordController.text != _confirmPasswordController.text) {
-          throw Exception('New passwords do not match');
+          throw Exception(context.tr('passwordsDoNotMatch'));
         }
       }
 
@@ -136,7 +151,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
+          SnackBar(content: Text(context.tr('profileUpdatedSuccessfully'))),
         );
         Navigator.of(context).pop();
       }
@@ -169,7 +184,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Driver Profile'),
+        title: Text(context.tr('driverProfile')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -183,7 +198,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             children: [
               // Header
               Text(
-                'Edit Driver Profile',
+                context.tr('editDriverProfile'),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -191,7 +206,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Update your professional information',
+                context.tr('updateYourProfessionalInformation'),
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(
                     context,
@@ -218,13 +233,15 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       onPressed: () {
                         // TODO: Implement profile picture upload
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Profile picture upload coming soon'),
+                          SnackBar(
+                            content: Text(
+                              context.tr('profilePictureUploadComingSoon'),
+                            ),
                           ),
                         );
                       },
                       icon: const Icon(Icons.camera_alt),
-                      label: const Text('Change Photo'),
+                      label: Text(context.tr('changePhoto')),
                     ),
                   ],
                 ),
@@ -249,7 +266,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Personal Information',
+                        context.tr('personalInformation'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -260,16 +277,16 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // Name Field
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name',
+                        decoration: InputDecoration(
+                          labelText: context.tr('fullName'),
                           prefixIcon: Icon(Icons.person),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Name is required';
+                            return context.tr('nameRequired');
                           }
                           if (value.trim().length < 2) {
-                            return 'Name must be at least 2 characters';
+                            return context.tr('nameMinLength');
                           }
                           return null;
                         },
@@ -279,8 +296,8 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // Email Field (Read-only)
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email Address',
+                        decoration: InputDecoration(
+                          labelText: context.tr('emailAddress'),
                           prefixIcon: Icon(Icons.email),
                         ),
                         readOnly: true,
@@ -291,18 +308,18 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // Phone Field
                       TextFormField(
                         controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone Number',
+                        decoration: InputDecoration(
+                          labelText: context.tr('phoneNumber'),
                           prefixIcon: Icon(Icons.phone),
                         ),
                         keyboardType: TextInputType.phone,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Phone number is required for drivers';
+                            return context.tr('phoneRequiredForDrivers');
                           }
                           final phoneRegExp = RegExp(r'^\+?[\d\s\-\(\)]+$');
                           if (!phoneRegExp.hasMatch(value)) {
-                            return 'Please enter a valid phone number';
+                            return context.tr('invalidPhoneNumber');
                           }
                           return null;
                         },
@@ -331,7 +348,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Professional Information',
+                        context.tr('professionalInformation'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -342,15 +359,17 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // License Number Field
                       TextFormField(
                         controller: _licenseNumberController,
-                        decoration: const InputDecoration(
-                          labelText: 'Driver License Number',
+                        decoration: InputDecoration(
+                          labelText: context.tr('driverLicenseNumber'),
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.badge),
-                          hintText: 'Professional driver license number',
+                          hintText: context.tr(
+                            'professionalDriverLicenseNumber',
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'License number is required';
+                            return context.tr('licenseRequired');
                           }
                           return null;
                         },
@@ -360,15 +379,15 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // Vehicle Type Field
                       TextFormField(
                         controller: _vehicleTypeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Vehicle Type',
+                        decoration: InputDecoration(
+                          labelText: context.tr('vehicleType'),
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.directions_car),
-                          hintText: 'e.g., Van, Truck, etc.',
+                          hintText: context.tr('vehicleTypeHint'),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Vehicle type is required';
+                            return context.tr('vehicleTypeRequired');
                           }
                           return null;
                         },
@@ -377,12 +396,12 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
 
                       // Service Area Field
                       DropdownButtonFormField<String>(
-                        value: _selectedArea,
-                        decoration: const InputDecoration(
-                          labelText: 'Service Area',
+                        value: _selectedAreaDisplay,
+                        decoration: InputDecoration(
+                          labelText: context.tr('serviceArea'),
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.location_on),
-                          hintText: 'Select your service area',
+                          hintText: context.tr('selectServiceArea'),
                         ),
                         items: _ammanDistricts.map((district) {
                           return DropdownMenuItem<String>(
@@ -391,13 +410,28 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                           );
                         }).toList(),
                         onChanged: (value) {
-                          setState(() {
-                            _selectedArea = value;
-                          });
+                          if (value != null) {
+                            final locale = Localizations.localeOf(context);
+                            final isArabic = locale.languageCode == 'ar';
+
+                            // Find the district and store the English name
+                            final district = AmmanDistricts.allDistricts
+                                .firstWhere(
+                                  (d) => isArabic
+                                      ? d.arabicName == value
+                                      : '${d.name} District' == value,
+                                  orElse: () =>
+                                      AmmanDistricts.allDistricts.first,
+                                );
+
+                            setState(() {
+                              _selectedArea = district.name;
+                            });
+                          }
                         },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Service area is required';
+                            return context.tr('serviceAreaRequired');
                           }
                           return null;
                         },
@@ -407,23 +441,23 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // Years of Experience Field
                       TextFormField(
                         controller: _experienceController,
-                        decoration: const InputDecoration(
-                          labelText: 'Years of Experience',
+                        decoration: InputDecoration(
+                          labelText: context.tr('yearsOfExperience'),
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.timeline),
-                          hintText: 'Number of years',
+                          hintText: context.tr('yearsHint'),
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Years of experience is required';
+                            return context.tr('experienceRequired');
                           }
                           final years = int.tryParse(value);
                           if (years == null || years < 0) {
-                            return 'Please enter a valid number';
+                            return context.tr('enterValidNumber');
                           }
                           if (years > 50) {
-                            return 'Please enter a realistic number of years';
+                            return context.tr('enterRealisticYears');
                           }
                           return null;
                         },
@@ -433,20 +467,19 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       // Bio Field
                       TextFormField(
                         controller: _bioController,
-                        decoration: const InputDecoration(
-                          labelText: 'Professional Bio',
+                        decoration: InputDecoration(
+                          labelText: context.tr('professionalBio'),
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.description),
-                          hintText:
-                              'Brief description of your experience and services',
+                          hintText: context.tr('bioHint'),
                         ),
                         maxLines: 3,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Professional bio is required';
+                            return context.tr('bioRequired');
                           }
                           if (value.trim().length < 10) {
-                            return 'Bio must be at least 10 characters';
+                            return context.tr('bioMinLength');
                           }
                           return null;
                         },
@@ -478,7 +511,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Change Password',
+                              context.tr('changePassword'),
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
@@ -500,7 +533,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Enable to change your password',
+                        context.tr('enableToChangeYourPassword'),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(
                             context,
@@ -512,8 +545,8 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                         const SizedBox(height: 24),
                         TextFormField(
                           controller: _currentPasswordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Current Password',
+                          decoration: InputDecoration(
+                            labelText: context.tr('currentPassword'),
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.lock),
                           ),
@@ -521,7 +554,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                           validator: (value) {
                             if (_showPasswordFields) {
                               if (value == null || value.isEmpty) {
-                                return 'Current password is required';
+                                return context.tr('currentPasswordRequired');
                               }
                             }
                             return null;
@@ -530,8 +563,8 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _newPasswordController,
-                          decoration: const InputDecoration(
-                            labelText: 'New Password',
+                          decoration: InputDecoration(
+                            labelText: context.tr('newPassword'),
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.lock_outline),
                           ),
@@ -539,10 +572,10 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                           validator: (value) {
                             if (_showPasswordFields) {
                               if (value == null || value.isEmpty) {
-                                return 'New password is required';
+                                return context.tr('newPasswordRequired');
                               }
                               if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
+                                return context.tr('passwordMinLength');
                               }
                             }
                             return null;
@@ -551,8 +584,8 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _confirmPasswordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Confirm New Password',
+                          decoration: InputDecoration(
+                            labelText: context.tr('confirmNewPassword'),
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.lock_outline),
                           ),
@@ -560,10 +593,10 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                           validator: (value) {
                             if (_showPasswordFields) {
                               if (value == null || value.isEmpty) {
-                                return 'Please confirm your new password';
+                                return context.tr('confirmPasswordRequired');
                               }
                               if (value != _newPasswordController.text) {
-                                return 'Passwords do not match';
+                                return context.tr('passwordsDoNotMatch');
                               }
                             }
                             return null;
@@ -604,13 +637,13 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
 
               // Action Buttons
               PrimaryButton(
-                label: 'Save Changes',
+                label: context.tr('saveChanges'),
                 onPressed: _isLoading ? null : _updateProfile,
                 isLoading: _isLoading,
               ),
               const SizedBox(height: 8),
               Text(
-                'Your profile information helps us contact you and secure your account.',
+                context.tr('profileInfoHelp'),
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
@@ -624,7 +657,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text('Cancel'),
+                  child: Text(context.tr('cancel')),
                 ),
               ),
             ],

@@ -1,12 +1,16 @@
 // lib/screens/owner/pet_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/pet_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/pet.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
 import 'medical_history_screen.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class PetManagementScreen extends StatefulWidget {
   const PetManagementScreen({super.key});
@@ -32,7 +36,7 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Pets'),
+        title: Text(context.tr('myPets')),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -55,10 +59,10 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
           if (petProvider.pets.isEmpty) {
             return EmptyState(
               icon: Icons.pets,
-              title: 'No pets registered yet',
+              title: context.tr('noPetsRegisteredYet'),
               message:
                   'Add your pets to book appointments and manage their care',
-              actionLabel: 'Add Your First Pet',
+              actionLabel: context.tr('addYourFirstPetButton'),
               onAction: () => _showAddPetDialog(context),
             );
           }
@@ -66,8 +70,8 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
           return Column(
             children: [
               SectionHeader(
-                title: 'My Pets',
-                subtitle: 'Tap a pet to view or update its details',
+                title: context.tr('myPets'),
+                subtitle: context.tr('tapAPetToViewOrUpdateItsDetails'),
               ),
               // Header with pet count and add button hint
               TweenAnimationBuilder<double>(
@@ -76,7 +80,7 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                 builder: (context, value, child) {
                   return Opacity(
                     opacity: value,
-                    child: Transform.translate(
+                    child: Translations.get(
                       offset: Offset(0, -10 * (1 - value)),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -87,7 +91,12 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                         child: Row(
                           children: [
                             Text(
-                              '${petProvider.pets.length} pet${petProvider.pets.length == 1 ? '' : 's'} registered',
+                              context.tr(
+                                'petsRegistered',
+                                args: {
+                                  'count': petProvider.pets.length.toString(),
+                                },
+                              ),
                               style: TextStyle(
                                 color: Theme.of(
                                   context,
@@ -99,7 +108,7 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                             TextButton.icon(
                               onPressed: () => _showAddPetDialog(context),
                               icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Add Pet'),
+                              label: Text(context.tr('addPet')),
                               style: TextButton.styleFrom(
                                 foregroundColor: Theme.of(
                                   context,
@@ -127,7 +136,7 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
                       duration: Duration(milliseconds: 400 + (index * 100)),
                       curve: Curves.easeOutCubic,
                       builder: (context, animationValue, child) {
-                        return Transform.translate(
+                        return Translations.get(
                           offset: Offset(50 * (1 - animationValue), 0),
                           child: Opacity(
                             opacity: animationValue,
@@ -171,12 +180,12 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Pet'),
+        title: Text(context.tr('deletePet')),
         content: Text('Are you sure you want to delete ${pet.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           TextButton(
             onPressed: () async {
@@ -191,7 +200,7 @@ class _PetManagementScreenState extends State<PetManagementScreen> {
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: Text(context.tr('delete')),
           ),
         ],
       ),
@@ -426,14 +435,16 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
                     _speciesController.text = value ?? '';
                   });
                 },
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Please select species' : null,
+                validator: (value) => value?.isEmpty ?? true
+                    ? context.tr('pleaseSelectSpecies')
+                    : null,
               ),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Pet Name'),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Please enter pet name' : null,
+                validator: (value) => value?.isEmpty ?? true
+                    ? context.tr('pleaseEnterPetName')
+                    : null,
               ),
               TextFormField(
                 controller: _breedController,
@@ -479,7 +490,7 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.tr('cancel')),
         ),
         ElevatedButton(
           onPressed: () async {
@@ -553,7 +564,9 @@ class _AddEditPetDialogState extends State<_AddEditPetDialog> {
               }
             }
           },
-          child: Text(widget.pet == null ? 'Add' : 'Update'),
+          child: Text(
+            widget.pet == null ? context.tr('add') : context.tr('update'),
+          ),
         ),
       ],
     );

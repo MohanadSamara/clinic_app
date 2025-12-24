@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../db/db_helper.dart';
 import '../../models/user.dart';
 import '../../models/van.dart';
+import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/van_provider.dart';
+import '../../../translations.dart';
+
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -29,15 +33,45 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final users = userMaps.map((map) => User.fromMap(map)).toList();
       setState(() => _users = users);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading users: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('errorLoadingUsers')}: $e')),
+      );
     } finally {
       setState(() => _loading = false);
     }
   }
 
   Future<void> _updateUserRole(User user, String newRole) async {
+    if (user.role == newRole) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('userAlreadyHasRole'))));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.tr('confirmRoleChange')),
+        content: Text(
+          'Change ${user.name}\'s role from ${user.role} to $newRole?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.tr('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.tr('confirm')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _loading = true);
     try {
       await DBHelper.instance.updateUser(user.id!, {'role': newRole});
       setState(() {
@@ -46,47 +80,92 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           _users[index] = user.copyWith(role: newRole);
         }
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('User role updated')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('userRoleUpdated')} $newRole')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error updating role: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.tr('errorUpdatingRole')}: ${e.toString()}'),
+        ),
+      );
+    } finally {
+      setState(() => _loading = false);
     }
   }
 
   Future<void> _deleteUser(User user) async {
+    // Prevent deleting the current admin user
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.user?.id == user.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('cannotDeleteOwnAccount'))),
+      );
+      return;
+    }
+
+    // Check if user has active links
+    if (user.role == 'doctor' && user.linkedDriverId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('cannotDeleteDoctorWithActiveLink'))),
+      );
+      return;
+    }
+
+    if (user.role == 'driver' && user.linkedDoctorId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('cannotDeleteDriverWithActiveLink'))),
+      );
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.name}?'),
+        title: Text(context.tr('deleteUser')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${context.tr('areYouSureDelete')} ${user.name}?'),
+            const SizedBox(height: 8),
+            Text(
+              context.tr('permanentDeleteWarning'),
+              style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(context.tr('delete')),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      try {
-        await DBHelper.instance.deleteUser(user.id!);
-        setState(() => _users.removeWhere((u) => u.id == user.id));
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('User deleted')));
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error deleting user: $e')));
-      }
+    if (confirm != true) return;
+
+    setState(() => _loading = true);
+    try {
+      await DBHelper.instance.deleteUser(user.id!);
+      setState(() => _users.removeWhere((u) => u.id == user.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${user.name} ${context.tr('hasBeenDeleted')}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.tr('errorDeletingUser')}: ${e.toString()}'),
+        ),
+      );
+    } finally {
+      setState(() => _loading = false);
     }
   }
 
@@ -105,7 +184,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'No available drivers in the same area (${doctorArea}) to link',
+            '${context.tr('noAvailableDriversInArea')} (${doctorArea})',
           ),
         ),
       );
@@ -115,7 +194,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final selectedDriver = await showDialog<User>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Link Doctor to Driver'),
+        title: Text(context.tr('linkDoctorToDriver')),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -134,7 +213,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
         ],
       ),
@@ -171,9 +250,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         // Now require van assignment
         await _assignVanToLinkedPair(doctor, selectedDriver);
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error linking users: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.tr('errorLinkingUsers')}: $e')),
+        );
       }
     }
   }
@@ -185,13 +264,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final availableVans = vanProvider.getAvailableVans();
 
     if (availableVans.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No available vans to assign. Please create vans first.',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('noAvailableVans'))));
       return;
     }
 
@@ -199,7 +274,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       context: context,
       barrierDismissible: false, // Make it mandatory
       builder: (context) => AlertDialog(
-        title: const Text('Assign Van to Team'),
+        title: Text(context.tr('assignVanToTeam')),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -224,7 +299,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     return ListTile(
                       leading: const Icon(Icons.directions_car),
                       title: Text(van.name),
-                      subtitle: Text('License: ${van.licensePlate}'),
+                      subtitle: Text(
+                        '${context.tr('license')}: ${van.licensePlate}',
+                      ),
                       onTap: () => Navigator.of(context).pop(van),
                     );
                   },
@@ -236,7 +313,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel Linking'),
+            child: Text(context.tr('cancelLinking')),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
           ),
         ],
@@ -259,9 +336,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ),
         );
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error assigning van: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.tr('errorAssigningVan')}: $e')),
+        );
       }
     } else {
       // If no van was selected, undo the linking
@@ -285,7 +362,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Linking cancelled - no van assigned')),
+          SnackBar(content: Text(context.tr('linkingCancelledNoVanAssigned'))),
         );
       } catch (e) {
         debugPrint('Error undoing linking: $e');
@@ -319,19 +396,298 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unlinked ${doctor.name} from ${driver.name}')),
+        SnackBar(
+          content: Text(
+            context.tr(
+              'unlinkedFrom',
+              args: {'doctorName': doctor.name, 'driverName': driver.name},
+            ),
+          ),
+        ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error unlinking users: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('errorUnlinkingUsers')}: $e')),
+      );
+    }
+  }
+
+  Future<void> _addUser() async {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final phoneController = TextEditingController();
+    String selectedRole = 'owner';
+    String? selectedArea;
+
+    final List<String> ammanDistricts = [
+      'Amman Qasaba District',
+      'Al-Jami\'a District',
+      'Marka District',
+      'Al-Qweismeh District',
+      'Wadi Al-Sir District',
+      'Al-Jizah District',
+      'Sahab District',
+      'Dabouq District (new)',
+      'Naour District',
+    ];
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(context.tr('addNewUser')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name *',
+                    hintText: 'Enter user\'s full name',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email *',
+                    hintText: 'Enter email address',
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Password *',
+                    hintText: 'Enter password',
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone (optional)',
+                    hintText: 'Enter phone number',
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  decoration: const InputDecoration(
+                    labelText: 'Role *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'owner',
+                      child: Text(context.tr('owner')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'doctor',
+                      child: Text(context.tr('doctor')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'driver',
+                      child: Text(context.tr('driver')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'admin',
+                      child: Text(context.tr('admin')),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedRole = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                if (selectedRole == 'doctor' || selectedRole == 'driver')
+                  DropdownButtonFormField<String>(
+                    value: selectedArea,
+                    decoration: const InputDecoration(
+                      labelText: 'Area *',
+                      hintText: 'Select service area',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ammanDistricts.map((district) {
+                      return DropdownMenuItem(
+                        value: district,
+                        child: Text(district),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => selectedArea = value);
+                    },
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(context.tr('cancel')),
+            ),
+            TextButton(
+              onPressed: () {
+                // Validation
+                final name = nameController.text.trim();
+                final email = emailController.text.trim();
+                final password = passwordController.text.trim();
+                final phone = phoneController.text.trim();
+
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.tr('nameRequired'))),
+                  );
+                  return;
+                }
+
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.tr('emailRequired'))),
+                  );
+                  return;
+                }
+
+                if (!RegExp(
+                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                ).hasMatch(email)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.tr('enterValidEmail'))),
+                  );
+                  return;
+                }
+
+                if (password.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.tr('passwordRequired'))),
+                  );
+                  return;
+                }
+
+                if (password.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(context.tr('passwordMinLength'))),
+                  );
+                  return;
+                }
+
+                if ((selectedRole == 'doctor' || selectedRole == 'driver') &&
+                    selectedArea == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr('areaRequiredForDoctorsDrivers')),
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.pop(context, {
+                  'name': name,
+                  'email': email,
+                  'password': password,
+                  'phone': phone.isNotEmpty ? phone : null,
+                  'role': selectedRole,
+                  'area': selectedArea,
+                });
+              },
+              child: const Text('Add User'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _loading = true);
+      try {
+        final userData = {
+          'name': result['name'],
+          'email': result['email'],
+          'password': result['password'],
+          'phone': result['phone'],
+          'role': result['role'],
+          'area': result['area'],
+        };
+
+        final userId = await DBHelper.instance.insertUser(userData);
+        final newUser = User(
+          id: userId,
+          name: result['name'],
+          email: result['email'],
+          password: result['password'],
+          phone: result['phone'],
+          role: result['role'],
+          area: result['area'],
+        );
+
+        setState(() => _users.add(newUser));
+
+        // Log audit action
+        final adminProvider = context.read<AdminProvider>();
+        await adminProvider.logAuditAction(
+          'add_user',
+          'Added new user ${result['name']} with role ${result['role']}',
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${result['name']} has been added successfully'),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding user: ${e.toString()}')),
+        );
+      } finally {
+        setState(() => _loading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Check if user is admin
+    if (auth.user?.role.toLowerCase() != 'admin') {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Access Denied')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.block, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Access Denied',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('You do not have permission to access this page.'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('User Management')),
+      appBar: AppBar(
+        title: const Text('User Management'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _addUser,
+            tooltip: context.tr('addNewUser'),
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -456,3 +812,5 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 }
+
+

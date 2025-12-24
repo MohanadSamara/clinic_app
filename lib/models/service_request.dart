@@ -2,7 +2,7 @@ class ServiceRequest {
   final int? id;
   final int ownerId;
   final int petId;
-  final String requestType; // 'urgent', 'checkup'
+  final String requestType; // 'emergency', 'checkup'
   final String description;
   final String
   status; // 'pending', 'approved', 'assigned', 'in_progress', 'completed', 'rejected'
@@ -100,3 +100,10 @@ class ServiceRequest {
     );
   }
 }
+
+
+
+
+
+
+

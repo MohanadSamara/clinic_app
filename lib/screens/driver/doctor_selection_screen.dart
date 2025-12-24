@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../db/db_helper.dart';
 import '../../models/user.dart';
+import '../../translations.dart';
 
 class DoctorSelectionScreen extends StatefulWidget {
   const DoctorSelectionScreen({super.key});
@@ -65,7 +66,14 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Successfully linked with Dr. ${doctor.name}')),
+        SnackBar(
+          content: Text(
+            context.tr(
+              'successfullyLinkedWithDoctor',
+              args: {'doctorName': doctor.name},
+            ),
+          ),
+        ),
       );
 
       // Navigate back to dashboard
@@ -73,7 +81,7 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
     } catch (e) {
       debugPrint('Error linking with doctor: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to link with doctor')),
+        SnackBar(content: Text(context.tr('failedToLinkWithDoctor'))),
       );
     }
   }
@@ -83,14 +91,14 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
     final isLight = Theme.of(context).brightness == Brightness.light;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Doctor'),
+        title: Text(context.tr('selectDoctor')),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _doctors.isEmpty
-          ? const Center(child: Text('No doctors available'))
+          ? Center(child: Text(context.tr('noDoctorsAvailable')))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _doctors.length,
@@ -116,7 +124,7 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
                     ),
                     trailing: ElevatedButton(
                       onPressed: () => _selectDoctor(doctor),
-                      child: const Text('Select'),
+                      child: Text(context.tr('select')),
                     ),
                   ),
                 );

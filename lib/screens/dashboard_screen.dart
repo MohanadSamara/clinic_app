@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pet_provider.dart';
+
 import 'owner/pet_management_screen.dart';
 import 'owner/booking_screen.dart';
 import 'owner/appointments_screen.dart';
+import '../../translations.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,6 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navigateToBooking(int petCount) {
+    
     final colorScheme = Theme.of(context).colorScheme;
 
     if (petCount == 0) {
@@ -34,15 +37,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('No Pets Found'),
-          content: const Text(
-            'You need to add at least one pet before booking an appointment. '
-            'Would you like to add a pet now?',
-          ),
+          title: Text(context.tr('noPetsFound')),
+          content: Text(context.tr('needToAddPetBeforeBooking')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(context.tr('cancel')),
             ),
             ElevatedButton(
               onPressed: () {
@@ -61,7 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text('Add Pet'),
+              child: Text(context.tr('addPet')),
             ),
           ],
         ),
@@ -76,6 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final user = auth.user;
     final theme = Theme.of(context);
@@ -84,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Vet2U Dashboard'),
+        title: Text(context.tr('vet2UDashboard')),
         backgroundColor: theme.appBarTheme.backgroundColor,
         foregroundColor: theme.appBarTheme.foregroundColor,
         elevation: 0,
@@ -177,8 +178,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 child: Text(
                                   hasPets
-                                      ? '$petCount Pet${petCount > 1 ? 's' : ''} Registered'
-                                      : 'No Pets Yet',
+                                      ? '${petCount} ${context.tr('petRegistered')}'
+                                      : context.tr('noPetsYet'),
                                   style: TextStyle(
                                     color: statusTextColor,
                                     fontWeight: FontWeight.w600,
@@ -215,14 +216,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Get Started!',
+                            context.tr('getStarted'),
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Add your pet profile to start booking veterinary services.',
+                            context.tr('addPetProfileToBook'),
                             textAlign: TextAlign.center,
                             style: mutedBodyStyle,
                           ),
@@ -237,7 +238,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
                               icon: const Icon(Icons.add),
-                              label: const Text('Add Your First Pet'),
+                              label: Text(context.tr('addYourFirstPet')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.tertiary,
                                 foregroundColor: colorScheme.onTertiary,
@@ -272,14 +273,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Ready to Book?',
+                            context.tr('readyToBook'),
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Schedule a veterinary visit for your pet.',
+                            context.tr('scheduleVetVisitForPet'),
                             textAlign: TextAlign.center,
                             style: mutedBodyStyle,
                           ),
@@ -289,7 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: ElevatedButton.icon(
                               onPressed: () => _navigateToBooking(petCount),
                               icon: const Icon(Icons.add_circle_outline),
-                              label: const Text('Book Appointment'),
+                              label: Text(context.tr('bookAppointment')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.primary,
                                 foregroundColor: colorScheme.onPrimary,
@@ -311,7 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 // Services Section
                 Text(
-                  'Our Services',
+                  context.tr('ourServices'),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -328,44 +329,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     _ServiceCard(
                       icon: Icons.calendar_today,
-                      title: 'Booking',
-                      subtitle: 'Schedule a Visit',
+                      title: context.tr('booking'),
+                      subtitle: context.tr('scheduleAVisit'),
                       color: colorScheme.primary,
                       onTap: () => _navigateToBooking(petCount),
                     ),
                     _ServiceCard(
                       icon: Icons.medical_services,
-                      title: 'Records',
-                      subtitle: 'Health Records',
+                      title: context.tr('records'),
+                      subtitle: context.tr('healthRecords'),
                       color: colorScheme.secondary,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Coming soon!')),
+                          SnackBar(content: Text(context.tr('comingSoon'))),
                         );
                       },
                     ),
                     _ServiceCard(
                       icon: Icons.emergency,
-                      title: 'Emergency',
-                      subtitle: 'Immediate Care',
+                      title: context.tr('emergency'),
+                      subtitle: context.tr('immediateCare'),
                       color: colorScheme.error,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Emergency services coming soon!'),
+                          SnackBar(
+                            content: Text(context.tr('emergencyServicesComingSoon')),
                           ),
                         );
                       },
                     ),
                     _ServiceCard(
                       icon: Icons.payment,
-                      title: 'Payments',
-                      subtitle: 'Manage Payments',
+                      title: context.tr('payments'),
+                      subtitle: context.tr('managePayments'),
                       color: colorScheme.tertiary,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment management coming soon!'),
+                          SnackBar(
+                            content: Text(context.tr('paymentManagementComingSoon')),
                           ),
                         );
                       },
@@ -377,7 +378,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 // Quick Navigation Buttons
                 Text(
-                  'Quick Actions',
+                  context.tr('quickActions'),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -386,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 _ActionButton(
                   icon: Icons.pets,
-                  text: 'My Pets',
+                  text: context.tr('myPets'),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -397,7 +398,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 12),
                 _ActionButton(
                   icon: Icons.event,
-                  text: 'My Appointments',
+                  text: context.tr('myAppointments'),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -510,3 +511,10 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+

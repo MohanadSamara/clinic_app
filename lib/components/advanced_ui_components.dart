@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../theme/app_theme.dart';
+import '../../translations.dart';
+import '../../translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 /// Advanced skeleton loader for professional loading states
 class SkeletonLoader extends StatefulWidget {
@@ -1043,7 +1046,7 @@ class _ProfessionalBottomSheetState extends State<ProfessionalBottomSheet>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return Transform.translate(
+        return Translations.get(
           offset: Offset(0, (1 - _animation.value) * 100),
           child: Opacity(
             opacity: _animation.value,

@@ -21,6 +21,7 @@ class DBHelper {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
+
     // Note: For mobile (Android/iOS), sqflite uses the default factory automatically
   }
 
@@ -46,7 +47,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 27,
+      version: 32,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -553,6 +554,96 @@ class DBHelper {
         );
       }
     }
+    if (oldVersion < 28) {
+      // Add schedules table for doctor working hours
+      try {
+        await db.execute('''
+          CREATE TABLE schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doctor_id INTEGER NOT NULL,
+            day_of_week TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            FOREIGN KEY (doctor_id) REFERENCES users (id)
+          );
+        ''');
+        debugPrint('Created schedules table in version 28');
+      } catch (e) {
+        debugPrint('Error creating schedules table: $e');
+      }
+    }
+    if (oldVersion < 29) {
+      // Add service_request_id column to appointments table for linking emergencies
+      try {
+        await db.execute(
+          'ALTER TABLE appointments ADD COLUMN service_request_id INTEGER',
+        );
+        debugPrint(
+          'Added service_request_id column to appointments table in version 29',
+        );
+      } catch (e) {
+        debugPrint(
+          'Error adding service_request_id column to appointments table: $e',
+        );
+      }
+    }
+    // Ensure service_request_id column exists (for databases that might have missed the migration)
+    if (oldVersion < 30) {
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(appointments)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('service_request_id')) {
+          await db.execute(
+            'ALTER TABLE appointments ADD COLUMN service_request_id INTEGER',
+          );
+          debugPrint(
+            'Added service_request_id column to appointments table in version 30',
+          );
+        }
+      } catch (e) {
+        debugPrint(
+          'Error ensuring service_request_id column exists in appointments table: $e',
+        );
+      }
+    }
+    if (oldVersion < 31) {
+      // Add is_holiday column to schedules table
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(schedules)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('is_holiday')) {
+          await db.execute(
+            'ALTER TABLE schedules ADD COLUMN is_holiday INTEGER DEFAULT 0',
+          );
+          debugPrint(
+            'Added is_holiday column to schedules table in version 31',
+          );
+        }
+      } catch (e) {
+        debugPrint('Error adding is_holiday column to schedules table: $e');
+      }
+    }
+    if (oldVersion < 32) {
+      // Add is_free_day column to schedules table
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(schedules)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('is_free_day')) {
+          await db.execute(
+            'ALTER TABLE schedules ADD COLUMN is_free_day INTEGER DEFAULT 0',
+          );
+          debugPrint(
+            'Added is_free_day column to schedules table in version 32',
+          );
+        }
+      } catch (e) {
+        debugPrint('Error adding is_free_day column to schedules table: $e');
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -616,7 +707,8 @@ class DBHelper {
         location_lat REAL,
         location_lng REAL,
         calendar_event_id TEXT,
-        payment_method TEXT
+        payment_method TEXT,
+        service_request_id INTEGER
       );
     ''');
 
@@ -814,6 +906,21 @@ class DBHelper {
       );
     ''');
 
+    // Create schedules table for doctor working hours
+    await db.execute('''
+      CREATE TABLE schedules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        doctor_id INTEGER NOT NULL,
+        day_of_week TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        is_holiday INTEGER DEFAULT 0,
+        is_free_day INTEGER DEFAULT 0,
+        FOREIGN KEY (doctor_id) REFERENCES users (id)
+      );
+    ''');
+
     // Create audit_logs table
     await db.execute('''
       CREATE TABLE IF NOT EXISTS audit_logs (
@@ -826,6 +933,17 @@ class DBHelper {
         ip_address TEXT,
         FOREIGN KEY (document_id) REFERENCES documents (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
+      );
+    ''');
+
+    // Create system_settings table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE NOT NULL,
+        value TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     ''');
 
@@ -1162,6 +1280,19 @@ class DBHelper {
       data,
       where: 'id=?',
       whereArgs: [id],
+    );
+  }
+
+  Future<int> updateAppointmentStatusByServiceRequestId(
+    int serviceRequestId,
+    String status,
+  ) async {
+    final db = await instance.database;
+    return await db.update(
+      'appointments',
+      {'status': status},
+      where: 'service_request_id=?',
+      whereArgs: [serviceRequestId],
     );
   }
 
@@ -1524,6 +1655,7 @@ class DBHelper {
 
   Future<List<Map<String, dynamic>>> getServiceRequests({
     int? ownerId,
+    int? assignedDoctorId,
     String? status,
     String? requestType,
   }) async {
@@ -1534,6 +1666,12 @@ class DBHelper {
     if (ownerId != null) {
       whereClause += 'owner_id=?';
       whereArgs.add(ownerId);
+    }
+
+    if (assignedDoctorId != null) {
+      if (whereClause.isNotEmpty) whereClause += ' AND ';
+      whereClause += 'assigned_doctor_id=?';
+      whereArgs.add(assignedDoctorId);
     }
 
     if (status != null) {
@@ -1943,5 +2081,135 @@ class DBHelper {
         }
       }
     }
+  }
+
+  // ---------- SCHEDULES ----------
+  Future<int> insertSchedule(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('schedules', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getSchedulesByDoctor(int doctorId) async {
+    final db = await instance.database;
+    return await db.query(
+      'schedules',
+      where: 'doctor_id=?',
+      whereArgs: [doctorId],
+      orderBy: 'day_of_week ASC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getScheduleById(int id) async {
+    final db = await instance.database;
+    final res = await db.query('schedules', where: 'id=?', whereArgs: [id]);
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  Future<int> updateSchedule(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('schedules', data, where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<int> deleteSchedule(int id) async {
+    final db = await instance.database;
+    return await db.delete('schedules', where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<int> deleteSchedulesByDoctor(int doctorId) async {
+    final db = await instance.database;
+    return await db.delete(
+      'schedules',
+      where: 'doctor_id=?',
+      whereArgs: [doctorId],
+    );
+  }
+
+  // ---------- SYSTEM SETTINGS ----------
+  Future<Map<String, dynamic>> getSystemSettings() async {
+    final db = await instance.database;
+    final settings = await db.query('system_settings');
+    final result = <String, dynamic>{};
+    for (final setting in settings) {
+      result[setting['key'] as String] = setting['value'];
+    }
+    return result;
+  }
+
+  Future<int> updateSystemSetting(String key, dynamic value) async {
+    final db = await instance.database;
+    return await db.insert('system_settings', {
+      'key': key,
+      'value': value.toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  // ---------- AUDIT LOGS ----------
+  Future<List<Map<String, dynamic>>> getAuditLogs({int limit = 100}) async {
+    final db = await instance.database;
+    return await db.query(
+      'audit_logs',
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+  }
+
+  // ---------- DASHBOARD STATS ----------
+  Future<Map<String, dynamic>> getDashboardStats() async {
+    final db = await instance.database;
+    final stats = <String, dynamic>{};
+
+    // Total users by role
+    final userStats = await db.rawQuery('''
+      SELECT role, COUNT(*) as count
+      FROM users
+      GROUP BY role
+    ''');
+    for (final stat in userStats) {
+      stats['${stat['role']}_count'] = stat['count'];
+    }
+
+    // Total appointments this month
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final appointmentsThisMonth =
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM appointments WHERE scheduled_at >= ?',
+            [startOfMonth.toIso8601String()],
+          ),
+        ) ??
+        0;
+    stats['appointments_this_month'] = appointmentsThisMonth;
+
+    // Total revenue this month
+    final revenueThisMonth = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM payments WHERE created_at >= ? AND status = ?',
+      [startOfMonth.toIso8601String(), 'completed'],
+    );
+    stats['revenue_this_month'] =
+        (revenueThisMonth.first['total'] ?? 0.0) as double;
+
+    // Active vans
+    final activeVans =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM vans WHERE status = ?', [
+            'available',
+          ]),
+        ) ??
+        0;
+    stats['active_vans'] = activeVans;
+
+    // Low stock items
+    final lowStockItems =
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM inventory WHERE quantity <= min_threshold',
+          ),
+        ) ??
+        0;
+    stats['low_stock_items'] = lowStockItems;
+
+    return stats;
   }
 }

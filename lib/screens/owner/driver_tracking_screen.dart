@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../db/db_helper.dart';
 import '../../models/driver_status.dart';
 import '../../models/appointment.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
+import '../../../translations.dart';
 
 class DriverTrackingScreen extends StatefulWidget {
   const DriverTrackingScreen({super.key});
@@ -156,12 +158,12 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Track Drivers'),
+        title: Text(context.tr('trackDrivers')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadDriverStatuses,
-            tooltip: 'Refresh driver locations',
+            tooltip: context.tr('refresh'),
           ),
         ],
       ),
@@ -170,8 +172,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
           : _driverStatuses.isEmpty
           ? EmptyState(
               icon: Icons.location_off,
-              title: 'No active trip',
-              message: 'Tracking will appear here when a driver is assigned.',
+              title: context.tr('noAppointmentsAvailable'),
+              message: context.tr('noDoctorLinked'),
             )
           : Column(
               children: [
@@ -439,14 +441,14 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Status: ${driverStatus.status}'),
+            Text('${context.tr('status')}: ${driverStatus.status}'),
             Text(
-              'Location: ${driverStatus.latitude.toStringAsFixed(4)}, ${driverStatus.longitude.toStringAsFixed(4)}',
+              '${context.tr('coordinates')}: ${driverStatus.latitude.toStringAsFixed(4)}, ${driverStatus.longitude.toStringAsFixed(4)}',
             ),
-            Text('Last Updated: ${driverStatus.lastUpdated}'),
+            Text('${context.tr('lastUpdated')}: ${driverStatus.lastUpdated}'),
             if (driverStatus.currentAppointmentId != null)
               Text(
-                'Current Appointment: #${driverStatus.currentAppointmentId}',
+                '${context.tr('currentAppointment')}: #${driverStatus.currentAppointmentId}',
               ),
           ],
         ),

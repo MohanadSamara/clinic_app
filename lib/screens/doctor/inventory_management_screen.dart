@@ -634,3 +634,10 @@ class _UpdateStockDialogState extends State<_UpdateStockDialog> {
     super.dispose();
   }
 }
+
+
+
+
+
+
+

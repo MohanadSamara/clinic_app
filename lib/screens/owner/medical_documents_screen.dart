@@ -9,6 +9,8 @@ import '../../models/document.dart';
 import '../../models/pet.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
+import '../../../translations.dart';
+
 
 class MedicalDocumentsScreen extends StatefulWidget {
   const MedicalDocumentsScreen({super.key});
@@ -44,6 +46,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
   }
 
   Future<void> _downloadDocument(Document document) async {
+    
     setState(() => _isLoading = true);
 
     try {
@@ -55,23 +58,24 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Document downloaded successfully')),
+          SnackBar(content: Text(context.tr('documentDownloadedSuccessfully'))),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to download document')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.tr('failedToDownloadDocument'))));
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error downloading document: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('errorDownloadingDocument')}: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _viewAuditLogs(Document document) async {
+    
     final documentProvider = Provider.of<DocumentProvider>(
       context,
       listen: false,
@@ -83,7 +87,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Document History'),
+        title: Text(context.tr('documentHistory')),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -94,7 +98,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
               return ListTile(
                 title: Text(log.action.toUpperCase()),
                 subtitle: Text(
-                  '${DateFormat('MMM dd, yyyy HH:mm').format(log.timestamp)}\n'
+                  '${DateFormat('MMM dd, yyyy HH:mm', Localizations.localeOf(context).languageCode).format(log.timestamp)}\n'
                   'User ID: ${log.userId}',
                 ),
                 trailing: log.details != null ? Text(log.details!) : null,
@@ -105,7 +109,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(context.tr('close')),
           ),
         ],
       ),
@@ -114,9 +118,10 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Medical Documents'),
+        title: Text(context.tr('medicalDocuments')),
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
@@ -128,8 +133,8 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
       body: Column(
         children: [
           SectionHeader(
-            title: 'Medical Documents',
-            subtitle: 'Prescriptions, lab results, and more',
+            title: context.tr('medicalDocuments'),
+            subtitle: context.tr('prescriptionsLabResultsAndMore'),
           ),
           // Pet Filter
           Consumer<PetProvider>(
@@ -143,11 +148,11 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                 color: Colors.grey[100],
                 child: DropdownButtonFormField<Pet?>(
                   value: _selectedPet,
-                  hint: const Text('Filter by pet (optional)'),
+                  hint: Text(context.tr('filterByPetOptional')),
                   items: [
-                    const DropdownMenuItem<Pet?>(
+                    DropdownMenuItem<Pet?>(
                       value: null,
-                      child: Text('All pets'),
+                      child: Text(context.tr('allPets')),
                     ),
                     ...petProvider.pets.map((pet) {
                       return DropdownMenuItem<Pet?>(
@@ -191,9 +196,8 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                 if (documents.isEmpty) {
                   return EmptyState(
                     icon: Icons.description,
-                    title: 'No medical documents found',
-                    message:
-                        'Documents uploaded by your doctor will appear here',
+                    title: context.tr('noMedicalDocumentsFound'),
+                    message: context.tr('documentsUploadedByDoctorWillAppearHere'),
                   );
                 }
 
@@ -231,7 +235,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Uploaded: ${DateFormat('MMM dd, yyyy').format(document.uploadDate)}',
+                                        '${context.tr('uploadedLabel')} ${DateFormat('MMM dd, yyyy', Localizations.localeOf(context).languageCode).format(document.uploadDate)}',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[600],
@@ -262,23 +266,23 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                                     }
                                   },
                                   itemBuilder: (context) => [
-                                    const PopupMenuItem(
+                                    PopupMenuItem(
                                       value: 'download',
                                       child: Row(
                                         children: [
                                           Icon(Icons.download),
                                           SizedBox(width: 8),
-                                          Text('Download'),
+                                          Text(context.tr('download')),
                                         ],
                                       ),
                                     ),
-                                    const PopupMenuItem(
+                                    PopupMenuItem(
                                       value: 'history',
                                       child: Row(
                                         children: [
                                           Icon(Icons.history),
                                           SizedBox(width: 8),
-                                          Text('View History'),
+                                          Text(context.tr('viewHistory')),
                                         ],
                                       ),
                                     ),
@@ -357,3 +361,10 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
     }
   }
 }
+
+
+
+
+
+
+

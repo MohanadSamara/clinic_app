@@ -404,3 +404,10 @@ class _DetailedTreatmentRecordCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+

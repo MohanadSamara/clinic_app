@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/van_provider.dart';
 import '../../models/van.dart';
 import '../../models/user.dart';
+import '../../translations.dart';
 
 class DriverVanSelectionScreen extends StatefulWidget {
   const DriverVanSelectionScreen({super.key});
@@ -66,11 +67,7 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
       if (authProvider.user!.linkedDoctorId == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'You must be linked to a doctor before assigning a van',
-              ),
-            ),
+            SnackBar(content: Text(context.tr('youMustBeLinkedToADoctor'))),
           );
         }
         return;
@@ -90,14 +87,25 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully assigned van: ${van.name}')),
+          SnackBar(
+            content: Text(
+              context.tr(
+                'successfullyAssignedVan',
+                args: {'vanName': van.name},
+              ),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to assign van: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr('failedToAssignVan', args: {'error': e.toString()}),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -125,14 +133,18 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Van unassigned successfully')),
+          SnackBar(content: Text(context.tr('vanUnassignedSuccessfully'))),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to unassign van: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr('failedToUnassignVan', args: {'error': e.toString()}),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -151,7 +163,7 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Van'),
+        title: Text(context.tr('selectVan')),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         actions: [
@@ -159,7 +171,7 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
             IconButton(
               icon: const Icon(Icons.clear),
               onPressed: _unassignVan,
-              tooltip: 'Unassign Van',
+              tooltip: context.tr('unassignVan'),
             ),
         ],
       ),
@@ -186,8 +198,8 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
                                   color: Colors.blue,
                                 ),
                                 const SizedBox(width: 12),
-                                const Text(
-                                  'Currently Assigned Van',
+                                Text(
+                                  context.tr('currentlyAssignedVan'),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -205,14 +217,18 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text('License: ${_selectedVan!.licensePlate}'),
+                            Text(
+                              '${context.tr('license')}: ${_selectedVan!.licensePlate}',
+                            ),
                             if (_selectedVan!.model != null) ...[
                               const SizedBox(height: 2),
-                              Text('Model: ${_selectedVan!.model}'),
+                              Text(
+                                '${context.tr('model')}: ${_selectedVan!.model}',
+                              ),
                             ],
                             const SizedBox(height: 2),
                             Text(
-                              'Capacity: ${_selectedVan!.capacity} passenger(s)',
+                              '${context.tr('capacity')}: ${_selectedVan!.capacity} ${context.tr('passengers')}',
                             ),
                           ],
                         ),
@@ -222,18 +238,20 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
                   ],
 
                   // Available Vans
-                  const Text(
-                    'Available Vans',
+                  Text(
+                    context.tr('availableVans'),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
 
                   if (availableVans.isEmpty)
-                    const Card(
+                    Card(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
                         child: Center(
-                          child: Text('No vans available for assignment'),
+                          child: Text(
+                            context.tr('noVansAvailableForAssignment'),
+                          ),
                         ),
                       ),
                     )
@@ -265,17 +283,21 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('License: ${van.licensePlate}'),
+                                Text(
+                                  '${context.tr('license')}: ${van.licensePlate}',
+                                ),
                                 if (van.model != null)
-                                  Text('Model: ${van.model}'),
-                                Text('Capacity: ${van.capacity} passenger(s)'),
+                                  Text('${context.tr('model')}: ${van.model}'),
+                                Text(
+                                  '${context.tr('capacity')}: ${van.capacity} ${context.tr('passengers')}',
+                                ),
                               ],
                             ),
                             trailing: ElevatedButton(
                               onPressed: _isLoading
                                   ? null
                                   : () => _assignVan(van),
-                              child: const Text('Assign'),
+                              child: Text(context.tr('assign')),
                             ),
                           ),
                         );
@@ -284,8 +306,8 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
 
                   // All Vans (for reference)
                   const SizedBox(height: 24),
-                  const Text(
-                    'All Vans',
+                  Text(
+                    context.tr('allVans'),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
@@ -338,20 +360,25 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('License: ${van.licensePlate}'),
-                              Text('Status: ${van.status}'),
+                              Text(
+                                '${context.tr('license')}: ${van.licensePlate}',
+                              ),
+                              Text('${context.tr('status')}: ${van.status}'),
                               if (van.model != null)
-                                Text('Model: ${van.model}'),
-                              if (isAssignedToMe) const Text('Assigned to you'),
+                                Text('${context.tr('model')}: ${van.model}'),
+                              if (isAssignedToMe)
+                                Text(context.tr('assignedToYou')),
                               if (isAssignedToOther)
-                                const Text('Assigned to another driver'),
+                                Text(context.tr('assignedToAnotherDriver')),
                               if (van.isPartiallyAssigned &&
                                   !isAssignedToMe &&
                                   !isAssignedToOther)
                                 Text(
                                   van.assignedDriverId != null
-                                      ? 'Waiting for doctor assignment'
-                                      : 'Waiting for driver assignment',
+                                      ? context.tr('waitingForDoctorAssignment')
+                                      : context.tr(
+                                          'waitingForDriverAssignment',
+                                        ),
                                   style: const TextStyle(
                                     color: Colors.orange,
                                     fontSize: 12,
@@ -371,8 +398,8 @@ class _DriverVanSelectionScreenState extends State<DriverVanSelectionScreen> {
                                       : () => _assignVan(van),
                                   child: Text(
                                     van.isPartiallyAssigned
-                                        ? 'Complete Assignment'
-                                        : 'Assign',
+                                        ? context.tr('completeAssignment')
+                                        : context.tr('assign'),
                                   ),
                                 )
                               : null,

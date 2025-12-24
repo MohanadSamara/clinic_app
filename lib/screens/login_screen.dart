@@ -1,10 +1,12 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../translations.dart';
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
 import 'role_based_home.dart';
 import 'role_selection_screen.dart';
+import '../../translations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'Sign In',
+                      context.tr('signIn'),
                       style: theme.textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colorScheme.onSurface,
@@ -53,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Welcome back to Vet2U',
+                      context.tr('welcomeBackToVet2U'),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -79,8 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextField(
                         controller: _email,
                         decoration: InputDecoration(
-                          labelText: 'Email Address',
-                          hintText: 'Enter your email',
+                          labelText: context.tr('emailAddress'),
+                          hintText: context.tr('enterYourEmail'),
                           prefixIcon: Icon(
                             Icons.email_outlined,
                             color: colorScheme.onSurfaceVariant,
@@ -93,8 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextField(
                         controller: _password,
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Enter your password',
+                          labelText: context.tr('password'),
+                          hintText: context.tr('enterYourPassword'),
                           prefixIcon: Icon(
                             Icons.lock_outline,
                             color: colorScheme.onSurfaceVariant,
@@ -134,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   textStyle: theme.textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
-                                child: const Text('Sign In'),
+                                child: Text(context.tr('signIn')),
                               ),
                       ),
                     ],
@@ -158,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'Or continue with',
+                      context.tr('orContinueWith'),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
@@ -184,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _googleSignIn,
                       icon: Icon(Icons.g_mobiledata, color: colorScheme.error),
                       label: Text(
-                        'Google',
+                        context.tr('google'),
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
@@ -210,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _facebookSignIn,
                       icon: Icon(Icons.facebook, color: colorScheme.secondary),
                       label: Text(
-                        'Facebook',
+                        context.tr('facebook'),
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
@@ -240,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Don't have an account? ",
+                    context.tr('dontHaveAccount'),
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -256,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
-                      'Sign Up',
+                      context.tr('signUp'),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -277,11 +279,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Basic validation
     if (_email.text.trim().isEmpty) {
-      _showError('Please enter your email');
+      _showError(context.tr('pleaseEnterYourEmail'));
       return;
     }
     if (_password.text.isEmpty) {
-      _showError('Please enter your password');
+      _showError(context.tr('pleaseEnterYourPassword'));
       return;
     }
 

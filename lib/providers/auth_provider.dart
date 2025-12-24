@@ -525,3 +525,10 @@ class AuthProvider extends ChangeNotifier {
     return null;
   }
 }
+
+
+
+
+
+
+

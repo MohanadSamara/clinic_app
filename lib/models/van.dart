@@ -100,3 +100,10 @@ class Van {
   bool get isFullyAssigned =>
       assignedDriverId != null && assignedDoctorId != null;
 }
+
+
+
+
+
+
+

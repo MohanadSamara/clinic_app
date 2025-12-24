@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/location_service.dart';
+import '../../translations.dart';
 
 class SelectLocationScreen extends StatefulWidget {
   final LatLng? destination;
@@ -80,10 +81,8 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
         // Show informative message instead of error
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Using default location. You can still select a location on the map.',
-            ),
+          SnackBar(
+            content: Text(context.tr('usingDefaultLocation')),
             duration: Duration(seconds: 3),
           ),
         );
@@ -215,7 +214,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch Google Maps')),
+          SnackBar(content: Text(context.tr('couldNotLaunchGoogleMaps'))),
         );
       }
     }
@@ -229,7 +228,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
         await launchUrl(Uri.parse(url));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Google Maps')),
+          SnackBar(content: Text(context.tr('couldNotOpenGoogleMaps'))),
         );
       }
     }
@@ -255,9 +254,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error getting current location: ${e.toString().contains('timeout') ? 'Request timed out' : e}',
-            ),
+            content: Text(context.tr('errorGettingCurrentLocation')),
             duration: Duration(seconds: 3),
           ),
         );
@@ -269,14 +266,20 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isNavigationMode ? 'Navigation' : 'Select Location'),
+        title: Text(
+          widget.isNavigationMode
+              ? context.tr('navigation')
+              : context.tr('selectLocation'),
+        ),
         actions: [
           if ((widget.isNavigationMode && widget.destination != null) ||
               (!widget.isNavigationMode && _selectedLocation != null))
             TextButton(
               onPressed: _confirmLocation,
               child: Text(
-                widget.isNavigationMode ? 'Start Navigation' : 'Confirm',
+                widget.isNavigationMode
+                    ? context.tr('startNavigation')
+                    : context.tr('confirm'),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimary,
                 ),
@@ -329,8 +332,8 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_selectedAddress != null) ...[
-                        const Text(
-                          'Selected Address:',
+                        Text(
+                          context.tr('selectedAddress'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -343,8 +346,8 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                         ),
                         if (_showManualAddressInput) ...[
                           const SizedBox(height: 16),
-                          const Text(
-                            'Enter Address Manually:',
+                          Text(
+                            context.tr('enterAddressManually'),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -353,8 +356,10 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                           const SizedBox(height: 8),
                           TextField(
                             controller: _addressController,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter address for this location',
+                            decoration: InputDecoration(
+                              hintText: context.tr(
+                                'enterAddressForThisLocation',
+                              ),
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -372,7 +377,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                             child: ElevatedButton.icon(
                               onPressed: _useCurrentLocation,
                               icon: const Icon(Icons.my_location),
-                              label: const Text('Use Current Location'),
+                              label: Text(context.tr('useCurrentLocation')),
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -381,7 +386,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                               onPressed: _selectedLocation != null
                                   ? _confirmLocation
                                   : null,
-                              child: const Text('Confirm Location'),
+                              child: Text(context.tr('confirmLocation')),
                             ),
                           ),
                         ],
@@ -393,13 +398,13 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _openInGoogleMaps,
                             icon: const Icon(Icons.map),
-                            label: const Text('View in Google Maps'),
+                            label: Text(context.tr('viewInGoogleMaps')),
                           ),
                         ),
                       ],
                       const SizedBox(height: 8),
-                      const Text(
-                        'Tap on the map to select a location',
+                      Text(
+                        context.tr('tapOnTheMapToSelectALocation'),
                         style: TextStyle(color: Colors.grey, fontSize: 12),
                         textAlign: TextAlign.center,
                       ),

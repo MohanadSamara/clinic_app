@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/payment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/payment.dart';
 import '../../components/ui_kit.dart';
 import '../../services/pdf_service.dart';
 import 'payment_processing_screen.dart';
+import '../../../translations.dart';
 
 class PaymentHistoryScreen extends StatefulWidget {
   const PaymentHistoryScreen({super.key});
@@ -34,7 +36,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payment History'),
+        title: Text(context.tr('paymentHistory')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -437,7 +439,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _downloadInvoice(payment),
                     icon: const Icon(Icons.download),
-                    label: const Text('Download Invoice'),
+                    label: Text(context.tr('downloadInvoice')),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -447,7 +449,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                     child: TextButton.icon(
                       onPressed: () => _requestRefund(payment),
                       icon: const Icon(Icons.undo),
-                      label: const Text('Request Refund'),
+                      label: Text(context.tr('requestRefund')),
                       style: TextButton.styleFrom(foregroundColor: Colors.red),
                     ),
                   ),
@@ -464,7 +466,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                       _retryPayment(payment);
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry Payment'),
+                    label: Text(context.tr('retryPayment')),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -476,7 +478,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _contactSupport(payment),
                     icon: const Icon(Icons.support),
-                    label: const Text('Contact Support'),
+                    label: Text(context.tr('contactSupport')),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -562,19 +564,13 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           SnackBar(
             content: const Text('Invoice downloaded successfully'),
             action: SnackBarAction(
-              label: 'Open',
-              onPressed: () async {
-                // Try to open the file (this will work on mobile)
-                // On desktop, users can find it in their documents folder
-                try {
-                  await PdfService.shareInvoicePdf(payment);
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('File saved to Documents folder'),
-                    ),
-                  );
-                }
+              label: 'View',
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('File saved to Documents folder'),
+                  ),
+                );
               },
             ),
           ),
@@ -596,15 +592,14 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Request Refund'),
-        content: const Text(
-          'Are you sure you want to request a refund for this payment? '
-          'This action cannot be undone.',
+        title: Text(context.tr('requestRefundTitle')),
+        content: Text(
+          context.tr('areYouSureYouWantToRequestARefund'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -612,7 +607,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
               await _processRefund(payment);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Request Refund'),
+            child: Text(context.tr('requestRefundButton')),
           ),
         ],
       ),
@@ -662,3 +657,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     );
   }
 }
+
+
+
+
+
+
+

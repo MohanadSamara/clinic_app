@@ -80,3 +80,10 @@ class MedicalRecord {
   @override
   int get hashCode => id?.hashCode ?? 0;
 }
+
+
+
+
+
+
+

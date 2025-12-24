@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/van_provider.dart';
 import '../../models/van.dart';
+import '../../translations.dart';
 
 class DoctorVanSelectionScreen extends StatefulWidget {
   const DoctorVanSelectionScreen({super.key});
@@ -89,14 +90,18 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully assigned van: ${van.name}')),
+          SnackBar(
+            content: Text(
+              '${context.tr('successfullyAssignedVan')}: ${van.name}',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to assign van: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.tr('failedToAssignVan')}: $e')),
+        );
       }
     } finally {
       if (mounted) {
@@ -124,14 +129,14 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Van unassigned successfully')),
+          SnackBar(content: Text(context.tr('vanUnassignedSuccessfully'))),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to unassign van: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.tr('failedToUnassignVan')}: $e')),
+        );
       }
     } finally {
       if (mounted) {
@@ -150,7 +155,7 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Van'),
+        title: Text(context.tr('selectVan')),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         actions: [
@@ -158,7 +163,7 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
             IconButton(
               icon: const Icon(Icons.clear),
               onPressed: _unassignVan,
-              tooltip: 'Unassign Van',
+              tooltip: context.tr('unassignVan'),
             ),
         ],
       ),
@@ -185,8 +190,8 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
                                   color: Colors.green,
                                 ),
                                 const SizedBox(width: 12),
-                                const Text(
-                                  'Currently Assigned Van',
+                                Text(
+                                  context.tr('currentlyAssignedVan'),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -221,18 +226,20 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
                   ],
 
                   // Available Vans
-                  const Text(
-                    'Available Vans',
+                  Text(
+                    context.tr('availableVans'),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
 
                   if (availableVans.isEmpty)
-                    const Card(
+                    Card(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
                         child: Center(
-                          child: Text('No vans available for assignment'),
+                          child: Text(
+                            context.tr('noVansAvailableForAssignment'),
+                          ),
                         ),
                       ),
                     )
@@ -283,8 +290,8 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
 
                   // All Vans (for reference)
                   const SizedBox(height: 24),
-                  const Text(
-                    'All Vans',
+                  Text(
+                    context.tr('allVans'),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
@@ -341,9 +348,10 @@ class _DoctorVanSelectionScreenState extends State<DoctorVanSelectionScreen> {
                               Text('Status: ${van.status}'),
                               if (van.model != null)
                                 Text('Model: ${van.model}'),
-                              if (isAssignedToMe) const Text('Assigned to you'),
+                              if (isAssignedToMe)
+                                Text(context.tr('assignedToYou')),
                               if (isAssignedToOther)
-                                const Text('Assigned to another doctor'),
+                                Text(context.tr('assignedToAnotherDoctor')),
                               if (van.isPartiallyAssigned &&
                                   !isAssignedToMe &&
                                   !isAssignedToOther)

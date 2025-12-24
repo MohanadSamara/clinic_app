@@ -9,6 +9,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+
 import '../../providers/auth_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -23,6 +24,10 @@ import '../../components/modern_cards.dart';
 import 'doctor_selection_screen.dart';
 import 'van_selection_screen.dart';
 import 'driver_profile_screen.dart';
+import 'driver_emergency_screen.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -93,6 +98,11 @@ class _DriverDashboardState extends State<DriverDashboard>
         authProvider.user!.id!,
         newStatus,
       );
+
+      // Refresh appointments when app resumes to show any new emergency cases
+      if (state == AppLifecycleState.resumed) {
+        _loadAssignedAppointments();
+      }
     }
   }
 
@@ -331,7 +341,7 @@ class _DriverDashboardState extends State<DriverDashboard>
       debugPrint('Error loading current location: $e');
       if (mounted && !_isDisposed) {
         setState(() {
-          _currentAddress = 'Location unavailable';
+          _currentAddress = context.tr('locationUnavailable');
         });
       }
     }
@@ -572,15 +582,23 @@ class _DriverDashboardState extends State<DriverDashboard>
       await _loadDriverStatus();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Status updated to: $status')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr('statusUpdated', args: {'status': status}),
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error updating status: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr('errorUpdatingStatus', args: {'error': e.toString()}),
+            ),
+          ),
+        );
       }
     }
   }
@@ -593,7 +611,7 @@ class _DriverDashboardState extends State<DriverDashboard>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vet2U Driver'),
+        title: Text(context.tr('vet2UDriver')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -629,7 +647,9 @@ class _DriverDashboardState extends State<DriverDashboard>
                     child: Row(
                       children: [
                         Text(
-                          isOnline ? 'Online' : 'Offline',
+                          isOnline
+                              ? context.tr('online')
+                              : context.tr('offline'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -668,7 +688,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 onPressed: () => _showLanguageDialog(context, localeProvider),
-                tooltip: 'Change Language',
+                tooltip: context.tr('changeLanguage'),
               );
             },
           ),
@@ -724,7 +744,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         builder: (context, animationValue, child) {
           return Opacity(
             opacity: animationValue,
-            child: Transform.translate(
+            child: Translations.get(
               offset: Offset(0, 20 * (1 - animationValue)),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
@@ -738,7 +758,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                       builder: (context, locationValue, child) {
                         return Opacity(
                           opacity: locationValue,
-                          child: Transform.translate(
+                          child: Translations.get(
                             offset: Offset(-30 * (1 - locationValue), 0),
                             child: Card(
                               color: Colors.blue.shade50,
@@ -757,8 +777,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
-                                            'Your Location',
+                                          Text(
+                                            context.tr('yourLocation'),
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: Colors.blue,
@@ -768,7 +788,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                           const SizedBox(height: 4),
                                           Text(
                                             _currentAddress ??
-                                                'Getting location...',
+                                                context.tr('gettingLocation'),
                                             style: const TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w500,
@@ -802,18 +822,21 @@ class _DriverDashboardState extends State<DriverDashboard>
                       builder: (context, mapValue, child) {
                         return Opacity(
                           opacity: mapValue,
-                          child: Transform.translate(
+                          child: Translations.get(
                             offset: Offset(30 * (1 - mapValue), 0),
                             child: Column(
                               children: [
                                 Row(
                                   children: [
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
-                                        'Live Map',
+                                        context.tr('liveMap'),
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
                                         ),
                                       ),
                                     ),
@@ -935,8 +958,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                             ),
                                                       ),
                                                       const SizedBox(width: 4),
-                                                      const Text(
-                                                        'You',
+                                                      Text(
+                                                        context.tr('you'),
                                                         style: TextStyle(
                                                           fontSize: 12,
                                                           fontWeight:
@@ -963,8 +986,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                           ),
                                                     ),
                                                     const SizedBox(width: 4),
-                                                    const Text(
-                                                      'Next Stop',
+                                                    Text(
+                                                      context.tr('nextStop'),
                                                       style: TextStyle(
                                                         fontSize: 12,
                                                         fontWeight:
@@ -990,8 +1013,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                           ),
                                                     ),
                                                     const SizedBox(width: 4),
-                                                    const Text(
-                                                      'Other Stops',
+                                                    Text(
+                                                      context.tr('otherStops'),
                                                       style: TextStyle(
                                                         fontSize: 12,
                                                         fontWeight:
@@ -1023,7 +1046,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                       builder: (context, statusValue, child) {
                         return Opacity(
                           opacity: statusValue,
-                          child: Transform.translate(
+                          child: Translations.get(
                             offset: Offset(-30 * (1 - statusValue), 0),
                             child: Card(
                               elevation: 0,
@@ -1043,7 +1066,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Driver Status',
+                                      context.tr('driverStatus'),
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium
@@ -1086,7 +1109,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      'Status updates automatically based on location and activity.',
+                                      context.tr('statusUpdatesAutomatically'),
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium
@@ -1116,7 +1139,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                         builder: (context, doctorValue, child) {
                           return Opacity(
                             opacity: doctorValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - doctorValue), 0),
                               child: Card(
                                 elevation: 0,
@@ -1147,7 +1170,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                           ),
                                           const SizedBox(width: 12),
                                           Text(
-                                            'Linked Doctor',
+                                            context.tr('linkedDoctor'),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .titleMedium
@@ -1181,7 +1204,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                       if (_linkedDoctor!.phone != null) ...[
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Phone: ${_linkedDoctor!.phone}',
+                                          '${context.tr('phone')}: ${_linkedDoctor!.phone}',
                                           style: TextStyle(
                                             color: Theme.of(context)
                                                 .colorScheme
@@ -1202,8 +1225,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                             12,
                                           ),
                                         ),
-                                        child: const Text(
-                                          'ACTIVE',
+                                        child: Text(
+                                          context.tr('active'),
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
@@ -1232,13 +1255,13 @@ class _DriverDashboardState extends State<DriverDashboard>
                         builder: (context, appointmentValue, child) {
                           return Opacity(
                             opacity: appointmentValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - appointmentValue), 0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Next Appointment',
+                                  Text(
+                                    context.tr('nextAppointment'),
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -1267,7 +1290,9 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                   _assignedAppointments
                                                           .first
                                                           .address ??
-                                                      'Address not available',
+                                                      context.tr(
+                                                        'addressNotAvailable',
+                                                      ),
                                                   style: const TextStyle(
                                                     fontSize: 18,
                                                     fontWeight: FontWeight.bold,
@@ -1285,7 +1310,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
-                                                'Scheduled: ${_assignedAppointments.first.scheduledAt}',
+                                                '${context.tr('scheduled')}: ${_assignedAppointments.first.scheduledAt}',
                                                 style: const TextStyle(
                                                   fontSize: 16,
                                                 ),
@@ -1330,7 +1355,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                   _assignedAppointments.first,
                                                 ),
                                             icon: const Icon(Icons.navigation),
-                                            label: const Text('Navigate'),
+                                            label: Text(context.tr('navigate')),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.blue,
                                             ),
@@ -1354,16 +1379,19 @@ class _DriverDashboardState extends State<DriverDashboard>
                         builder: (context, noAppointmentValue, child) {
                           return Opacity(
                             opacity: noAppointmentValue,
-                            child: Transform.translate(
+                            child: Translations.get(
                               offset: Offset(30 * (1 - noAppointmentValue), 0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'No Appointments Available',
+                                  Text(
+                                    context.tr('noAppointmentsAvailable'),
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -1380,16 +1408,19 @@ class _DriverDashboardState extends State<DriverDashboard>
                                             color: Colors.grey.shade600,
                                           ),
                                           const SizedBox(height: 16),
-                                          const Text(
-                                            'Link with a Doctor',
+                                          Text(
+                                            context.tr('linkWithADoctor'),
                                             style: TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
                                             ),
                                           ),
                                           const SizedBox(height: 8),
-                                          const Text(
-                                            'You need to link with a doctor to see appointments. Only linked drivers can view and manage appointments.',
+                                          Text(
+                                            context.tr('needToLinkWithDoctor'),
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontSize: 14,
@@ -1406,8 +1437,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                   ),
                                                 ),
                                             icon: const Icon(Icons.person_add),
-                                            label: const Text(
-                                              'Link with Doctor',
+                                            label: Text(
+                                              context.tr('linkWithADoctor'),
                                             ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.blue,
@@ -1438,16 +1469,19 @@ class _DriverDashboardState extends State<DriverDashboard>
                       builder: (context, allAppointmentsValue, child) {
                         return Opacity(
                           opacity: allAppointmentsValue,
-                          child: Transform.translate(
+                          child: Translations.get(
                             offset: Offset(-30 * (1 - allAppointmentsValue), 0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'All Appointments',
+                                Text(
+                                  context.tr('allAppointments'),
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -1467,16 +1501,18 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                 color: Colors.grey,
                                               ),
                                               const SizedBox(height: 16),
-                                              const Text(
-                                                'No doctor linked',
+                                              Text(
+                                                context.tr('noDoctorLinked'),
                                                 style: TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              const Text(
-                                                'Link with a doctor to see appointments',
+                                              Text(
+                                                context.tr(
+                                                  'linkWithDoctorToSeeAppointments',
+                                                ),
                                                 textAlign: TextAlign.center,
                                                 style: TextStyle(
                                                   color: Colors.grey,
@@ -1494,8 +1530,8 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                 icon: const Icon(
                                                   Icons.person_add,
                                                 ),
-                                                label: const Text(
-                                                  'Link with Doctor',
+                                                label: Text(
+                                                  context.tr('linkWithADoctor'),
                                                 ),
                                               ),
                                             ] else ...[
@@ -1505,8 +1541,10 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                 color: Colors.grey,
                                               ),
                                               const SizedBox(height: 16),
-                                              const Text(
-                                                'No appointments assigned for today',
+                                              Text(
+                                                context.tr(
+                                                  'noAppointmentsAssignedForToday',
+                                                ),
                                                 style: TextStyle(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w500,
@@ -1557,13 +1595,13 @@ class _DriverDashboardState extends State<DriverDashboard>
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'Status: ${appointment.status}',
+                                                '${context.tr('status')}: ${appointment.status}',
                                               ),
                                               Text(
-                                                'Address: ${appointment.address}',
+                                                '${context.tr('address')}: ${appointment.address}',
                                               ),
                                               Text(
-                                                'Time: ${appointment.scheduledAt}',
+                                                '${context.tr('time')}: ${appointment.scheduledAt}',
                                               ),
                                             ],
                                           ),
@@ -1594,7 +1632,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                       builder: (context, actionsValue, child) {
                         return Opacity(
                           opacity: actionsValue,
-                          child: Transform.translate(
+                          child: Translations.get(
                             offset: Offset(30 * (1 - actionsValue), 0),
                             child: Column(
                               children: [
@@ -1603,7 +1641,7 @@ class _DriverDashboardState extends State<DriverDashboard>
                                     vertical: 16,
                                   ),
                                   child: Text(
-                                    'Quick Actions',
+                                    context.tr('quickActions'),
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
@@ -1624,25 +1662,25 @@ class _DriverDashboardState extends State<DriverDashboard>
                                   mainAxisSpacing: 16,
                                   children: [
                                     ModernGridCard(
-                                      title: 'Vehicle Check',
+                                      title: context.tr('vehicleCheck'),
                                       icon: Icons.directions_car,
                                       color: Colors.blue,
                                       onTap: () => _showVehicleCheckDialog(),
                                     ),
                                     ModernGridCard(
-                                      title: 'Navigation',
+                                      title: context.tr('navigation'),
                                       icon: Icons.navigation,
                                       color: Colors.green,
                                       onTap: () => _openNavigation(),
                                     ),
                                     ModernGridCard(
-                                      title: 'Emergency',
+                                      title: context.tr('emergency'),
                                       icon: Icons.emergency,
                                       color: Colors.red,
                                       onTap: () => _handleEmergency(),
                                     ),
                                     ModernGridCard(
-                                      title: 'Support',
+                                      title: context.tr('support'),
                                       icon: Icons.support_agent,
                                       color: Colors.purple,
                                       onTap: () => _contactSupport(),
@@ -1684,14 +1722,12 @@ class _DriverDashboardState extends State<DriverDashboard>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Vehicle Check'),
-        content: const Text(
-          'Vehicle check functionality will be implemented here.',
-        ),
+        title: Text(context.tr('vehicleCheckDialog')),
+        content: Text(context.tr('vehicleCheckMessage')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(context.tr('ok')),
           ),
         ],
       ),
@@ -1703,7 +1739,7 @@ class _DriverDashboardState extends State<DriverDashboard>
       await _launchNavigation(_driverLat!, _driverLng!, null, null);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Current location not available')),
+        SnackBar(content: Text(context.tr('currentLocationNotAvailable'))),
       );
     }
   }
@@ -1718,7 +1754,7 @@ class _DriverDashboardState extends State<DriverDashboard>
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Current location not available')),
+        SnackBar(content: Text(context.tr('currentLocationNotAvailable'))),
       );
     }
   }
@@ -1745,45 +1781,30 @@ class _DriverDashboardState extends State<DriverDashboard>
     } catch (e) {
       // Fallback for web or if Google Maps not available
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not open maps: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.tr('couldNotOpenMaps', args: {'error': e.toString()}),
+            ),
+          ),
+        );
       }
     }
   }
 
   void _handleEmergency() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Emergency'),
-        content: const Text(
-          'Emergency contact functionality will be implemented here.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Emergency alert sent!')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Send Alert'),
-          ),
-        ],
-      ),
+    // Navigate to emergency cases screen for drivers
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const DriverEmergencyScreen()),
     );
   }
 
   void _contactSupport() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Support contact functionality will be implemented'),
+      SnackBar(
+        content: Text(
+          context.tr('supportContactFunctionalityWillBeImplemented'),
+        ),
       ),
     );
   }
@@ -1797,7 +1818,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(context.tr('close')),
           ),
         ],
       ),
@@ -1808,26 +1829,28 @@ class _DriverDashboardState extends State<DriverDashboard>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Appointment Details'),
+        title: Text(context.tr('appointmentDetails')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Service: ${appointment.serviceType}'),
-            Text('Address: ${appointment.address ?? 'Not specified'}'),
-            Text('Time: ${appointment.scheduledAt}'),
-            Text('Status: ${appointment.status}'),
+            Text('${context.tr('service')}: ${appointment.serviceType}'),
+            Text(
+              '${context.tr('address')}: ${appointment.address ?? context.tr('notSpecified')}',
+            ),
+            Text('${context.tr('time')}: ${appointment.scheduledAt}'),
+            Text('${context.tr('status')}: ${appointment.status}'),
             if (appointment.locationLat != null &&
                 appointment.locationLng != null)
               Text(
-                'Coordinates: ${appointment.locationLat!.toStringAsFixed(4)}, ${appointment.locationLng!.toStringAsFixed(4)}',
+                '${context.tr('coordinates')}: ${appointment.locationLat!.toStringAsFixed(4)}, ${appointment.locationLng!.toStringAsFixed(4)}',
               ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(context.tr('close')),
           ),
           ElevatedButton.icon(
             onPressed: () {
@@ -1835,7 +1858,7 @@ class _DriverDashboardState extends State<DriverDashboard>
               _navigateToAppointment(appointment);
             },
             icon: const Icon(Icons.navigation),
-            label: const Text('Navigate'),
+            label: Text(context.tr('navigate')),
           ),
         ],
       ),
@@ -1886,12 +1909,12 @@ class _DriverDashboardState extends State<DriverDashboard>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Close App'),
-        content: const Text('Are you sure you want to close the app?'),
+        title: Text(context.tr('closeApp')),
+        content: Text(context.tr('areYouSureYouWantToCloseTheApp')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           TextButton(
             onPressed: () {
@@ -1899,7 +1922,7 @@ class _DriverDashboardState extends State<DriverDashboard>
               _performAppExit();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Close App'),
+            child: Text(context.tr('closeApp')),
           ),
         ],
       ),
@@ -1919,9 +1942,9 @@ class _DriverDashboardState extends State<DriverDashboard>
         // Fallback: show message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Please close this browser tab manually to exit the app',
+                context.tr('pleaseCloseThisBrowserTabManuallyToExitTheApp'),
               ),
               duration: Duration(seconds: 5),
             ),
@@ -1939,9 +1962,9 @@ class _DriverDashboardState extends State<DriverDashboard>
       // For desktop or other platforms: Show message since exit may not work reliably
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Please close the application window manually to exit',
+              context.tr('pleaseCloseTheApplicationWindowManuallyToExit'),
             ),
             duration: Duration(seconds: 5),
           ),
@@ -1977,24 +2000,26 @@ class _DriverDashboardState extends State<DriverDashboard>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
+        title: Text(context.tr('selectLanguage')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Text('🇺🇸', style: TextStyle(fontSize: 24)),
-              title: const Text('English'),
+              title: Text(context.tr('english')),
               onTap: () {
                 localeProvider.setLocale(const Locale('en'));
+
                 Navigator.of(context).pop();
               },
               selected: localeProvider.locale.languageCode == 'en',
             ),
             ListTile(
               leading: const Text('🇸🇦', style: TextStyle(fontSize: 24)),
-              title: const Text('العربية'),
+              title: Text(context.tr('arabic')),
               onTap: () {
                 localeProvider.setLocale(const Locale('ar'));
+
                 Navigator.of(context).pop();
               },
               selected: localeProvider.locale.languageCode == 'ar',
@@ -2004,7 +2029,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
         ],
       ),

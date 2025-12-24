@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/van.dart';
 import '../../models/user.dart';
 import '../../db/db_helper.dart';
+import '../../translations.dart';
 
 class VanManagementScreen extends StatefulWidget {
   const VanManagementScreen({super.key});
@@ -143,20 +144,20 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
       if (_isEditing) {
         await vanProvider.updateVan(_editingVan!.id!, van);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Van updated successfully')),
+          SnackBar(content: Text(context.tr('vanUpdatedSuccessfully'))),
         );
       } else {
         await vanProvider.addVan(van);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Van added successfully')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('vanAddedSuccessfully'))),
+        );
       }
 
       _clearForm();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error saving van: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('errorSavingVan')}: $e')),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -170,9 +171,12 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Van'),
+        title: Text(context.tr('deleteVan')),
         content: Text(
-          'Are you sure you want to delete "${van.name}"? This action cannot be undone.',
+          context.tr(
+            'areYouSureYouWantToDeleteVan',
+            args: {'vanName': van.name},
+          ),
         ),
         actions: [
           TextButton(
@@ -193,9 +197,9 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
     try {
       final vanProvider = context.read<VanProvider>();
       await vanProvider.deleteVan(van.id!);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Van deleted successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('vanDeletedSuccessfully'))),
+      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -242,7 +246,7 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
       await vanProvider.unassignVanFromDoctorAndDriver(van.id!);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Van unassigned successfully')),
+        SnackBar(content: Text(context.tr('vanUnassignedSuccessfully'))),
       );
 
       // Reload data
@@ -278,11 +282,35 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Check if user is admin
+    if (auth.user?.role.toLowerCase() != 'admin') {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Access Denied')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.block, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Access Denied',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('You do not have permission to access this page.'),
+            ],
+          ),
+        ),
+      );
+    }
+
     final vanProvider = context.watch<VanProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Van Management'),
+        title: Text(context.tr('vanManagement')),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
       ),
@@ -299,19 +327,21 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isEditing ? 'Edit Van' : 'Add New Van',
+                      _isEditing
+                          ? context.tr('editVan')
+                          : context.tr('addNewVan'),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Van Name *',
-                        hintText: 'e.g., Vet Van Alpha',
+                      decoration: InputDecoration(
+                        labelText: '${context.tr('vanName')} *',
+                        hintText: context.tr('vanNameExample'),
                       ),
                       validator: (value) {
                         if (value?.trim().isEmpty ?? true) {
-                          return 'Van name is required';
+                          return context.tr('vanNameRequired');
                         }
                         return null;
                       },
@@ -319,13 +349,13 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _licensePlateController,
-                      decoration: const InputDecoration(
-                        labelText: 'License Plate *',
-                        hintText: 'e.g., VET-001',
+                      decoration: InputDecoration(
+                        labelText: '${context.tr('licensePlate')} *',
+                        hintText: context.tr('licensePlateExample'),
                       ),
                       validator: (value) {
                         if (value?.trim().isEmpty ?? true) {
-                          return 'License plate is required';
+                          return context.tr('licensePlateRequired');
                         }
                         return null;
                       },
@@ -336,9 +366,9 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _modelController,
-                            decoration: const InputDecoration(
-                              labelText: 'Model',
-                              hintText: 'e.g., Ford Transit',
+                            decoration: InputDecoration(
+                              labelText: context.tr('model'),
+                              hintText: context.tr('modelExample'),
                             ),
                           ),
                         ),
@@ -346,15 +376,15 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _capacityController,
-                            decoration: const InputDecoration(
-                              labelText: 'Capacity *',
-                              hintText: 'Number of passengers',
+                            decoration: InputDecoration(
+                              labelText: '${context.tr('capacity')} *',
+                              hintText: context.tr('numberOfPassengers'),
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
                               final capacity = int.tryParse(value ?? '');
                               if (capacity == null || capacity < 1) {
-                                return 'Enter valid capacity';
+                                return context.tr('enterValidCapacity');
                               }
                               return null;
                             },
@@ -365,18 +395,18 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Optional description',
+                      decoration: InputDecoration(
+                        labelText: context.tr('description'),
+                        hintText: context.tr('optionalDescription'),
                       ),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _selectedArea,
-                      decoration: const InputDecoration(
-                        labelText: 'Area',
-                        hintText: 'Select an area',
+                      decoration: InputDecoration(
+                        labelText: context.tr('area'),
+                        hintText: context.tr('selectAnArea'),
                       ),
                       items: _ammanDistricts.map((district) {
                         return DropdownMenuItem<String>(
@@ -396,14 +426,18 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _saveVan,
-                            child: Text(_isEditing ? 'Update Van' : 'Add Van'),
+                            child: Text(
+                              _isEditing
+                                  ? context.tr('updateVan')
+                                  : context.tr('addVan'),
+                            ),
                           ),
                         ),
                         if (_isEditing) ...[
                           const SizedBox(width: 8),
                           TextButton(
                             onPressed: _clearForm,
-                            child: const Text('Cancel'),
+                            child: Text(context.tr('cancel')),
                           ),
                         ],
                       ],
@@ -419,7 +453,7 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
             child: vanProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : vanProvider.vans.isEmpty
-                ? const Center(child: Text('No vans found'))
+                ? Center(child: Text(context.tr('noVansFound')))
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: vanProvider.vans.length,
@@ -466,20 +500,20 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                                         ),
                                       );
                                     }
-                                    return const Text(
-                                      'Fully Assigned',
+                                    return Text(
+                                      context.tr('fullyAssigned'),
                                       style: TextStyle(color: Colors.green),
                                     );
                                   },
                                 ),
                               ] else if (van.isPartiallyAssigned)
-                                const Text(
-                                  'Partially Assigned',
+                                Text(
+                                  context.tr('partiallyAssigned'),
                                   style: TextStyle(color: Colors.orange),
                                 )
                               else
-                                const Text(
-                                  'Available',
+                                Text(
+                                  context.tr('available'),
                                   style: TextStyle(color: Colors.grey),
                                 ),
                             ],
@@ -490,7 +524,7 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                               if (van.isAvailable && _linkedPairs.isNotEmpty)
                                 PopupMenuButton<Map<String, dynamic>>(
                                   icon: const Icon(Icons.assignment),
-                                  tooltip: 'Assign to Team',
+                                  tooltip: context.tr('assignToTeam'),
                                   onSelected: (pair) =>
                                       _assignVanToPair(van, pair),
                                   itemBuilder: (context) => _linkedPairs.map((
@@ -511,12 +545,12 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                                 IconButton(
                                   icon: const Icon(Icons.clear),
                                   onPressed: () => _unassignVan(van),
-                                  tooltip: 'Unassign Van',
+                                  tooltip: context.tr('unassignVan'),
                                 ),
                               IconButton(
                                 icon: const Icon(Icons.edit),
                                 onPressed: () => _editVan(van),
-                                tooltip: 'Edit Van',
+                                tooltip: context.tr('editVan'),
                               ),
                               IconButton(
                                 icon: const Icon(
@@ -524,7 +558,7 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
                                   color: Colors.red,
                                 ),
                                 onPressed: () => _deleteVan(van),
-                                tooltip: 'Delete Van',
+                                tooltip: context.tr('deleteVan'),
                               ),
                             ],
                           ),

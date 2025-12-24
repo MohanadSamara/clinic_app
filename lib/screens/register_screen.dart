@@ -1,6 +1,8 @@
 // lib/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../../translations.dart';
 import '../providers/auth_provider.dart';
 import 'role_based_home.dart';
 import 'role_selection_screen.dart';
@@ -62,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   children: [
                     Text(
-                      'Create Account',
+                      AppLocalizations.of(context)!.createAccount,
                       style: theme.textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colorScheme.onSurface,
@@ -70,7 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Let's set up your account",
+                      AppLocalizations.of(context)!.letsSetUpYourAccount,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -96,8 +98,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _name,
                         decoration: InputDecoration(
-                          labelText: 'Full Name',
-                          hintText: 'Enter your full name',
+                          labelText: context.tr('fullName'),
+                          hintText: context.tr('enterYourFullName'),
                           prefixIcon: Icon(
                             Icons.person_outline,
                             color: colorScheme.onSurfaceVariant,
@@ -109,8 +111,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _email,
                         decoration: InputDecoration(
-                          labelText: 'Email Address',
-                          hintText: 'Enter your email',
+                          labelText: context.tr('emailAddress'),
+                          hintText: context.tr('enterYourEmail'),
                           prefixIcon: Icon(
                             Icons.email_outlined,
                             color: colorScheme.onSurfaceVariant,
@@ -123,8 +125,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _pass,
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Min 6 characters',
+                          labelText: context.tr('password'),
+                          hintText: context.tr('min6Characters'),
                           prefixIcon: Icon(
                             Icons.lock_outline,
                             color: colorScheme.onSurfaceVariant,
@@ -137,8 +139,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _phone,
                         decoration: InputDecoration(
-                          labelText: 'Phone Number',
-                          hintText: 'Optional',
+                          labelText: context.tr('phoneNumber'),
+                          hintText: context.tr('optional'),
                           prefixIcon: Icon(
                             Icons.phone_outlined,
                             color: colorScheme.onSurfaceVariant,
@@ -151,8 +153,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       DropdownButtonFormField<String>(
                         value: _selectedRole,
                         decoration: InputDecoration(
-                          labelText: 'Role',
-                          hintText: 'Select your role',
+                          labelText: context.tr('role'),
+                          hintText: context.tr('selectYourRole'),
                           prefixIcon: Icon(
                             Icons.work_outline,
                             color: colorScheme.onSurfaceVariant,
@@ -162,22 +164,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           Icons.arrow_drop_down,
                           color: colorScheme.onSurfaceVariant,
                         ),
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: 'owner',
-                            child: Text('Pet Owner'),
+                            child: Text(context.tr('petOwner')),
                           ),
                           DropdownMenuItem(
                             value: 'doctor',
-                            child: Text('Veterinarian'),
+                            child: Text(context.tr('veterinarian')),
                           ),
                           DropdownMenuItem(
                             value: 'driver',
-                            child: Text('Driver'),
+                            child: Text(context.tr('driver')),
                           ),
                           DropdownMenuItem(
                             value: 'admin',
-                            child: Text('Administrator'),
+                            child: Text(context.tr('administrator')),
                           ),
                         ],
                         onChanged: (value) {
@@ -198,8 +200,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         DropdownButtonFormField<String>(
                           value: _selectedArea,
                           decoration: InputDecoration(
-                            labelText: 'Service Area *',
-                            hintText: 'Select your service area',
+                            labelText: context.tr('serviceAreaRequired'),
+                            hintText: context.tr('selectYourServiceArea'),
                             prefixIcon: Icon(
                               Icons.location_on_outlined,
                               color: colorScheme.onSurfaceVariant,
@@ -225,7 +227,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _selectedRole == 'driver')
                               ? (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please select a service area';
+                                    return context.tr(
+                                      'pleaseSelectServiceArea',
+                                    );
                                   }
                                   return null;
                                 }
@@ -262,7 +266,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   textStyle: theme.textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
-                                child: const Text('Create Account'),
+                                child: Text(context.tr('createAccount')),
                               ),
                       ),
                     ],
@@ -286,7 +290,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'Or continue with',
+                      context.tr('orContinueWith'),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
@@ -312,7 +316,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _googleSignUp,
                       icon: Icon(Icons.g_mobiledata, color: colorScheme.error),
                       label: Text(
-                        'Google',
+                        context.tr('google'),
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
@@ -338,7 +342,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _facebookSignUp,
                       icon: Icon(Icons.facebook, color: colorScheme.secondary),
                       label: Text(
-                        'Facebook',
+                        context.tr('facebook'),
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
@@ -368,7 +372,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Already have an account? ",
+                    context.tr('alreadyHaveAccount'),
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -381,7 +385,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
-                      'Sign In',
+                      context.tr('signIn'),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -402,26 +406,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     // Validation
     if (_name.text.trim().isEmpty) {
-      _showError('Please enter your full name');
+      _showError(context.tr('pleaseEnterYourFullName'));
       return;
     }
     if (_email.text.trim().isEmpty) {
-      _showError('Please enter your email');
+      _showError(context.tr('pleaseEnterYourEmail'));
       return;
     }
     if (!RegExp(
       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
     ).hasMatch(_email.text.trim())) {
-      _showError('Please enter a valid email address');
+      _showError(context.tr('pleaseEnterValidEmailAddress'));
       return;
     }
     if (_pass.text.length < 6) {
-      _showError('Password must be at least 6 characters long');
+      _showError(context.tr('passwordMustBeAtLeast6Characters'));
       return;
     }
     if ((_selectedRole == 'doctor' || _selectedRole == 'driver') &&
         (_selectedArea == null || _selectedArea!.isEmpty)) {
-      _showError('Please select a service area for your role');
+      _showError(context.tr('pleaseSelectServiceAreaForYourRole'));
       return;
     }
 

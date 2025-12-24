@@ -9,6 +9,9 @@ import '../../models/document.dart';
 import '../../models/pet.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class MedicalHistoryScreen extends StatefulWidget {
   final Pet pet;
@@ -40,7 +43,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.pet.name} - Medical History'),
+        title: Text('${widget.pet.name} - ${context.tr('medicalHistory')}'),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -51,7 +54,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
         builder: (context, animationValue, child) {
           return Opacity(
             opacity: animationValue,
-            child: Transform.translate(
+            child: Translations.get(
               offset: Offset(0, 20 * (1 - animationValue)),
               child: Consumer<MedicalProvider>(
                 builder: (context, medicalProvider, child) {
@@ -66,7 +69,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                   if (records.isEmpty) {
                     return EmptyState(
                       icon: Icons.medical_services,
-                      title: 'No records yet',
+                      title: context.tr('noMedicalRecords'),
                       message: 'Your pet\'s past visits will appear here.',
                     );
                   }
@@ -78,7 +81,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                   return Column(
                     children: [
                       SectionHeader(
-                        title: 'Medical History',
+                        title: context.tr('medicalHistory'),
                         subtitle: 'Past visits and treatments',
                       ),
                       Expanded(
@@ -88,7 +91,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                           builder: (context, listValue, child) {
                             return Opacity(
                               opacity: listValue,
-                              child: Transform.translate(
+                              child: Translations.get(
                                 offset: Offset(30 * (1 - listValue), 0),
                                 child: ListView.builder(
                                   padding: const EdgeInsets.all(16),
@@ -105,7 +108,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                                       ),
                                       curve: Curves.easeOutCubic,
                                       builder: (context, cardValue, child) {
-                                        return Transform.translate(
+                                        return Translations.get(
                                           offset: Offset(
                                             -30 * (1 - cardValue),
                                             0,

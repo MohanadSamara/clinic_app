@@ -196,7 +196,10 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
             const SizedBox(height: 20),
             _buildInfoRow(
               'Date',
-              DateFormat('MMM dd, yyyy').format(DateTime.parse(record.date)),
+              DateFormat(
+                'MMM dd, yyyy',
+                Localizations.localeOf(context).languageCode,
+              ).format(DateTime.parse(record.date)),
             ),
             const SizedBox(height: 12),
             _buildInfoRow('Doctor ID', record.doctorId.toString()),
@@ -383,7 +386,7 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Uploaded: ${DateFormat('MMM dd, yyyy').format(document.uploadDate)}',
+              'Uploaded: ${DateFormat('MMM dd, yyyy', Localizations.localeOf(context).languageCode).format(document.uploadDate)}',
             ),
             if (document.description != null) Text(document.description!),
             Text('Size: ${(document.fileSize / 1024).toStringAsFixed(1)} KB'),
@@ -519,3 +522,10 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
     }
   }
 }
+
+
+
+
+
+
+

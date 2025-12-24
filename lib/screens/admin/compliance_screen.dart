@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../db/db_helper.dart';
+import '../../providers/auth_provider.dart';
 
 class ComplianceScreen extends StatefulWidget {
   const ComplianceScreen({super.key});
@@ -108,6 +110,30 @@ class _ComplianceScreenState extends State<ComplianceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Check if user is admin
+    if (auth.user?.role.toLowerCase() != 'admin') {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Access Denied')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.block, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Access Denied',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('You do not have permission to access this page.'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Compliance & Records'),
@@ -326,3 +352,10 @@ class _ComplianceLogDialogState extends State<ComplianceLogDialog> {
     }
   }
 }
+
+
+
+
+
+
+

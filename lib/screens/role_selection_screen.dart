@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'role_based_home.dart';
+import '../../translations.dart';
+
 
 class RoleSelectionScreen extends StatefulWidget {
   final String name;
@@ -70,7 +72,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: const Text('Select Your Role'),
+        title: Text(context.tr('selectYourRole')),
         automaticallyImplyLeading: false,
         backgroundColor: colorScheme.background,
         foregroundColor: colorScheme.onSurface,
@@ -82,14 +84,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Welcome, ${widget.name}!',
+              '${context.tr('welcomeUser')} ${widget.name}!',
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Please select your role to continue:',
+              context.tr('selectRoleToContinue'),
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -135,7 +137,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
             if (_selectedRole == 'doctor' || _selectedRole == 'driver') ...[
               const SizedBox(height: 24),
               Text(
-                'Service Area',
+                context.tr('serviceArea'),
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
@@ -143,7 +145,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Select the area where you will provide services:',
+                context.tr('selectAreaWhereYouWillProvideServices'),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -152,8 +154,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               DropdownButtonFormField<String>(
                 value: _selectedArea,
                 decoration: InputDecoration(
-                  labelText: 'Service Area *',
-                  hintText: 'Select your service area',
+                  labelText: context.tr('serviceAreaRequired'),
+                  hintText: context.tr('selectServiceArea'),
                   prefixIcon: Icon(
                     Icons.location_on_outlined,
                     color: colorScheme.onSurfaceVariant,
@@ -181,7 +183,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     (_selectedRole == 'doctor' || _selectedRole == 'driver')
                     ? (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please select a service area';
+                          return context.tr('pleaseSelectServiceArea');
                         }
                         return null;
                       }
@@ -223,7 +225,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text('Continue'),
+                      child: Text(context.tr('continueButton')),
                     ),
             ),
           ],
@@ -260,7 +262,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text(
+              '${context.tr('error')}: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -272,3 +276,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     }
   }
 }
+
+
+
+
+
+
+

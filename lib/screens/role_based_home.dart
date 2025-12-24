@@ -2,17 +2,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+
 import 'owner/owner_dashboard.dart';
 import 'doctor/doctor_dashboard.dart';
 import 'driver/driver_dashboard.dart';
 import 'admin/admin_dashboard.dart';
 import 'login_screen.dart';
+import '../../translations.dart';
 
 class RoleBasedHome extends StatelessWidget {
   const RoleBasedHome({super.key});
 
   @override
   Widget build(BuildContext context) {
+    
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         // Show loading indicator while initializing
@@ -28,7 +31,7 @@ class RoleBasedHome extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Loading your dashboard...',
+                    context.tr('loadingYourDashboard'),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -68,3 +71,10 @@ class RoleBasedHome extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+

@@ -12,6 +12,9 @@ import '../../providers/auth_provider.dart';
 import '../../models/pet.dart';
 import '../../models/medical_record.dart';
 import '../../components/modern_cards.dart';
+import '../../../translations.dart';
+import '../../../translations/translations.dart';
+import 'package:get/get.dart' hide Translations;
 
 class DocumentUploadScreen extends StatefulWidget {
   const DocumentUploadScreen({super.key});
@@ -99,9 +102,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error picking file: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('errorPickingFile')}: $e')),
+      );
     }
   }
 
@@ -109,7 +112,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     if (_selectedPet == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a pet')));
+      ).showSnackBar(SnackBar(content: Text(context.tr('pleaseSelectPet'))));
       return;
     }
 
@@ -117,7 +120,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       // Adjusted to check both
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a file')));
+      ).showSnackBar(SnackBar(content: Text(context.tr('pleaseSelectFile'))));
       return;
     }
 
@@ -167,7 +170,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
       if (document != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Document uploaded successfully')),
+          SnackBar(content: Text(context.tr('documentUploadedSuccessfully'))),
         );
         // Reset form
         setState(() {
@@ -180,7 +183,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload document')),
+          SnackBar(content: Text(context.tr('failedToUploadDocument'))),
         );
       }
     } catch (e) {
@@ -189,9 +192,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       if (mounted) {
         setState(() => _uploadProgress = 0.0);
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error uploading document: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('errorUploadingDocument')}: $e')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isUploading = false);
@@ -203,7 +206,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upload Medical Document'),
+        title: Text(context.tr('uploadDocument')),
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
       ),
@@ -266,7 +269,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Link to Medical Record (Optional)',
+                  context.tr('linkToMedicalRecord'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -274,13 +277,13 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Associate this document with a specific medical record',
+                  context.tr('associateWithRecord'),
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<MedicalRecord?>(
                   value: _selectedMedicalRecord,
-                  hint: const Text('Select a medical record (optional)'),
+                  hint: Text(context.tr('noSpecificRecord')),
                   items: [
                     const DropdownMenuItem<MedicalRecord?>(
                       value: null,
@@ -331,7 +334,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       duration: Duration(milliseconds: 400 + (index * 100)),
       curve: Curves.easeOutCubic,
       builder: (context, animationValue, childWidget) {
-        return Transform.translate(
+        return Translations.get(
           offset: Offset(0, 30 * (1 - animationValue)),
           child: Opacity(opacity: animationValue, child: childWidget),
         );
@@ -344,10 +347,10 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     return Consumer<PetProvider>(
       builder: (context, petProvider, child) {
         if (petProvider.pets.isEmpty) {
-          return const Card(
+          return Card(
             child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No pets available. Please add pets first.'),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(context.tr('noPetsFound')),
             ),
           );
         }
@@ -358,14 +361,17 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Select Pet',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Text(
+                  context.tr('selectPet'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<Pet>(
                   initialValue: _selectedPet,
-                  hint: const Text('Choose a pet'),
+                  hint: Text(context.tr('choosePet')),
                   items: petProvider.pets.map((pet) {
                     return DropdownMenuItem<Pet>(
                       value: pet,
@@ -419,7 +425,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _fileName ?? 'Tap to select a file',
+                _fileName ?? context.tr('tapToSelectFile'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: _fileName != null
@@ -435,7 +441,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Supported: PDF, JPG, PNG, DOC, DOCX, TXT (Max 10MB)',
+                context.tr('supportedFormats'),
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(
@@ -458,17 +464,17 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Description (Optional)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              context.tr('description'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Enter document description...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: context.tr('description'),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -484,9 +490,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Access Level',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              context.tr('accessLevel'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -509,8 +515,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Private: Only pet owner and uploader\nPublic: Anyone can view\nRestricted: Only doctors and admins',
+            Text(
+              context.tr('accessLevelDescription'),
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -585,7 +591,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Uploading...',
+                    context.tr('uploading'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -600,7 +606,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   const Icon(Icons.cloud_upload, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Upload Document',
+                    context.tr('upload'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

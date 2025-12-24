@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/payment_provider.dart';
 import '../../models/payment.dart';
 import '../../db/db_helper.dart';
+import '../../../translations.dart';
 
 class PaymentProcessingScreen extends StatefulWidget {
   final Payment payment;
@@ -37,7 +39,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Complete Payment'),
+        title: Text(context.tr('completePayment')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -57,7 +59,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Payment Summary',
+                        context.tr('paymentSummary'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -90,7 +92,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
 
               // Payment Method Selection
               Text(
-                'Payment Method',
+                context.tr('paymentMethod'),
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -124,7 +126,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
               // Card Details Form
               if (_selectedMethod == 'card') ...[
                 Text(
-                  'Card Details',
+                  context.tr('cardDetails'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -264,8 +266,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'You will pay in cash when the service is delivered. '
-                            'Please have the exact amount ready.',
+                            context.tr('youWillPayInCash'),
                             style: TextStyle(color: Colors.orange.shade800),
                           ),
                         ),
@@ -322,7 +323,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Your payment information is secure',
+                      context.tr('yourPaymentInformationIsSecure'),
                       style: TextStyle(
                         color: Colors.green.shade600,
                         fontSize: 12,
@@ -482,3 +483,10 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
     }
   }
 }
+
+
+
+
+
+
+

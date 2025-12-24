@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../db/db_helper.dart';
+import '../../providers/auth_provider.dart';
 
 class ReportingScreen extends StatefulWidget {
   const ReportingScreen({super.key});
@@ -90,6 +92,30 @@ class _ReportingScreenState extends State<ReportingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Check if user is admin
+    if (auth.user?.role.toLowerCase() != 'admin') {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Access Denied')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.block, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Access Denied',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('You do not have permission to access this page.'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reporting & Analytics'),
@@ -142,7 +168,10 @@ class _ReportingScreenState extends State<ReportingScreen> {
                       ),
                       const SizedBox(width: 16),
                       Text(
-                        DateFormat('MMM dd, yyyy').format(_selectedDate),
+                        DateFormat(
+                          'MMM dd, yyyy',
+                          Localizations.localeOf(context).languageCode,
+                        ).format(_selectedDate),
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -272,6 +301,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
                               title: Text(
                                 DateFormat(
                                   'MMM dd, yyyy',
+                                  Localizations.localeOf(context).languageCode,
                                 ).format(DateTime.parse(count['day'])),
                               ),
                               trailing: Text('${count['count']} appointments'),
@@ -382,3 +412,10 @@ class _ReportingScreenState extends State<ReportingScreen> {
     );
   }
 }
+
+
+
+
+
+
+
