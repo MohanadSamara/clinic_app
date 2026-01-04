@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/admin_provider.dart';
@@ -26,6 +27,30 @@ import 'services/notification_service.dart';
 import 'services/calendar_service.dart';
 import 'screens/loading_screen.dart';
 import 'theme/vet_theme.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
+// Web-specific imports
+import 'dart:html' as html;
+import 'dart:js' as js;
+
+void _setupWebCloseHandling() {
+  if (kIsWeb) {
+    // Add beforeunload event listener to ensure data is saved before page closes
+    html.window.onBeforeUnload.listen((event) {
+      // Note: We can't do async operations here due to browser limitations
+      // But we can show a confirmation dialog
+      // The actual data saving happens through the app lifecycle events we already implemented
+
+      // Optional: Show confirmation dialog (browsers may ignore this)
+      // event.returnValue = 'Are you sure you want to leave? Data will be saved automatically.';
+
+      debugPrint(
+        'Browser close detected - data should be saved via lifecycle events',
+      );
+    });
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +75,26 @@ void main() async {
     // Initialize sample vans for testing
     await _initializeSampleVans();
 
+    // Create a file in Documents directory (skip on web)
+    if (!kIsWeb) {
+      try {
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/created_file.txt');
+        await file.writeAsString(
+          'This file was created by the Vet2U app on ${DateTime.now()}.',
+        );
+        debugPrint('File created at: ${file.path}');
+      } catch (e) {
+        debugPrint('Error creating file: $e');
+      }
+    }
+
     runApp(MyApp(authProvider: authProvider));
+
+    // Setup web-specific close handling
+    if (kIsWeb) {
+      _setupWebCloseHandling();
+    }
   } catch (e, stackTrace) {
     debugPrint('Error in main: $e');
     debugPrint('Stack trace: $stackTrace');

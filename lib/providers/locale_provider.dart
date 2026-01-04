@@ -36,4 +36,13 @@ class LocaleProvider with ChangeNotifier {
       // ignore errors
     }
   }
+
+  Future<void> saveLocalePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, _locale.languageCode);
+    } catch (_) {
+      // ignore errors
+    }
+  }
 }

@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import '../models/payment.dart';
 
+// Web-specific imports
+import 'dart:html' as html;
+
 class PdfService {
-  static Future<String> generateInvoicePdf(Payment payment) async {
+  static Future<void> generateInvoicePdf(Payment payment) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -195,13 +199,24 @@ class PdfService {
       ),
     );
 
-    // Save the PDF
-    final output = await getApplicationDocumentsDirectory();
+    // Save or download the PDF
     final fileName = 'invoice_${payment.invoiceNumber ?? payment.id}.pdf';
-    final file = File('${output.path}/$fileName');
-    await file.writeAsBytes(await pdf.save());
+    final bytes = await pdf.save();
 
-    return file.path;
+    if (kIsWeb) {
+      // For web, trigger download
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+    } else {
+      // For mobile/desktop, save to documents directory
+      final output = await getApplicationDocumentsDirectory();
+      final file = File('${output.path}/$fileName');
+      await file.writeAsBytes(bytes);
+    }
   }
 
   static String _formatDate(String dateString) {
@@ -213,10 +228,3 @@ class PdfService {
     }
   }
 }
-
-
-
-
-
-
-

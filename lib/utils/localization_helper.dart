@@ -220,6 +220,26 @@ class LocalizationHelper {
         return _localizations!.doctorProfile;
       case 'editDoctorProfile':
         return _localizations!.editDoctorProfile;
+      case 'updateYourProfessionalInformation':
+        return _localizations!.updateYourProfessionalInformation;
+      case 'profilePictureUploadComingSoon':
+        return _localizations!.profilePictureUploadComingSoon;
+      case 'phoneRequiredForDoctors':
+        return _localizations!.phoneRequiredForDoctors;
+      case 'enterValidPhoneNumber':
+        return _localizations!.enterValidPhoneNumber;
+      case 'yearsHint':
+        return _localizations!.yearsHint;
+      case 'enterRealisticYears':
+        return _localizations!.enterRealisticYears;
+      case 'bioHint':
+        return _localizations!.bioHint;
+      case 'currentPasswordRequired':
+        return _localizations!.currentPasswordRequired;
+      case 'newPasswordRequired':
+        return _localizations!.newPasswordRequired;
+      case 'confirmPasswordRequired':
+        return _localizations!.confirmPasswordRequired;
       case 'profileUpdatedSuccessfully':
         return _localizations!.profileUpdatedSuccessfully;
 

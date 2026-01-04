@@ -36,13 +36,33 @@ class DBHelper {
     if (kIsWeb) {
       // For web, use the default path (IndexedDB)
       dbPath = await getDatabasesPath();
-    } else if (Platform.isAndroid || Platform.isIOS) {
-      // For mobile, use the standard app data directory
-      dbPath = await getDatabasesPath();
     } else {
-      // For desktop (Windows, Linux, macOS), use a persistent directory in the user's documents
-      final directory = await getApplicationDocumentsDirectory();
-      dbPath = directory.path;
+      // For mobile and desktop platforms
+      try {
+        // Check if we're on mobile platforms
+        bool isMobile = false;
+        try {
+          // Only access Platform class on non-web platforms
+          if (!kIsWeb) {
+            isMobile = Platform.isAndroid || Platform.isIOS;
+          }
+        } catch (e) {
+          // If Platform access fails, assume desktop
+          isMobile = false;
+        }
+
+        if (isMobile) {
+          // For mobile, use the standard app data directory
+          dbPath = await getDatabasesPath();
+        } else {
+          // For desktop (Windows, Linux, macOS), use a persistent directory in the user's documents
+          final directory = await getApplicationDocumentsDirectory();
+          dbPath = directory.path;
+        }
+      } catch (e) {
+        // Fallback to getDatabasesPath for any platform detection issues
+        dbPath = await getDatabasesPath();
+      }
     }
     final path = join(dbPath, filePath);
     return await openDatabase(
@@ -2211,5 +2231,241 @@ class DBHelper {
     stats['low_stock_items'] = lowStockItems;
 
     return stats;
+  }
+
+  // ---------- RAW SQL QUERY EXECUTION ----------
+  Future<List<Map<String, dynamic>>> executeRawQuery(
+    String sql, [
+    List<dynamic>? arguments,
+  ]) async {
+    final db = await instance.database;
+    return await db.rawQuery(sql, arguments);
+  }
+
+  Future<int> executeRawUpdate(String sql, [List<dynamic>? arguments]) async {
+    final db = await instance.database;
+    return await db.rawUpdate(sql, arguments);
+  }
+
+  Future<int> executeRawDelete(String sql, [List<dynamic>? arguments]) async {
+    final db = await instance.database;
+    return await db.rawDelete(sql, arguments);
+  }
+
+  Future<int> executeRawInsert(String sql, [List<dynamic>? arguments]) async {
+    final db = await instance.database;
+    return await db.rawInsert(sql, arguments);
+  }
+
+  // ---------- DATABASE FILE ACCESS ----------
+  Future<String> getDatabasePath() async {
+    String dbPath;
+    if (kIsWeb) {
+      // For web, use the default path (IndexedDB)
+      dbPath = await getDatabasesPath();
+    } else {
+      // For mobile and desktop platforms
+      try {
+        // Check if we're on mobile platforms
+        bool isMobile = false;
+        try {
+          // Only access Platform class on non-web platforms
+          if (!kIsWeb) {
+            isMobile = Platform.isAndroid || Platform.isIOS;
+          }
+        } catch (e) {
+          // If Platform access fails, assume desktop
+          isMobile = false;
+        }
+
+        if (isMobile) {
+          // For mobile, use the standard app data directory
+          dbPath = await getDatabasesPath();
+        } else {
+          // For desktop (Windows, Linux, macOS), use a persistent directory in the user's documents
+          final directory = await getApplicationDocumentsDirectory();
+          dbPath = directory.path;
+        }
+      } catch (e) {
+        // Fallback to getDatabasesPath for any platform detection issues
+        dbPath = await getDatabasesPath();
+      }
+    }
+    final path = join(dbPath, 'vet_clinic.db');
+    return path;
+  }
+
+  /// Get the database file path for external access (CLI/GUI tools)
+  Future<String> getDatabaseFilePathForExternalAccess() async {
+    final path = await getDatabasePath();
+
+    // For desktop platforms, return the actual file path
+    if (!kIsWeb) {
+      try {
+        // Check if we're on mobile platforms
+        bool isMobile = false;
+        try {
+          // Only access Platform class on non-web platforms
+          if (!kIsWeb) {
+            isMobile = Platform.isAndroid || Platform.isIOS;
+          }
+        } catch (e) {
+          // If Platform access fails, assume desktop
+          isMobile = false;
+        }
+
+        if (!isMobile) {
+          return path;
+        }
+      } catch (e) {
+        // If platform detection fails, assume desktop
+        return path;
+      }
+    }
+
+    // For mobile and web, we need to copy the database to a shared location
+    try {
+      if (kIsWeb) {
+        // For web, we can't directly access the file system, but we can export
+        return 'Web platform: Use the export functionality to get database data';
+      } else {
+        // For mobile, copy to app documents directory
+        final appDir = await getApplicationDocumentsDirectory();
+        final externalPath = join(appDir.path, 'vet_clinic.db');
+        final sourceFile = File(path);
+        final targetFile = File(externalPath);
+
+        if (await sourceFile.exists()) {
+          await sourceFile.copy(externalPath);
+          return externalPath;
+        }
+        return 'Mobile platform: Database file copied to app documents directory';
+      }
+    } catch (e) {
+      debugPrint('Error accessing external database path: $e');
+    }
+
+    return path;
+  }
+
+  Future<Map<String, dynamic>> getDatabaseInfo() async {
+    final path = await getDatabasePath();
+    final file = File(path);
+
+    bool exists = await file.exists();
+    int size = 0;
+    String lastModified = 'N/A';
+
+    if (exists) {
+      size = await file.length();
+      final stat = await file.stat();
+      lastModified = stat.modified.toIso8601String();
+    }
+
+    String platformName = 'Unknown';
+
+    // Handle web platform separately
+    if (kIsWeb) {
+      platformName = 'Web (IndexedDB)';
+    } else {
+      try {
+        // Check if we're on mobile platforms
+        bool isAndroid = false;
+        bool isIOS = false;
+        bool isWindows = false;
+        bool isLinux = false;
+        bool isMacOS = false;
+
+        try {
+          // Only access Platform class on non-web platforms
+          if (!kIsWeb) {
+            isAndroid = Platform.isAndroid;
+            isIOS = Platform.isIOS;
+            isWindows = Platform.isWindows;
+            isLinux = Platform.isLinux;
+            isMacOS = Platform.isMacOS;
+          }
+        } catch (e) {
+          // If Platform access fails, keep 'Unknown'
+        }
+
+        if (isAndroid) {
+          platformName = 'Android';
+        } else if (isIOS) {
+          platformName = 'iOS';
+        } else if (isWindows) {
+          platformName = 'Windows';
+        } else if (isLinux) {
+          platformName = 'Linux';
+        } else if (isMacOS) {
+          platformName = 'macOS';
+        }
+      } catch (e) {
+        // If platform detection fails, keep 'Unknown'
+      }
+    }
+
+    return {
+      'path': path,
+      'exists': exists,
+      'size': size,
+      'lastModified': lastModified,
+      'platform': platformName,
+    };
+  }
+
+  /// Copy database file to a location accessible by external tools
+  Future<String> copyDatabaseForExternalAccess() async {
+    final sourcePath = await getDatabasePath();
+    final sourceFile = File(sourcePath);
+
+    if (!await sourceFile.exists()) {
+      throw Exception('Database file does not exist at: $sourcePath');
+    }
+
+    String targetPath;
+
+    if (kIsWeb) {
+      // For web, we can't copy to file system, but we can provide export instructions
+      return 'Web platform: Use the export functionality to get database data. The database is stored in IndexedDB and cannot be directly accessed as a file.';
+    } else {
+      // For mobile and desktop platforms
+      try {
+        // Check if we're on mobile platforms
+        bool isMobile = false;
+        try {
+          // Only access Platform class on non-web platforms
+          if (!kIsWeb) {
+            isMobile = Platform.isAndroid || Platform.isIOS;
+          }
+        } catch (e) {
+          // If Platform access fails, assume desktop
+          isMobile = false;
+        }
+
+        if (isMobile) {
+          // For mobile, copy to app documents directory
+          final appDir = await getApplicationDocumentsDirectory();
+          targetPath = join(appDir.path, 'vet_clinic_export.db');
+        } else {
+          // For desktop, copy to a known location
+          final appDir = await getApplicationDocumentsDirectory();
+          targetPath = join(appDir.path, 'vet_clinic_export.db');
+        }
+      } catch (e) {
+        // Fallback to getDatabasesPath
+        final dbPath = await getDatabasesPath();
+        targetPath = join(dbPath, 'vet_clinic_export.db');
+      }
+    }
+
+    try {
+      final targetFile = await sourceFile.copy(targetPath);
+      debugPrint('Database copied to: $targetPath');
+      return targetPath;
+    } catch (e) {
+      debugPrint('Error copying database: $e');
+      throw Exception('Failed to copy database file: $e');
+    }
   }
 }

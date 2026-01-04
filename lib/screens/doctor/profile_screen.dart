@@ -6,7 +6,7 @@ import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
 import '../../l10n/app_localizations.dart';
-import '../../translations/translations.dart';
+import '../../translations.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({super.key});
@@ -54,6 +54,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Load doctor-specific data (simulated for now)
+    _loadDoctorProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final user = context.read<AuthProvider>().user;
     if (user != null) {
       _nameController.text = user.name;
@@ -61,9 +68,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       _phoneController.text = user.phone ?? '';
       _selectedArea = user.area;
     }
-
-    // Load doctor-specific data (simulated for now)
-    _loadDoctorProfile();
   }
 
   @override
@@ -138,11 +142,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.profileUpdatedSuccessfully,
-            ),
-          ),
+          SnackBar(content: Text(context.tr('profileUpdatedSuccessfully'))),
         );
         Navigator.of(context).pop();
       }
@@ -175,7 +175,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.doctorProfile),
+        title: Text(context.tr('doctorProfile')),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -186,7 +186,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         builder: (context, animationValue, child) {
           return Opacity(
             opacity: animationValue,
-            child: Translations.get(
+            child: Transform.translate(
               offset: Offset(0.0, 20.0 * (1.0 - animationValue)),
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(AppTheme.padding),
@@ -202,15 +202,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         builder: (context, headerValue, child) {
                           return Opacity(
                             opacity: headerValue,
-                            child: Translations.get(
+                            child: Transform.translate(
                               offset: Offset(-30.0 * (1.0 - headerValue), 0.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.editDoctorProfile,
+                                    context.tr('editDoctorProfile'),
                                     style: Theme.of(context)
                                         .textTheme
                                         .headlineMedium
@@ -223,9 +221,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.updateYourProfessionalInformation,
+                                    context.tr(
+                                      'updateYourProfessionalInformation',
+                                    ),
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
                                           color: Theme.of(context)
@@ -249,7 +247,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         builder: (context, avatarValue, child) {
                           return Opacity(
                             opacity: avatarValue,
-                            child: Translations.get(
+                            child: Transform.translate(
                               offset: Offset(30.0 * (1.0 - avatarValue), 0.0),
                               child: Center(
                                 child: Column(
@@ -276,19 +274,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              AppLocalizations.of(
-                                                context,
-                                              )!.profilePictureUploadComingSoon,
+                                              context.tr(
+                                                'profilePictureUploadComingSoon',
+                                              ),
                                             ),
                                           ),
                                         );
                                       },
                                       icon: const Icon(Icons.camera_alt),
-                                      label: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.changePhoto,
-                                      ),
+                                      label: Text(context.tr('changePhoto')),
                                     ),
                                   ],
                                 ),
@@ -306,7 +300,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         builder: (context, personalValue, child) {
                           return Opacity(
                             opacity: personalValue,
-                            child: Translations.get(
+                            child: Transform.translate(
                               offset: Offset(
                                 (-30 * (1 - personalValue)).toDouble(),
                                 0,
@@ -329,9 +323,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.personalInformation,
+                                        context.tr('personalInformation'),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -348,22 +340,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _nameController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.fullName,
+                                          labelText: context.tr('fullName'),
                                           prefixIcon: const Icon(Icons.person),
                                         ),
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.nameRequired;
+                                            return context.tr('nameRequired');
                                           }
                                           if (value.trim().length < 2) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.nameMinLength;
+                                            return context.tr('nameMinLength');
                                           }
                                           return null;
                                         },
@@ -374,9 +360,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _emailController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.emailAddress,
+                                          labelText: context.tr('emailAddress'),
                                           prefixIcon: const Icon(Icons.email),
                                         ),
                                         readOnly: true,
@@ -388,26 +372,24 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _phoneController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.phoneNumber,
+                                          labelText: context.tr('phoneNumber'),
                                           prefixIcon: const Icon(Icons.phone),
                                         ),
                                         keyboardType: TextInputType.phone,
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.phoneRequiredForDoctors;
+                                            return context.tr(
+                                              'phoneRequiredForDoctors',
+                                            );
                                           }
                                           final phoneRegExp = RegExp(
                                             r'^\+?[\d\s\-\(\)]+$',
                                           );
                                           if (!phoneRegExp.hasMatch(value)) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.enterValidPhoneNumber;
+                                            return context.tr(
+                                              'enterValidPhoneNumber',
+                                            );
                                           }
                                           return null;
                                         },
@@ -429,7 +411,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         builder: (context, professionalValue, child) {
                           return Opacity(
                             opacity: professionalValue,
-                            child: Translations.get(
+                            child: Transform.translate(
                               offset: Offset(
                                 (30 * (1 - professionalValue)).toDouble(),
                                 0,
@@ -452,9 +434,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.professionalInformation,
+                                        context.tr('professionalInformation'),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -471,23 +451,23 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _specializationController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.specialization,
+                                          labelText: context.tr(
+                                            'specialization',
+                                          ),
                                           border: const OutlineInputBorder(),
                                           prefixIcon: const Icon(
                                             Icons.medical_services,
                                           ),
-                                          hintText: AppLocalizations.of(
-                                            context,
-                                          )!.specializationHint,
+                                          hintText: context.tr(
+                                            'specializationHint',
+                                          ),
                                         ),
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.specializationRequired;
+                                            return context.tr(
+                                              'specializationRequired',
+                                            );
                                           }
                                           return null;
                                         },
@@ -498,21 +478,21 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _licenseNumberController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.licenseNumber,
+                                          labelText: context.tr(
+                                            'licenseNumber',
+                                          ),
                                           border: const OutlineInputBorder(),
                                           prefixIcon: const Icon(Icons.badge),
-                                          hintText: AppLocalizations.of(
-                                            context,
-                                          )!.licenseNumberHint,
+                                          hintText: context.tr(
+                                            'licenseNumberHint',
+                                          ),
                                         ),
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.licenseRequired;
+                                            return context.tr(
+                                              'licenseRequired',
+                                            );
                                           }
                                           return null;
                                         },
@@ -523,35 +503,33 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _experienceController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.yearsOfExperience,
+                                          labelText: context.tr(
+                                            'yearsOfExperience',
+                                          ),
                                           border: const OutlineInputBorder(),
                                           prefixIcon: const Icon(
                                             Icons.timeline,
                                           ),
-                                          hintText: AppLocalizations.of(
-                                            context,
-                                          )!.yearsHint,
+                                          hintText: context.tr('yearsHint'),
                                         ),
                                         keyboardType: TextInputType.number,
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.experienceRequired;
+                                            return context.tr(
+                                              'experienceRequired',
+                                            );
                                           }
                                           final years = int.tryParse(value);
                                           if (years == null || years < 0) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.enterValidNumber;
+                                            return context.tr(
+                                              'enterValidNumber',
+                                            );
                                           }
                                           if (years > 50) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.enterRealisticYears;
+                                            return context.tr(
+                                              'enterRealisticYears',
+                                            );
                                           }
                                           return null;
                                         },
@@ -562,16 +540,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       DropdownButtonFormField<String>(
                                         value: _selectedArea,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.serviceArea,
+                                          labelText: context.tr('serviceArea'),
                                           border: const OutlineInputBorder(),
                                           prefixIcon: const Icon(
                                             Icons.location_on,
                                           ),
-                                          hintText: AppLocalizations.of(
-                                            context,
-                                          )!.selectServiceArea,
+                                          hintText: context.tr(
+                                            'selectServiceArea',
+                                          ),
                                         ),
                                         items: _ammanDistricts.map((district) {
                                           return DropdownMenuItem<String>(
@@ -586,9 +562,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.serviceAreaRequired;
+                                            return context.tr(
+                                              'serviceAreaRequired',
+                                            );
                                           }
                                           return null;
                                         },
@@ -599,29 +575,23 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       TextFormField(
                                         controller: _bioController,
                                         decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(
-                                            context,
-                                          )!.professionalBio,
+                                          labelText: context.tr(
+                                            'professionalBio',
+                                          ),
                                           border: const OutlineInputBorder(),
                                           prefixIcon: const Icon(
                                             Icons.description,
                                           ),
-                                          hintText: AppLocalizations.of(
-                                            context,
-                                          )!.bioHint,
+                                          hintText: context.tr('bioHint'),
                                         ),
                                         maxLines: 3,
                                         validator: (value) {
                                           if (value == null ||
                                               value.trim().isEmpty) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.bioRequired;
+                                            return context.tr('bioRequired');
                                           }
                                           if (value.trim().length < 10) {
-                                            return AppLocalizations.of(
-                                              context,
-                                            )!.bioMinLength;
+                                            return context.tr('bioMinLength');
                                           }
                                           return null;
                                         },
@@ -643,7 +613,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         builder: (context, passwordValue, child) {
                           return Opacity(
                             opacity: passwordValue,
-                            child: Translations.get(
+                            child: Transform.translate(
                               offset: Offset(
                                 (-30 * (1 - passwordValue)).toDouble(),
                                 0,
@@ -669,9 +639,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              AppLocalizations.of(
-                                                context,
-                                              )!.changePassword,
+                                              context.tr('changePassword'),
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleLarge
@@ -695,9 +663,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.enablePasswordChange,
+                                        context.tr('enablePasswordChange'),
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -715,9 +681,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                           controller:
                                               _currentPasswordController,
                                           decoration: InputDecoration(
-                                            labelText: AppLocalizations.of(
-                                              context,
-                                            )!.currentPassword,
+                                            labelText: context.tr(
+                                              'currentPassword',
+                                            ),
                                             border: const OutlineInputBorder(),
                                             prefixIcon: const Icon(Icons.lock),
                                           ),
@@ -726,9 +692,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                             if (_showPasswordFields) {
                                               if (value == null ||
                                                   value.isEmpty) {
-                                                return AppLocalizations.of(
-                                                  context,
-                                                )!.currentPasswordRequired;
+                                                return context.tr(
+                                                  'currentPasswordRequired',
+                                                );
                                               }
                                             }
                                             return null;
@@ -738,9 +704,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                         TextFormField(
                                           controller: _newPasswordController,
                                           decoration: InputDecoration(
-                                            labelText: AppLocalizations.of(
-                                              context,
-                                            )!.newPassword,
+                                            labelText: context.tr(
+                                              'newPassword',
+                                            ),
                                             border: const OutlineInputBorder(),
                                             prefixIcon: const Icon(
                                               Icons.lock_outline,
@@ -751,14 +717,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                             if (_showPasswordFields) {
                                               if (value == null ||
                                                   value.isEmpty) {
-                                                return AppLocalizations.of(
-                                                  context,
-                                                )!.newPasswordRequired;
+                                                return context.tr(
+                                                  'newPasswordRequired',
+                                                );
                                               }
                                               if (value.length < 6) {
-                                                return AppLocalizations.of(
-                                                  context,
-                                                )!.passwordMinLength;
+                                                return context.tr(
+                                                  'passwordMinLength',
+                                                );
                                               }
                                             }
                                             return null;
@@ -769,9 +735,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                           controller:
                                               _confirmPasswordController,
                                           decoration: InputDecoration(
-                                            labelText: AppLocalizations.of(
-                                              context,
-                                            )!.confirmNewPassword,
+                                            labelText: context.tr(
+                                              'confirmNewPassword',
+                                            ),
                                             border: const OutlineInputBorder(),
                                             prefixIcon: const Icon(
                                               Icons.lock_outline,
@@ -782,15 +748,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                             if (_showPasswordFields) {
                                               if (value == null ||
                                                   value.isEmpty) {
-                                                return AppLocalizations.of(
-                                                  context,
-                                                )!.confirmPasswordRequired;
+                                                return context.tr(
+                                                  'confirmPasswordRequired',
+                                                );
                                               }
                                               if (value !=
                                                   _newPasswordController.text) {
-                                                return AppLocalizations.of(
-                                                  context,
-                                                )!.passwordsDoNotMatch;
+                                                return context.tr(
+                                                  'passwordsDoNotMatch',
+                                                );
                                               }
                                             }
                                             return null;
@@ -840,7 +806,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         builder: (context, buttonValue, child) {
                           return Opacity(
                             opacity: buttonValue,
-                            child: Translations.get(
+                            child: Transform.translate(
                               offset: Offset(
                                 0,
                                 (20 * (1 - buttonValue)).toDouble(),
@@ -848,9 +814,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                               child: Column(
                                 children: [
                                   PrimaryButton(
-                                    label: AppLocalizations.of(
-                                      context,
-                                    )!.saveChanges,
+                                    label: context.tr('saveChanges'),
                                     onPressed: _isLoading
                                         ? null
                                         : _updateProfile,
@@ -858,9 +822,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.profileInfoHelp,
+                                    context.tr('profileInfoHelp'),
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(color: Colors.grey[600]),
                                     textAlign: TextAlign.center,
@@ -876,9 +838,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                           vertical: 16,
                                         ),
                                       ),
-                                      child: Text(
-                                        AppLocalizations.of(context)!.cancel,
-                                      ),
+                                      child: Text(context.tr('cancel')),
                                     ),
                                   ),
                                 ],

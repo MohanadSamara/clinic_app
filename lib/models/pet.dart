@@ -45,6 +45,8 @@ class Pet {
     'serial_number': serialNumber,
   };
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory Pet.fromMap(Map<String, dynamic> m) => Pet(
     id: m['id'],
     ownerId: m['owner_id'],
@@ -147,10 +149,3 @@ class Pet {
     );
   }
 }
-
-
-
-
-
-
-

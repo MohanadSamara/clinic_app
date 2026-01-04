@@ -136,6 +136,51 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     }
   }
 
+  Future<void> _switchGoogleAccount() async {
+    final authProvider = context.read<AuthProvider>();
+    final shouldSwitch = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch Google Account'),
+        content: const Text(
+          'This will sign you out and allow you to choose a different Google account to sign in with.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Switch Account'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSwitch == true) {
+      try {
+        await authProvider.switchGoogleAccount();
+        if (mounted) {
+          // After switching, navigate to dashboard or stay
+          // Since user might change, perhaps navigate to login if different user
+          // But for now, stay and let the provider update
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Switched to different Google account'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error switching account: $e')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
@@ -1073,6 +1118,44 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 16),
+
+                                      // Switch Google Account Button (only for Google users)
+                                      if (context
+                                              .read<AuthProvider>()
+                                              .user
+                                              ?.provider ==
+                                          'google') ...[
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: OutlinedButton.icon(
+                                            onPressed: _switchGoogleAccount,
+                                            icon: Icon(
+                                              Icons.account_circle,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                            ),
+                                            label: const Text(
+                                              'Switch Google Account',
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              side: BorderSide(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                              ),
+                                              foregroundColor: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
 
                                       // Delete Account Button
                                       SizedBox(

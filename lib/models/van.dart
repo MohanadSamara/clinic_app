@@ -42,6 +42,8 @@ class Van {
     };
   }
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory Van.fromMap(Map<String, dynamic> map) {
     return Van(
       id: map['id'],
@@ -100,10 +102,3 @@ class Van {
   bool get isFullyAssigned =>
       assignedDriverId != null && assignedDoctorId != null;
 }
-
-
-
-
-
-
-

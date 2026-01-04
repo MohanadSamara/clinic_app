@@ -1,6 +1,13 @@
 // lib/screens/owner/owner_dashboard.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+import 'dart:ui' show SystemNavigator;
+import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -8,6 +15,10 @@ import '../../providers/medical_provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/service_request_provider.dart';
+import '../../providers/availability_provider.dart';
+import '../../providers/document_provider.dart';
+import '../../providers/van_provider.dart';
+import '../../services/app_close_service.dart';
 import '../../models/service_request.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
@@ -144,6 +155,14 @@ class _OwnerHomeScreen extends StatelessWidget {
                     : context.tr('switchToDarkMode'),
               );
             },
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            onPressed: () => _closeApp(context),
+            tooltip: context.tr('closeApp'),
           ),
         ],
       ),
@@ -988,6 +1007,128 @@ class _OwnerHomeScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _closeApp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.tr('closeApp')),
+        content: Text(context.tr('areYouSureYouWantToCloseTheApp')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr('cancel')),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performAppExit(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(context.tr('closeApp')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performAppExit(BuildContext context) {
+    // Save any pending data before closing
+    _saveDataBeforeExit(context);
+
+    if (kIsWeb) {
+      // For web: Attempt to close the browser tab
+      try {
+        html.window.close();
+      } catch (e) {
+        debugPrint('Unable to close browser tab: $e');
+        // Fallback: Show confirmation that data is saved
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Data saved successfully. Please close this browser tab manually.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } else {
+      // For mobile and desktop platforms (non-web)
+      bool isMobile = false;
+      try {
+        // Only access Platform class on non-web platforms
+        if (!kIsWeb) {
+          isMobile = Platform.isAndroid || Platform.isIOS;
+        }
+      } catch (e) {
+        // If Platform access fails, assume desktop
+        isMobile = false;
+      }
+
+      if (isMobile) {
+        // For mobile: SystemNavigator.pop() works on Android, on iOS it may not close but returns to home
+        try {
+          SystemNavigator.pop();
+        } catch (e) {
+          debugPrint('Unable to close app on mobile platform: $e');
+        }
+      } else {
+        // For desktop: Attempt to close the application window
+        try {
+          exit(0);
+        } catch (e) {
+          debugPrint('Unable to close desktop app: $e');
+          // Fallback: Show message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                context.tr('pleaseCloseTheApplicationWindowManuallyToExit'),
+              ),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _saveDataBeforeExit(BuildContext context) async {
+    // Save any pending data before app closes using the AppCloseService
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final petProvider = Provider.of<PetProvider>(context, listen: false);
+    final appointmentProvider = Provider.of<AppointmentProvider>(
+      context,
+      listen: false,
+    );
+    final medicalProvider = Provider.of<MedicalProvider>(
+      context,
+      listen: false,
+    );
+    final serviceRequestProvider = Provider.of<ServiceRequestProvider>(
+      context,
+      listen: false,
+    );
+    final documentProvider = Provider.of<DocumentProvider>(
+      context,
+      listen: false,
+    );
+    final vanProvider = Provider.of<VanProvider>(context, listen: false);
+    final availabilityProvider = Provider.of<AvailabilityProvider>(
+      context,
+      listen: false,
+    );
+
+    await AppCloseService().saveDataBeforeExit(
+      authProvider: authProvider,
+      petProvider: petProvider,
+      appointmentProvider: appointmentProvider,
+      medicalProvider: medicalProvider,
+      serviceRequestProvider: serviceRequestProvider,
+      documentProvider: documentProvider,
+      vanProvider: vanProvider,
+      availabilityProvider: availabilityProvider,
     );
   }
 }

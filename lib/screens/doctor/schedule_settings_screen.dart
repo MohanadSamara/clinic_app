@@ -116,7 +116,6 @@ class _DayScheduleCard extends StatefulWidget {
 }
 
 class _DayScheduleCardState extends State<_DayScheduleCard> {
-  late bool _isActive;
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late bool _isHoliday;
@@ -125,7 +124,6 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
   @override
   void initState() {
     super.initState();
-    _isActive = widget.schedule?.isActive ?? false;
     _startTime = _parseTimeString(widget.schedule?.startTime ?? '08:00');
     _endTime = _parseTimeString(widget.schedule?.endTime ?? '18:00');
     _isHoliday = widget.schedule?.isHoliday ?? false;
@@ -250,13 +248,16 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
     final doctorId = context.read<AuthProvider>().user?.id;
     if (doctorId == null) return;
 
+    // Determine isActive based on holiday/free day status
+    final isActive = !_isHoliday; // Active unless it's a holiday
+
     final schedule = DoctorSchedule(
       id: widget.schedule?.id,
       doctorId: doctorId,
       dayOfWeek: widget.dayOfWeek,
       startTime: _formatTimeOfDay(_startTime),
       endTime: _formatTimeOfDay(_endTime),
-      isActive: _isActive,
+      isActive: isActive,
       isHoliday: _isHoliday,
       isFreeDay: _isFreeDay,
     );
@@ -280,125 +281,107 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              widget.dayLabel,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    widget.dayLabel,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                Text(
+                  'Free Day',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Switch(
-                  value: _isActive,
+                  value: _isFreeDay,
                   onChanged: (value) {
-                    setState(() => _isActive = value);
+                    final scheduleProvider = context.read<ScheduleProvider>();
+
+                    // Check free day limit before allowing change
+                    if (value && !_isFreeDay) {
+                      final freeDayCount = scheduleProvider.schedules
+                          .where((s) => s.isFreeDay)
+                          .length;
+                      if (freeDayCount >= 2) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Maximum 2 free days allowed'),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
+                    // Reset holiday if enabling free day
+                    if (value && _isHoliday) {
+                      setState(() => _isHoliday = false);
+                    }
+
+                    setState(() => _isFreeDay = value);
                     _saveSchedule();
                   },
-                  activeColor: colorScheme.primary,
+                  activeColor: Colors.orange,
                 ),
               ],
             ),
-            if (_isActive) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    'Free Day',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  'Holiday Days',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: _isFreeDay,
-                    onChanged: (value) {
-                      final scheduleProvider = context.read<ScheduleProvider>();
+                ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: _isHoliday,
+                  onChanged: (value) {
+                    final scheduleProvider = context.read<ScheduleProvider>();
 
-                      // Check free day limit before allowing change
-                      if (value && !_isFreeDay) {
-                        final freeDayCount = scheduleProvider.schedules
-                            .where((s) => s.isFreeDay)
-                            .length;
-                        if (freeDayCount >= 2) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Maximum 2 free days allowed',
-                              ),
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.error,
+                    // Check holiday limit before allowing change
+                    if (value && !_isHoliday) {
+                      final holidayCount = scheduleProvider.schedules
+                          .where((s) => s.isHoliday)
+                          .length;
+                      if (holidayCount >= 2) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'Maximum 2 holiday days allowed',
                             ),
-                          );
-                          return;
-                        }
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
+                          ),
+                        );
+                        return;
                       }
+                    }
 
-                      // Reset holiday if enabling free day
-                      if (value && _isHoliday) {
-                        setState(() => _isHoliday = false);
-                      }
+                    // Reset free day if enabling holiday
+                    if (value && _isFreeDay) {
+                      setState(() => _isFreeDay = false);
+                    }
 
-                      setState(() => _isFreeDay = value);
-                      _saveSchedule();
-                    },
-                    activeColor: Colors.orange,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    'Holiday Days',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: _isHoliday,
-                    onChanged: (value) {
-                      final scheduleProvider = context.read<ScheduleProvider>();
-
-                      // Check holiday limit before allowing change
-                      if (value && !_isHoliday) {
-                        final holidayCount = scheduleProvider.schedules
-                            .where((s) => s.isHoliday)
-                            .length;
-                        if (holidayCount >= 2) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Maximum 2 holiday days allowed',
-                              ),
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.error,
-                            ),
-                          );
-                          return;
-                        }
-                      }
-
-                      // Reset free day if enabling holiday
-                      if (value && _isFreeDay) {
-                        setState(() => _isFreeDay = false);
-                      }
-
-                      setState(() => _isHoliday = value);
-                      _saveSchedule();
-                    },
-                    activeColor: Colors.red,
-                  ),
-                ],
-              ),
-            ],
+                    setState(() => _isHoliday = value);
+                    _saveSchedule();
+                  },
+                  activeColor: Colors.red,
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
-            if (_isActive) ...[
+            if (!_isHoliday) ...[
               Row(
                 children: [
                   Expanded(
@@ -510,7 +493,8 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
                   ],
                 ),
               ),
-            ] else if (_isHoliday) ...[
+            ],
+            if (_isHoliday) ...[
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -554,21 +538,19 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant.withOpacity(0.3),
+                  color: colorScheme.primaryContainer.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.event_busy,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 20,
-                    ),
+                    Icon(Icons.schedule, color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      'Day off',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                    Expanded(
+                      child: Text(
+                        'Working hours: ${_startTime.format(context)} - ${_endTime.format(context)}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                        ),
                       ),
                     ),
                   ],

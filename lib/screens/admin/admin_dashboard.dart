@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -75,6 +77,14 @@ class AdminDashboard extends StatelessWidget {
                     : 'Switch to Dark Mode',
               );
             },
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            onPressed: () => _closeApp(context),
+            tooltip: context.tr('closeApp'),
           ),
           IconButton(
             icon: Icon(
@@ -289,5 +299,58 @@ class AdminDashboard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _closeApp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.tr('closeApp')),
+        content: Text(context.tr('confirmCloseApp')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr('cancel')),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _performAppExit(context);
+            },
+            child: Text(
+              context.tr('close'),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performAppExit(BuildContext context) async {
+    // Save data before exit
+    await _saveDataBeforeExit(context);
+
+    // Exit the app
+    if (Theme.of(context).platform == TargetPlatform.android) {
+      SystemNavigator.pop();
+    } else {
+      // For other platforms, use exit
+      exit(0);
+    }
+  }
+
+  Future<void> _saveDataBeforeExit(BuildContext context) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+
+    // Save user preferences
+    await auth.saveUserPreferences();
+    await themeProvider.saveThemePreference();
+    await localeProvider.saveLocalePreference();
+
+    // Add any other data saving logic here
+    // For example, save any unsaved changes in providers
   }
 }

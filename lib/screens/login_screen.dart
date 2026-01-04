@@ -320,10 +320,10 @@ class _LoginScreenState extends State<LoginScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => RoleSelectionScreen(
-                  name: pending['name'],
-                  email: pending['email'],
-                  provider: pending['provider'],
-                  providerId: pending['providerId'],
+                  name: pending['name'] ?? '',
+                  email: pending['email'] ?? '',
+                  provider: pending['provider'] ?? '',
+                  providerId: pending['providerId'] ?? '',
                 ),
               ),
             );
@@ -359,10 +359,10 @@ class _LoginScreenState extends State<LoginScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => RoleSelectionScreen(
-                  name: pending['name'],
-                  email: pending['email'],
-                  provider: pending['provider'],
-                  providerId: pending['providerId'],
+                  name: pending['name'] ?? '',
+                  email: pending['email'] ?? '',
+                  provider: pending['provider'] ?? '',
+                  providerId: pending['providerId'] ?? '',
                 ),
               ),
             );

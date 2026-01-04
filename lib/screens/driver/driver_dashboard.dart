@@ -5,7 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -45,6 +45,7 @@ class _DriverDashboardState extends State<DriverDashboard>
   User? _linkedDoctor;
   bool _isLoading = true;
   bool _isDisposed = false;
+  bool _hasSavedOnExit = false;
   String? _currentAddress;
   double? _driverLat;
   double? _driverLng;
@@ -80,11 +81,18 @@ class _DriverDashboardState extends State<DriverDashboard>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // Save data when app goes to background or is inactive
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
+    // Save data when app goes to background or is inactive (only once per exit)
+    if ((state == AppLifecycleState.inactive ||
+            state == AppLifecycleState.paused ||
+            state == AppLifecycleState.detached) &&
+        !_hasSavedOnExit) {
+      _hasSavedOnExit = true;
       _saveDataBeforeExit();
+    }
+
+    // Reset save flag when app resumes
+    if (state == AppLifecycleState.resumed) {
+      _hasSavedOnExit = false;
     }
 
     // Update availability status based on app state
@@ -1934,41 +1942,61 @@ class _DriverDashboardState extends State<DriverDashboard>
     _saveDataBeforeExit();
 
     if (kIsWeb) {
-      // For web: Try to close the window (may not work due to browser security)
+      // For web: Attempt to close the browser tab
       try {
         html.window.close();
       } catch (e) {
-        debugPrint('Unable to close web window: $e');
-        // Fallback: show message
+        debugPrint('Unable to close browser tab: $e');
+        // Fallback: Show confirmation that data is saved
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text(
-                context.tr('pleaseCloseThisBrowserTabManuallyToExitTheApp'),
+                'Data saved successfully. Please close this browser tab manually.',
               ),
-              duration: Duration(seconds: 5),
+              duration: Duration(seconds: 3),
             ),
           );
         }
       }
-    } else if (Platform.isAndroid || Platform.isIOS) {
-      // For mobile: SystemNavigator.pop() works on Android, on iOS it may not close but returns to home
-      try {
-        SystemNavigator.pop();
-      } catch (e) {
-        debugPrint('Unable to close app on mobile platform: $e');
-      }
     } else {
-      // For desktop or other platforms: Show message since exit may not work reliably
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              context.tr('pleaseCloseTheApplicationWindowManuallyToExit'),
-            ),
-            duration: Duration(seconds: 5),
-          ),
-        );
+      // For mobile and desktop platforms (non-web)
+      bool isMobile = false;
+      try {
+        // Only access Platform class on non-web platforms
+        if (!kIsWeb) {
+          isMobile = Platform.isAndroid || Platform.isIOS;
+        }
+      } catch (e) {
+        // If Platform access fails, assume desktop
+        isMobile = false;
+      }
+
+      if (isMobile) {
+        // For mobile: SystemNavigator.pop() works on Android, on iOS it may not close but returns to home
+        try {
+          SystemNavigator.pop();
+        } catch (e) {
+          debugPrint('Unable to close app on mobile platform: $e');
+        }
+      } else {
+        // For desktop: Attempt to close the application window
+        try {
+          exit(0);
+        } catch (e) {
+          debugPrint('Unable to close desktop app: $e');
+          // Fallback: Show message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  context.tr('pleaseCloseTheApplicationWindowManuallyToExit'),
+                ),
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        }
       }
     }
   }

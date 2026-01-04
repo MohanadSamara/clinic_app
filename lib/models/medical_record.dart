@@ -34,6 +34,8 @@ class MedicalRecord {
     'attachments': attachments?.join(','),
   };
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory MedicalRecord.fromMap(Map<String, dynamic> m) => MedicalRecord(
     id: m['id'] is int ? m['id'] as int : null,
     petId: m['pet_id'] is int ? m['pet_id'] as int : 0,
@@ -80,10 +82,3 @@ class MedicalRecord {
   @override
   int get hashCode => id?.hashCode ?? 0;
 }
-
-
-
-
-
-
-

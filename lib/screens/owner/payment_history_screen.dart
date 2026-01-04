@@ -556,24 +556,12 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
 
   Future<void> _downloadInvoice(Payment payment) async {
     try {
-      // Generate and save the PDF
-      final filePath = await PdfService.generateInvoicePdf(payment);
+      // Generate and download/save the PDF
+      await PdfService.generateInvoicePdf(payment);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Invoice downloaded successfully'),
-            action: SnackBarAction(
-              label: 'View',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('File saved to Documents folder'),
-                  ),
-                );
-              },
-            ),
-          ),
+          const SnackBar(content: Text('Invoice downloaded successfully')),
         );
       }
     } catch (e) {
@@ -593,9 +581,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.tr('requestRefundTitle')),
-        content: Text(
-          context.tr('areYouSureYouWantToRequestARefund'),
-        ),
+        content: Text(context.tr('areYouSureYouWantToRequestARefund')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -657,10 +643,3 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     );
   }
 }
-
-
-
-
-
-
-

@@ -48,6 +48,8 @@ class ServiceRequest {
     };
   }
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory ServiceRequest.fromMap(Map<String, dynamic> map) {
     return ServiceRequest(
       id: map['id'],
@@ -100,10 +102,3 @@ class ServiceRequest {
     );
   }
 }
-
-
-
-
-
-
-

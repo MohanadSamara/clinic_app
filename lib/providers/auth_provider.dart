@@ -187,7 +187,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Social Authentication Methods
-  Future<void> signInWithGoogle() async {
+  Future<void> signInWithGoogle({String? role}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -196,6 +196,7 @@ class AuthProvider extends ChangeNotifier {
         // Web implementation using Firebase Auth popup
         final firebase_auth.GoogleAuthProvider googleProvider =
             firebase_auth.GoogleAuthProvider();
+        googleProvider.setCustomParameters({'prompt': 'select_account'});
         final firebase_auth.UserCredential userCredential = await firebase_auth
             .FirebaseAuth
             .instance
@@ -205,10 +206,14 @@ class AuthProvider extends ChangeNotifier {
           firebaseUser: userCredential.user!,
           provider: 'google',
           providerId: userCredential.user!.uid,
+          role: role,
         );
       } else {
         // Mobile implementation using Google Sign In
-        final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+        // Disconnect first to force account selection
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        await googleSignIn.disconnect();
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         if (googleUser == null) {
           throw Exception('Google sign in cancelled');
         }
@@ -229,6 +234,7 @@ class AuthProvider extends ChangeNotifier {
           firebaseUser: userCredential.user!,
           provider: 'google',
           providerId: userCredential.user!.uid,
+          role: role,
         );
       }
     } catch (e) {
@@ -261,7 +267,27 @@ class AuthProvider extends ChangeNotifier {
         firebaseUser: userCredential.user!,
         provider: 'facebook',
         providerId: userCredential.user!.uid,
+        role: null,
       );
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Switch Google Account
+  Future<void> switchGoogleAccount() async {
+    final currentRole = _user?.role;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Sign out from Firebase first
+      await firebase_auth.FirebaseAuth.instance.signOut();
+
+      // Then sign in with Google, forcing account selection
+      await signInWithGoogle(role: currentRole);
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -273,6 +299,7 @@ class AuthProvider extends ChangeNotifier {
     required firebase_auth.User firebaseUser,
     required String provider,
     required String providerId,
+    String? role,
   }) async {
     try {
       // Check if user already exists in local DB
@@ -300,15 +327,35 @@ class AuthProvider extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       } else {
-        // New user: store pending data for role selection
-        _pendingSocialUser = {
-          'name': firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
-          'email': firebaseUser.email!,
-          'provider': provider,
-          'providerId': providerId,
-        };
-        _isLoading = false;
-        // Do not notify listeners for pending state to avoid UI rebuild issues
+        // New user
+        if (role != null) {
+          // For switching, create user with provided role
+          final localUser = User(
+            name: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
+            email: firebaseUser.email!,
+            password: '', // Social users don't have passwords
+            role: role,
+            provider: provider,
+            providerId: providerId,
+          );
+
+          final id = await DBHelper.instance.insertUser(localUser.toMap());
+          _user = User.fromMap(localUser.toMap()..['id'] = id);
+          await _saveUserToStorage(_user!);
+          _isLoading = false;
+          notifyListeners();
+        } else {
+          // Store pending data for role selection
+          _pendingSocialUser = {
+            'name':
+                firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
+            'email': firebaseUser.email!,
+            'provider': provider,
+            'provider': providerId,
+          };
+          _isLoading = false;
+          // Do not notify listeners for pending state to avoid UI rebuild issues
+        }
       }
     } catch (e) {
       _isLoading = false;
@@ -524,11 +571,10 @@ class AuthProvider extends ChangeNotifier {
 
     return null;
   }
+
+  Future<void> saveUserPreferences() async {
+    if (_user != null) {
+      await _saveUserToStorage(_user!);
+    }
+  }
 }
-
-
-
-
-
-
-

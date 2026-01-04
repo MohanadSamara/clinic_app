@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../db/db_helper.dart';
 import '../models/appointment.dart';
 import '../models/driver_status.dart';
@@ -239,6 +240,11 @@ class AppointmentProvider extends ChangeNotifier {
       // If doctor completes appointment, mark as completed
       if (status == 'completed') {
         // Appointment is now completed by doctor
+        // Save completed appointment data to Firebase
+        final appointment = getAppointmentById(id);
+        if (appointment != null) {
+          await _saveCompletedAppointmentToFirebase(appointment);
+        }
       }
 
       return true;
@@ -752,6 +758,44 @@ class AppointmentProvider extends ChangeNotifier {
       debugPrint('Error scheduling appointment notifications: $e');
     }
   }
+
+  Future<void> _saveCompletedAppointmentToFirebase(
+    Appointment appointment,
+  ) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final completedAppointmentData = {
+        'appointmentId': appointment.id,
+        'ownerId': appointment.ownerId,
+        'petId': appointment.petId,
+        'serviceType': appointment.serviceType,
+        'description': appointment.description,
+        'scheduledAt': appointment.scheduledAt,
+        'status': appointment.status,
+        'address': appointment.address,
+        'price': appointment.price,
+        'doctorId': appointment.doctorId,
+        'doctorName': appointment.doctorName,
+        'driverId': appointment.driverId,
+        'driverName': appointment.driverName,
+        'urgencyLevel': appointment.urgencyLevel,
+        'locationLat': appointment.locationLat,
+        'locationLng': appointment.locationLng,
+        'calendarEventId': appointment.calendarEventId,
+        'paymentMethod': appointment.paymentMethod,
+        'serviceRequestId': appointment.serviceRequestId,
+        'completedAt': FieldValue.serverTimestamp(),
+      };
+
+      await firestore
+          .collection('completed_appointments')
+          .doc(appointment.id.toString())
+          .set(completedAppointmentData);
+      debugPrint('Completed appointment ${appointment.id} saved to Firebase');
+    } catch (e) {
+      debugPrint('Error saving completed appointment to Firebase: $e');
+    }
+  }
 }
 
 // Role-based permission checks
@@ -823,10 +867,3 @@ bool canDoctorUpdateAppointment(String currentStatus, String newStatus) {
   final allowed = _allowedTransitions[currentStatus] ?? {};
   return allowed.contains(newStatus);
 }
-
-
-
-
-
-
-

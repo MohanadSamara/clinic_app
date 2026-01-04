@@ -60,6 +60,8 @@ class Document {
     };
   }
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory Document.fromMap(Map<String, dynamic> map) {
     return Document(
       id: map['id'],
@@ -167,10 +169,3 @@ class AuditLog {
     );
   }
 }
-
-
-
-
-
-
-

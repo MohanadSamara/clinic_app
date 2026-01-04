@@ -62,6 +62,8 @@ class Appointment {
     'service_request_id': serviceRequestId,
   };
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory Appointment.fromMap(Map<String, dynamic> m) => Appointment(
     id: m['id'] is int ? m['id'] as int : null,
     ownerId: m['owner_id'] is int ? m['owner_id'] as int : 0,
@@ -134,10 +136,3 @@ class Appointment {
     );
   }
 }
-
-
-
-
-
-
-

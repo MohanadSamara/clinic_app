@@ -50,9 +50,11 @@ class User {
     'last_seen': lastSeen,
   };
 
+  Map<String, dynamic> toJson() => toMap();
+
   factory User.fromMap(Map<String, dynamic> m) => User(
     id: m['id'] is int ? m['id'] as int : null,
-    name: m['name']?.toString() ?? 'Unknown',
+    name: _validateName(m['name']?.toString()),
     email: m['email']?.toString() ?? 'No email',
     password: m['password']?.toString() ?? '',
     phone: m['phone']?.toString(),
@@ -70,6 +72,13 @@ class User {
     availabilityStatus: m['availability_status']?.toString() ?? 'offline',
     lastSeen: m['last_seen']?.toString(),
   );
+
+  static String _validateName(String? name) {
+    if (name == null || name.isEmpty) return 'Unknown';
+    // Check if it looks like a closure toString
+    if (name.startsWith('Closure:') || name.contains('=>')) return 'Unknown';
+    return name;
+  }
 
   User copyWith({
     int? id,
@@ -105,10 +114,3 @@ class User {
     );
   }
 }
-
-
-
-
-
-
-
