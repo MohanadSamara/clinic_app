@@ -25,6 +25,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void initState() {
     super.initState();
     _startResendTimer();
+    _sendInitialVerificationCode();
   }
 
   @override
@@ -48,6 +49,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       }
       return true;
     });
+  }
+
+  void _sendInitialVerificationCode() {
+    // Send verification code when screen opens (in case registration failed to send)
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    auth.sendEmailVerificationCode(widget.email);
   }
 
   @override

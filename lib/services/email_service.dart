@@ -41,34 +41,24 @@ class EmailService {
           _emailJsServiceId.isNotEmpty &&
           _emailJsTemplateId.isNotEmpty &&
           _emailJsPublicKey.isNotEmpty &&
-          _emailJsServiceId != 'your_service_id' &&
-          _emailJsTemplateId != 'your_template_id' &&
-          _emailJsPublicKey != 'your_public_key';
+          _emailJsServiceId != 'service_v3hwr1n' &&
+          _emailJsTemplateId != 'template_38xcnsn' &&
+          _emailJsPublicKey != '_AG0cxQBNoMhgym53';
 
       if (!isConfigured) {
         // Fallback to demo mode if not configured
-        print('📧 EmailJS not configured - using demo mode');
-        print('📧 Verification email would be sent to $email');
-        print('🔢 Verification code: $code');
-        print(
-          '⚠️  Configure EmailJS credentials in email_service.dart for real emails',
-        );
-
         // Store the verification code temporarily
         await _storeVerificationCode(email, code);
         return true;
       }
 
       // Prepare EmailJS payload
-      // We include to_email in template_params so it can be used in the template
+      // The recipient must be set in the EmailJS template as {{to_email}}
       final payload = {
         'service_id': _emailJsServiceId,
         'template_id': _emailJsTemplateId,
         'user_id': _emailJsPublicKey,
-        'template_params': {
-          'verification_code': code,
-          'to_email': email,
-        },
+        'template_params': {'verification_code': code, 'to_email': email},
       };
 
       // Send email via EmailJS
@@ -90,8 +80,6 @@ class EmailService {
         print(
           '❌ Failed to send email: ${response.statusCode} - ${response.body}',
         );
-        // Even if email fails, in some dev scenarios we might want to store the code
-        // but for production we return false.
         return false;
       }
     } catch (e) {
@@ -106,7 +94,7 @@ class EmailService {
       final prefs = await SharedPreferences.getInstance();
       final String? storedJson = prefs.getString(_verificationCodesKey);
       Map<String, dynamic> codes = {};
-      
+
       if (storedJson != null) {
         codes = jsonDecode(storedJson) as Map<String, dynamic>;
       }
@@ -133,14 +121,14 @@ class EmailService {
       final prefs = await SharedPreferences.getInstance();
       final String? storedJson = prefs.getString(_verificationCodesKey);
       Map<String, dynamic> codes = {};
-      
+
       if (storedJson != null) {
         codes = jsonDecode(storedJson) as Map<String, dynamic>;
       }
 
       // Check in-memory fallback too
       final storedData = codes[email] ?? _inMemoryCodes[email];
-      
+
       if (storedData == null) {
         return false;
       }
