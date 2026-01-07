@@ -67,7 +67,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 32,
+      version: 37,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -664,6 +664,132 @@ class DBHelper {
         debugPrint('Error adding is_free_day column to schedules table: $e');
       }
     }
+    if (oldVersion < 33) {
+      // Add verification_status column to users table
+      try {
+        final result = await db.rawQuery("PRAGMA table_info(users)");
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('verification_status')) {
+          await db.execute(
+            'ALTER TABLE users ADD COLUMN verification_status TEXT DEFAULT "verified"',
+          );
+          debugPrint(
+            'Added verification_status column to users table in version 33',
+          );
+        }
+      } catch (e) {
+        debugPrint(
+          'Error adding verification_status column to users table: $e',
+        );
+      }
+    }
+    if (oldVersion < 35) {
+      // Add missing columns to doctor_verification_documents table
+      // This ensures the table has all required columns for doctor verification
+      try {
+        final result = await db.rawQuery(
+          "PRAGMA table_info(doctor_verification_documents)",
+        );
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        // Add each column if it doesn't exist
+        final columnsToAdd = {
+          'document_number': 'TEXT',
+          'expiry_date': 'TEXT',
+          'issuing_authority': 'TEXT',
+          'verification_code': 'TEXT',
+        };
+
+        for (final entry in columnsToAdd.entries) {
+          if (!columns.contains(entry.key)) {
+            await db.execute(
+              'ALTER TABLE doctor_verification_documents ADD COLUMN ${entry.key} ${entry.value}',
+            );
+            debugPrint(
+              'Added ${entry.key} column to doctor_verification_documents table',
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint(
+          'Error adding columns to doctor_verification_documents table: $e',
+        );
+      }
+    }
+    if (oldVersion < 36) {
+      // Create driver verification tables for driver verification process using driving license
+      try {
+        // Create driver_verification_documents table
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS driver_verification_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            driver_id INTEGER NOT NULL,
+            document_type TEXT NOT NULL,
+            document_number TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            file_path TEXT,
+            file_data BLOB,
+            upload_date TEXT NOT NULL,
+            expiry_date TEXT,
+            issuing_authority TEXT,
+            status TEXT DEFAULT 'pending',
+            review_date TEXT,
+            reviewer_id INTEGER,
+            review_notes TEXT,
+            verification_code TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (driver_id) REFERENCES users (id),
+            FOREIGN KEY (reviewer_id) REFERENCES users (id)
+          );
+        ''');
+        debugPrint('Created driver_verification_documents table in version 36');
+
+        // Create driver_verification_audit_logs table
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS driver_verification_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL,
+            user_id INTEGER,
+            action TEXT NOT NULL,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            details TEXT,
+            ip_address TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (document_id) REFERENCES driver_verification_documents (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+          );
+        ''');
+        debugPrint(
+          'Created driver_verification_audit_logs table in version 36',
+        );
+      } catch (e) {
+        debugPrint('Error creating driver verification tables: $e');
+      }
+    }
+    // Add issue_date column to driver_verification_documents table
+    if (oldVersion < 37) {
+      try {
+        final result = await db.rawQuery(
+          "PRAGMA table_info(driver_verification_documents)",
+        );
+        final columns = result.map((row) => row['name'] as String).toList();
+
+        if (!columns.contains('issue_date')) {
+          await db.execute(
+            'ALTER TABLE driver_verification_documents ADD COLUMN issue_date TEXT',
+          );
+          debugPrint(
+            'Added issue_date column to driver_verification_documents table in version 37',
+          );
+        }
+      } catch (e) {
+        debugPrint(
+          'Error adding issue_date column to driver_verification_documents table: $e',
+        );
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -688,7 +814,8 @@ class DBHelper {
         linked_doctor_id INTEGER,
         linked_driver_id INTEGER,
         availability_status TEXT DEFAULT 'offline',
-        last_seen TEXT
+        last_seen TEXT,
+        verification_status TEXT DEFAULT 'verified'
       );
     ''');
 
@@ -938,6 +1065,72 @@ class DBHelper {
         is_holiday INTEGER DEFAULT 0,
         is_free_day INTEGER DEFAULT 0,
         FOREIGN KEY (doctor_id) REFERENCES users (id)
+      );
+    ''');
+
+    // Doctor verification documents table
+    await db.execute('''
+      CREATE TABLE doctor_verification_documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        doctor_id INTEGER NOT NULL,
+        document_type TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT,
+        file_data BLOB,
+        upload_date TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        review_date TEXT,
+        reviewer_id INTEGER,
+        review_notes TEXT,
+        document_number TEXT,
+        expiry_date TEXT,
+        issuing_authority TEXT,
+        verification_code TEXT,
+        FOREIGN KEY (doctor_id) REFERENCES users (id),
+        FOREIGN KEY (reviewer_id) REFERENCES users (id)
+      );
+    ''');
+
+    // Driver verification documents table (for driving license verification)
+    await db.execute('''
+      CREATE TABLE driver_verification_documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver_id INTEGER NOT NULL,
+        document_type TEXT NOT NULL,
+        document_number TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT,
+        file_data BLOB,
+        upload_date TEXT NOT NULL,
+        expiry_date TEXT,
+        issue_date TEXT,
+        issuing_authority TEXT,
+        status TEXT DEFAULT 'pending',
+        review_date TEXT,
+        reviewer_id INTEGER,
+        review_notes TEXT,
+        verification_code TEXT,
+        vehicle_class TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (driver_id) REFERENCES users (id),
+        FOREIGN KEY (reviewer_id) REFERENCES users (id)
+      );
+    ''');
+
+    // Driver verification audit logs table
+    await db.execute('''
+      CREATE TABLE driver_verification_audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id INTEGER NOT NULL,
+        user_id INTEGER,
+        action TEXT NOT NULL,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        details TEXT,
+        ip_address TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (document_id) REFERENCES driver_verification_documents (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
       );
     ''');
 
@@ -2467,5 +2660,337 @@ class DBHelper {
       debugPrint('Error copying database: $e');
       throw Exception('Failed to copy database file: $e');
     }
+  }
+
+  // ---------- DOCTOR VERIFICATION DOCUMENTS ----------
+
+  Future<int> insertDoctorVerificationDocument(
+    Map<String, dynamic> data,
+  ) async {
+    final db = await instance.database;
+    return await db.insert('doctor_verification_documents', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getDoctorVerificationDocuments(
+    int doctorId,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'doctor_verification_documents',
+      where: 'doctor_id = ?',
+      whereArgs: [doctorId],
+      orderBy: 'upload_date DESC',
+    );
+  }
+
+  Future<int> updateDoctorVerificationDocument(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final db = await instance.database;
+    return await db.update(
+      'doctor_verification_documents',
+      data,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteDoctorVerificationDocument(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'doctor_verification_documents',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingVerificationDocuments() async {
+    final db = await instance.database;
+    return await db.query(
+      'doctor_verification_documents',
+      where: 'status = ?',
+      whereArgs: ['pending'],
+      orderBy: 'upload_date ASC',
+    );
+  }
+
+  // ---------- DRIVER VERIFICATION DOCUMENTS ----------
+
+  /// Insert a new driver verification document
+  Future<int> insertDriverVerificationDocument(
+    Map<String, dynamic> data,
+  ) async {
+    final db = await instance.database;
+    return await db.insert('driver_verification_documents', data);
+  }
+
+  /// Get all verification documents for a specific driver
+  Future<List<Map<String, dynamic>>> getDriverVerificationDocuments(
+    int driverId,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'driver_verification_documents',
+      where: 'driver_id = ?',
+      whereArgs: [driverId],
+      orderBy: 'upload_date DESC',
+    );
+  }
+
+  /// Get a specific driver verification document by ID
+  Future<Map<String, dynamic>?> getDriverVerificationDocumentById(
+    int id,
+  ) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'driver_verification_documents',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  /// Update a driver verification document
+  Future<int> updateDriverVerificationDocument(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final db = await instance.database;
+    data['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'driver_verification_documents',
+      data,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Delete a driver verification document
+  Future<int> deleteDriverVerificationDocument(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'driver_verification_documents',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Get all pending driver verification documents for review
+  Future<List<Map<String, dynamic>>>
+  getPendingDriverVerificationDocuments() async {
+    final db = await instance.database;
+    return await db.query(
+      'driver_verification_documents',
+      where: 'status = ?',
+      whereArgs: ['pending'],
+      orderBy: 'upload_date ASC',
+    );
+  }
+
+  /// Get all driver verification documents by status
+  Future<List<Map<String, dynamic>>> getDriverVerificationDocumentsByStatus(
+    String status,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'driver_verification_documents',
+      where: 'status = ?',
+      whereArgs: [status],
+      orderBy: 'upload_date DESC',
+    );
+  }
+
+  /// Get driver verification document by document number
+  Future<Map<String, dynamic>?> getDriverVerificationDocumentByNumber(
+    String documentNumber,
+  ) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'driver_verification_documents',
+      where: 'document_number = ?',
+      whereArgs: [documentNumber],
+    );
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  /// Get driver verification documents by email (for pre-login flow)
+  Future<List<Map<String, dynamic>>> getDriverVerificationDocumentsByEmail(
+    String email,
+  ) async {
+    final db = await instance.database;
+    final user = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    if (user.isEmpty) return [];
+    final driverId = user.first['id'] as int;
+    return await getDriverVerificationDocuments(driverId);
+  }
+
+  /// Get all drivers with pending verification documents
+  Future<List<Map<String, dynamic>>> getDriversWithPendingVerification() async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT DISTINCT u.*, COUNT(dvd.id) as pending_count
+      FROM users u
+      INNER JOIN driver_verification_documents dvd ON u.id = dvd.driver_id
+      WHERE dvd.status = 'pending'
+      GROUP BY u.id
+      ORDER BY u.name ASC
+    ''');
+  }
+
+  // ---------- DRIVER VERIFICATION AUDIT LOGS ----------
+
+  /// Insert a new driver verification audit log
+  Future<int> insertDriverVerificationAuditLog(
+    Map<String, dynamic> data,
+  ) async {
+    final db = await instance.database;
+    return await db.insert('driver_verification_audit_logs', data);
+  }
+
+  /// Get all audit logs for a specific driver verification document
+  Future<List<Map<String, dynamic>>> getDriverVerificationAuditLogsByDocument(
+    int documentId,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'driver_verification_audit_logs',
+      where: 'document_id = ?',
+      whereArgs: [documentId],
+      orderBy: 'timestamp DESC',
+    );
+  }
+
+  /// Get all audit logs for a specific user
+  Future<List<Map<String, dynamic>>> getDriverVerificationAuditLogsByUser(
+    int userId,
+  ) async {
+    final db = await instance.database;
+    return await db.query(
+      'driver_verification_audit_logs',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'timestamp DESC',
+    );
+  }
+
+  /// Get all driver verification audit logs
+  Future<List<Map<String, dynamic>>> getAllDriverVerificationAuditLogs({
+    int limit = 100,
+  }) async {
+    final db = await instance.database;
+    return await db.query(
+      'driver_verification_audit_logs',
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+  }
+
+  // ---------- DRIVER VERIFICATION STATUS HELPERS ----------
+
+  /// Get the verification status for a driver (all documents must be approved)
+  Future<String> getDriverVerificationStatus(int driverId) async {
+    final db = await instance.database;
+    final documents = await getDriverVerificationDocuments(driverId);
+
+    if (documents.isEmpty) {
+      return 'not_started';
+    }
+
+    final pendingCount = documents
+        .where((d) => d['status'] == 'pending')
+        .length;
+    final rejectedCount = documents
+        .where((d) => d['status'] == 'rejected')
+        .length;
+    final approvedCount = documents
+        .where((d) => d['status'] == 'approved')
+        .length;
+
+    if (pendingCount > 0) {
+      return 'pending';
+    }
+    if (rejectedCount > 0) {
+      return 'rejected';
+    }
+    if (approvedCount == documents.length) {
+      return 'approved';
+    }
+
+    return 'pending';
+  }
+
+  /// Approve a driver verification document
+  Future<int> approveDriverVerificationDocument(
+    int documentId,
+    int reviewerId,
+    String? notes,
+  ) async {
+    final db = await instance.database;
+
+    // Update the document status
+    final updateResult = await db.update(
+      'driver_verification_documents',
+      {
+        'status': 'approved',
+        'reviewer_id': reviewerId,
+        'review_date': DateTime.now().toIso8601String(),
+        'review_notes': notes,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [documentId],
+    );
+
+    // Add audit log
+    await insertDriverVerificationAuditLog({
+      'document_id': documentId,
+      'user_id': reviewerId,
+      'action': 'approved',
+      'timestamp': DateTime.now().toIso8601String(),
+      'details': notes ?? 'Document approved',
+    });
+
+    return updateResult;
+  }
+
+  /// Reject a driver verification document
+  Future<int> rejectDriverVerificationDocument(
+    int documentId,
+    int reviewerId,
+    String reason,
+  ) async {
+    final db = await instance.database;
+
+    // Update the document status
+    final updateResult = await db.update(
+      'driver_verification_documents',
+      {
+        'status': 'rejected',
+        'reviewer_id': reviewerId,
+        'review_date': DateTime.now().toIso8601String(),
+        'review_notes': reason,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [documentId],
+    );
+
+    // Add audit log
+    await insertDriverVerificationAuditLog({
+      'document_id': documentId,
+      'user_id': reviewerId,
+      'action': 'rejected',
+      'timestamp': DateTime.now().toIso8601String(),
+      'details': 'Reason: $reason',
+    });
+
+    return updateResult;
   }
 }

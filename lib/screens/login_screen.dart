@@ -6,6 +6,9 @@ import '../providers/auth_provider.dart';
 import 'register_screen.dart';
 import 'role_based_home.dart';
 import 'role_selection_screen.dart';
+import 'doctor/doctor_verification_status_screen.dart';
+import 'driver/driver_verification_status_screen.dart';
+import 'email_verification_screen.dart';
 import '../../translations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -291,10 +294,50 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await auth.login(email: _email.text.trim(), password: _password.text);
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-        );
+        // Check email verification first
+        if (auth.user?.verificationStatus == 'unverified') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(email: auth.user!.email),
+            ),
+          );
+        } else if (auth.user?.verificationStatus == 'unverified') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(email: auth.user!.email),
+            ),
+          );
+        } else if (auth.user?.verificationStatus == 'unverified') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(email: auth.user!.email),
+            ),
+          );
+        } else if (auth.user?.role == 'driver' &&
+            auth.user?.verificationStatus != 'verified') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DriverVerificationStatusScreen(),
+            ),
+          );
+        } else if (auth.user?.role == 'doctor' &&
+            auth.user?.verificationStatus != 'verified') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DoctorVerificationStatusScreen(),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          );
+        }
       }
     } catch (e) {
       _showError(e.toString());
@@ -325,6 +368,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   provider: pending['provider'] ?? '',
                   providerId: pending['providerId'] ?? '',
                 ),
+              ),
+            );
+          } else if (auth.user?.role == 'driver' &&
+              auth.user?.verificationStatus != 'verified') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DriverVerificationStatusScreen(),
+              ),
+            );
+          } else if (auth.user?.role == 'doctor' &&
+              auth.user?.verificationStatus != 'verified') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DoctorVerificationStatusScreen(),
               ),
             );
           } else {
@@ -364,6 +423,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   provider: pending['provider'] ?? '',
                   providerId: pending['providerId'] ?? '',
                 ),
+              ),
+            );
+          } else if (auth.user?.role == 'driver' &&
+              auth.user?.verificationStatus != 'verified') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DriverVerificationStatusScreen(),
+              ),
+            );
+          } else if (auth.user?.role == 'doctor' &&
+              auth.user?.verificationStatus != 'verified') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DoctorVerificationStatusScreen(),
               ),
             );
           } else {

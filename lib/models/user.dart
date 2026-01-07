@@ -15,6 +15,8 @@ class User {
   final int? linkedDriverId; // For doctors: which driver works with them
   final String availabilityStatus; // 'online', 'offline', 'busy', 'away'
   final String? lastSeen; // ISO timestamp
+  final String
+  verificationStatus; // 'verified', 'pending', 'rejected', 'partial' - for doctors
 
   User({
     this.id,
@@ -31,6 +33,7 @@ class User {
     this.linkedDriverId,
     this.availabilityStatus = 'offline',
     this.lastSeen,
+    this.verificationStatus = 'verified', // Default to verified for non-doctors
   });
 
   Map<String, dynamic> toMap() => {
@@ -48,6 +51,7 @@ class User {
     'linked_driver_id': linkedDriverId,
     'availability_status': availabilityStatus,
     'last_seen': lastSeen,
+    'verification_status': verificationStatus,
   };
 
   Map<String, dynamic> toJson() => toMap();
@@ -71,6 +75,7 @@ class User {
         : null,
     availabilityStatus: m['availability_status']?.toString() ?? 'offline',
     lastSeen: m['last_seen']?.toString(),
+    verificationStatus: m['verification_status']?.toString() ?? 'verified',
   );
 
   static String _validateName(String? name) {
@@ -95,6 +100,7 @@ class User {
     int? linkedDriverId,
     String? availabilityStatus,
     String? lastSeen,
+    String? verificationStatus,
   }) {
     return User(
       id: id ?? this.id,
@@ -111,6 +117,7 @@ class User {
       linkedDriverId: linkedDriverId ?? this.linkedDriverId,
       availabilityStatus: availabilityStatus ?? this.availabilityStatus,
       lastSeen: lastSeen ?? this.lastSeen,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
     );
   }
 }

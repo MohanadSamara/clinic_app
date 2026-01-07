@@ -11,6 +11,8 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import '../db/db_helper.dart';
 import '../models/user.dart';
 import '../firebase_options.dart';
+import '../utils/password_utils.dart';
+import '../services/email_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -20,8 +22,12 @@ class AuthProvider extends ChangeNotifier {
   // Temporary data for social login role selection
   Map<String, dynamic>? _pendingSocialUser;
 
+  // Temporary doctor registration data (stored until verification is complete)
+  Map<String, dynamic>? _pendingDoctorRegistration;
+
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
+  static const String _pendingDoctorKey = 'pending_doctor_registration';
 
   // Web profile image storage
   static Future<void> _saveWebProfileImage(
@@ -85,7 +91,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> register({
+  Future<int?> register({
     required String name,
     required String email,
     required String password,
@@ -103,8 +109,12 @@ class AuthProvider extends ChangeNotifier {
       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
         throw Exception('Invalid email format');
       }
-      if (password.length < 6)
-        throw Exception('Password must be at least 6 characters');
+
+      // Validate password strength
+      final passwordValidation = PasswordUtils.validatePassword(password);
+      if (!passwordValidation.isValid) {
+        throw Exception(passwordValidation.errors.join('. '));
+      }
 
       // Check if email exists
       final existing = await DBHelper.instance.getUserByEmail(email);
@@ -113,13 +123,15 @@ class AuthProvider extends ChangeNotifier {
       }
 
       final now = DateTime.now();
+      final hashedPassword = PasswordUtils.hashPassword(password);
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: password, // In production, hash this password
+        password: hashedPassword,
         phone: phone?.trim(),
         role: role,
         area: area,
+        verificationStatus: role == 'doctor' ? 'pending' : 'verified',
       );
 
       final id = await DBHelper.instance.insertUser(u.toMap());
@@ -130,6 +142,8 @@ class AuthProvider extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
+
+      return id;
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -146,14 +160,25 @@ class AuthProvider extends ChangeNotifier {
       if (email.trim().isEmpty) throw Exception('Email is required');
       if (password.isEmpty) throw Exception('Password is required');
 
-      final res = await DBHelper.instance.getUserByEmailAndPassword(
+      // Get user by email first
+      final userData = await DBHelper.instance.getUserByEmail(
         email.trim().toLowerCase(),
-        password,
       );
-
-      if (res == null) {
+      if (userData == null) {
         throw Exception('Invalid email or password');
       }
+
+      // Verify password against hash
+      final storedPassword = userData['password'] as String;
+      final isPasswordValid = PasswordUtils.verifyPassword(
+        password,
+        storedPassword,
+      );
+      if (!isPasswordValid) {
+        throw Exception('Invalid email or password');
+      }
+
+      final res = userData;
 
       // Set user from database result
       final user = User.fromMap(res);
@@ -337,6 +362,7 @@ class AuthProvider extends ChangeNotifier {
             role: role,
             provider: provider,
             providerId: providerId,
+            verificationStatus: role == 'doctor' ? 'pending' : 'verified',
           );
 
           final id = await DBHelper.instance.insertUser(localUser.toMap());
@@ -405,20 +431,26 @@ class AuthProvider extends ChangeNotifier {
 
       // Handle password change
       if (newPassword != null && newPassword.isNotEmpty) {
-        if (newPassword.length < 6) {
-          throw Exception('New password must be at least 6 characters');
+        // Validate new password strength
+        final passwordValidation = PasswordUtils.validatePassword(newPassword);
+        if (!passwordValidation.isValid) {
+          throw Exception(
+            'New password: ${passwordValidation.errors.join('. ')}',
+          );
         }
 
         // Verify current password if provided
         if (currentPassword != null && currentPassword.isNotEmpty) {
-          final isValidPassword = await DBHelper.instance
-              .getUserByEmailAndPassword(_user!.email, currentPassword);
-          if (isValidPassword == null) {
+          final isValidPassword = PasswordUtils.verifyPassword(
+            currentPassword,
+            _user!.password,
+          );
+          if (!isValidPassword) {
             throw Exception('Current password is incorrect');
           }
         }
 
-        updates['password'] = newPassword; // In production, hash this
+        updates['password'] = PasswordUtils.hashPassword(newPassword);
       }
 
       if (updates.isNotEmpty) {
@@ -536,6 +568,7 @@ class AuthProvider extends ChangeNotifier {
           provider: provider,
           providerId: providerId,
           area: area,
+          verificationStatus: role == 'doctor' ? 'pending' : 'verified',
         );
 
         final id = await DBHelper.instance.insertUser(localUser.toMap());
@@ -560,6 +593,184 @@ class AuthProvider extends ChangeNotifier {
   // Get pending social user data
   Map<String, dynamic>? get pendingSocialUser => _pendingSocialUser;
 
+  // ===== Doctor Registration Methods =====
+
+  // Store doctor registration data temporarily (without saving to database)
+  Future<void> storePendingDoctorRegistration({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    required String area,
+    required Map<String, dynamic> documents,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Hash the password before storing
+    final hashedPassword = PasswordUtils.hashPassword(password);
+
+    // Store simple data as string
+    final simpleData = {
+      'name': name,
+      'email': email.toLowerCase(),
+      'password': hashedPassword,
+      'phone': phone ?? '',
+      'area': area,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    final simpleDataString = simpleData.entries
+        .map((e) => '${e.key}:${e.value}')
+        .join(',');
+
+    // Store documents as JSON (but exclude file bytes for storage)
+    final documentsForStorage = <String, dynamic>{};
+    for (final entry in documents.entries) {
+      final docData = Map<String, dynamic>.from(entry.value);
+      // Remove file bytes - they'll be lost on restart
+      docData.remove('file_data');
+      documentsForStorage[entry.key] = docData;
+    }
+
+    await prefs.setString(_pendingDoctorKey, simpleDataString);
+    await prefs.setString(
+      '${_pendingDoctorKey}_documents',
+      jsonEncode(documentsForStorage),
+    );
+
+    _pendingDoctorRegistration = {...simpleData, 'documents': documents};
+  }
+
+  // Get pending doctor registration data
+  Map<String, dynamic>? get pendingDoctorRegistration =>
+      _pendingDoctorRegistration;
+
+  // Check if there's pending doctor registration
+  bool get hasPendingDoctorRegistration => _pendingDoctorRegistration != null;
+
+  // Complete doctor registration (called after verification is done)
+  Future<int?> completeDoctorRegistration() async {
+    if (_pendingDoctorRegistration == null) {
+      throw Exception('No pending doctor registration');
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = _pendingDoctorRegistration!;
+      final email = data['email'] as String;
+
+      // Check if email already exists
+      final existing = await DBHelper.instance.getUserByEmail(email);
+      if (existing != null) {
+        throw Exception('Email already exists');
+      }
+
+      final u = User(
+        name: data['name'] as String,
+        email: email,
+        password: data['password'] as String,
+        phone: (data['phone'] as String?)?.isEmpty == true
+            ? null
+            : data['phone'] as String?,
+        role: 'doctor',
+        area: data['area'] as String?,
+        verificationStatus: 'verified', // Auto-verify for simplicity
+      );
+
+      final id = await DBHelper.instance.insertUser(u.toMap());
+      _user = User.fromMap(u.toMap()..['id'] = id);
+
+      // Save documents
+      final documents = data['documents'] as Map<String, dynamic>;
+      for (final entry in documents.entries) {
+        final doc = entry.value;
+        if (doc['fileName'] != null) {
+          final documentData = {
+            'doctor_id': id,
+            'document_type': doc['document_type'],
+            'file_name': doc['fileName'],
+            'file_path': doc['file_path'],
+            'file_data': doc['file_data'],
+            'upload_date': DateTime.now().toIso8601String(),
+            'status': 'approved', // Auto-approve for simplicity
+            'document_number': doc['documentNumber'] ?? '',
+            'expiry_date': doc['expiry_date'],
+            'issuing_authority': doc['issuingAuthority'] ?? '',
+            'verification_code': doc['verificationCode'] ?? '',
+          };
+          await DBHelper.instance.insertDoctorVerificationDocument(
+            documentData,
+          );
+        }
+      }
+
+      // Clear pending registration
+      await clearPendingDoctorRegistration();
+
+      // Save user to storage
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return id;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Clear pending doctor registration
+  Future<void> clearPendingDoctorRegistration() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingDoctorKey);
+    await prefs.remove('${_pendingDoctorKey}_documents');
+    _pendingDoctorRegistration = null;
+  }
+
+  // Load pending doctor registration from storage
+  Future<void> loadPendingDoctorRegistration() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dataString = prefs.getString(_pendingDoctorKey);
+      if (dataString != null) {
+        final dataMap = <String, dynamic>{};
+        for (final pair in dataString.split(',')) {
+          final parts = pair.split(':');
+          if (parts.length >= 2) {
+            final key = parts[0];
+            final value = parts.sublist(1).join(':');
+            dataMap[key] = value;
+          }
+        }
+
+        // Load documents from JSON
+        final docsString = prefs.getString('${_pendingDoctorKey}_documents');
+        if (docsString != null) {
+          try {
+            dataMap['documents'] = jsonDecode(docsString);
+          } catch (e) {
+            dataMap['documents'] = {};
+          }
+        } else {
+          dataMap['documents'] = {};
+        }
+
+        _pendingDoctorRegistration = dataMap;
+      }
+    } catch (e) {
+      debugPrint('Error loading pending doctor registration: $e');
+    }
+  }
+
+  // Remove the old parse method
+  void _parseDocumentsString(String docsStr) {
+    // No longer needed - using JSON now
+  }
+
   // Get profile image bytes for web
   Future<Uint8List?> getProfileImageBytes() async {
     if (!kIsWeb || _user == null || _user!.profileImage == null) return null;
@@ -575,6 +786,143 @@ class AuthProvider extends ChangeNotifier {
   Future<void> saveUserPreferences() async {
     if (_user != null) {
       await _saveUserToStorage(_user!);
+    }
+  }
+
+  Future<void> updateVerificationStatus(String status) async {
+    if (_user == null) return;
+
+    try {
+      await DBHelper.instance.updateUser(_user!.id!, {
+        'verification_status': status,
+      });
+      _user = _user!.copyWith(verificationStatus: status);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating verification status: $e');
+    }
+  }
+
+  // ===== Email Verification Methods =====
+
+  // Send verification code to email
+  Future<bool> sendEmailVerificationCode(String email) async {
+    try {
+      final code = await EmailService.sendVerificationCode(email);
+      return code != null;
+    } catch (e) {
+      debugPrint('Error sending verification code: $e');
+      return false;
+    }
+  }
+
+  // Verify email with code
+  Future<bool> verifyEmailCode(String email, String code) async {
+    try {
+      return await EmailService.verifyCode(email, code);
+    } catch (e) {
+      debugPrint('Error verifying email code: $e');
+      return false;
+    }
+  }
+
+  // Resend verification code
+  Future<bool> resendEmailVerificationCode(String email) async {
+    try {
+      final code = await EmailService.resendVerificationCode(email);
+      return code != null;
+    } catch (e) {
+      debugPrint('Error resending verification code: $e');
+      return false;
+    }
+  }
+
+  // Check if email has pending verification
+  bool hasPendingEmailVerification(String email) {
+    return EmailService.hasPendingVerification(email);
+  }
+
+  // Register with email verification (modified register method)
+  Future<int?> registerWithEmailVerification({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String role = 'owner',
+    String? area,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Validate input
+      if (name.trim().isEmpty) throw Exception('Name is required');
+      if (email.trim().isEmpty) throw Exception('Email is required');
+      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+        throw Exception('Invalid email format');
+      }
+
+      // Validate password strength
+      final passwordValidation = PasswordUtils.validatePassword(password);
+      if (!passwordValidation.isValid) {
+        throw Exception(passwordValidation.errors.join('. '));
+      }
+
+      // Check if email exists
+      final existing = await DBHelper.instance.getUserByEmail(email);
+      if (existing != null) {
+        throw Exception('Email already exists');
+      }
+
+      final now = DateTime.now();
+      final hashedPassword = PasswordUtils.hashPassword(password);
+      final u = User(
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        phone: phone?.trim(),
+        role: role,
+        area: area,
+        verificationStatus: 'unverified', // Start as unverified
+      );
+
+      final id = await DBHelper.instance.insertUser(u.toMap());
+      _user = User.fromMap(u.toMap()..['id'] = id);
+
+      // Send verification email
+      final emailSent = await sendEmailVerificationCode(email);
+      if (!emailSent) {
+        // If email fails, still create user but mark as unverified
+        debugPrint('Warning: Failed to send verification email');
+      }
+
+      // Save to secure storage
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return id;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Complete email verification
+  Future<bool> completeEmailVerification(String email, String code) async {
+    try {
+      final isValid = await verifyEmailCode(email, code);
+      if (isValid) {
+        // Update user verification status
+        await updateVerificationStatus('verified');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error completing email verification: $e');
+      return false;
     }
   }
 }

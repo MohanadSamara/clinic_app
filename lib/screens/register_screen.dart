@@ -4,8 +4,12 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../../translations.dart';
 import '../providers/auth_provider.dart';
+import '../utils/password_utils.dart';
 import 'role_based_home.dart';
 import 'role_selection_screen.dart';
+import 'doctor/doctor_registration_documents_screen.dart';
+import 'driver/driver_verification_screen.dart';
+import 'email_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -126,7 +130,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _pass,
                         decoration: InputDecoration(
                           labelText: context.tr('password'),
-                          hintText: context.tr('min6Characters'),
+                          hintText:
+                              'At least 8 characters with uppercase, lowercase, number & special character',
                           prefixIcon: Icon(
                             Icons.lock_outline,
                             color: colorScheme.onSurfaceVariant,
@@ -255,7 +260,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               )
                             : ElevatedButton(
-                                onPressed: _register,
+                                onPressed: _selectedRole == 'doctor'
+                                    ? _goToDoctorRegistration
+                                    : _selectedRole == 'driver'
+                                    ? _goToDriverVerification
+                                    : _register,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: colorScheme.primary,
                                   foregroundColor: colorScheme.onPrimary,
@@ -266,7 +275,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   textStyle: theme.textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
-                                child: Text(context.tr('createAccount')),
+                                child: Text(
+                                  _selectedRole == 'doctor'
+                                      ? 'Continue to Document Upload'
+                                      : _selectedRole == 'driver'
+                                      ? 'Continue to Verification'
+                                      : context.tr('createAccount'),
+                                ),
                               ),
                       ),
                     ],
@@ -419,8 +434,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _showError(context.tr('pleaseEnterValidEmailAddress'));
       return;
     }
-    if (_pass.text.length < 6) {
-      _showError(context.tr('passwordMustBeAtLeast6Characters'));
+    // Validate password strength
+    final passwordValidation = PasswordUtils.validatePassword(_pass.text);
+    if (!passwordValidation.isValid) {
+      _showError(passwordValidation.errors.join('. '));
       return;
     }
     if ((_selectedRole == 'doctor' || _selectedRole == 'driver') &&
@@ -431,7 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _loading = true);
     try {
-      await auth.register(
+      await auth.registerWithEmailVerification(
         name: _name.text.trim(),
         email: _email.text.trim(),
         password: _pass.text,
@@ -440,9 +457,113 @@ class _RegisterScreenState extends State<RegisterScreen> {
         area: _selectedArea,
       );
       if (mounted) {
+        // Navigate to email verification screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(
+              email: _email.text.trim().toLowerCase(),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _goToDoctorRegistration() async {
+    // Validation for doctor registration
+    if (_name.text.trim().isEmpty) {
+      _showError(context.tr('pleaseEnterYourFullName'));
+      return;
+    }
+    if (_email.text.trim().isEmpty) {
+      _showError(context.tr('pleaseEnterYourEmail'));
+      return;
+    }
+    if (!RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    ).hasMatch(_email.text.trim())) {
+      _showError(context.tr('pleaseEnterValidEmailAddress'));
+      return;
+    }
+    // Validate password strength
+    final passwordValidation = PasswordUtils.validatePassword(_pass.text);
+    if (!passwordValidation.isValid) {
+      _showError(passwordValidation.errors.join('. '));
+      return;
+    }
+    if (_selectedArea == null || _selectedArea!.isEmpty) {
+      _showError(context.tr('pleaseSelectServiceAreaForYourRole'));
+      return;
+    }
+
+    // Navigate to doctor document upload screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoctorRegistrationDocumentsScreen(
+          name: _name.text.trim(),
+          email: _email.text.trim(),
+          password: _pass.text,
+          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+          area: _selectedArea!,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _goToDriverVerification() async {
+    // Validation for driver registration
+    if (_name.text.trim().isEmpty) {
+      _showError(context.tr('pleaseEnterYourFullName'));
+      return;
+    }
+    if (_email.text.trim().isEmpty) {
+      _showError(context.tr('pleaseEnterYourEmail'));
+      return;
+    }
+    if (!RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    ).hasMatch(_email.text.trim())) {
+      _showError(context.tr('pleaseEnterValidEmailAddress'));
+      return;
+    }
+    // Validate password strength
+    final passwordValidation = PasswordUtils.validatePassword(_pass.text);
+    if (!passwordValidation.isValid) {
+      _showError(passwordValidation.errors.join('. '));
+      return;
+    }
+    if (_selectedArea == null || _selectedArea!.isEmpty) {
+      _showError(context.tr('pleaseSelectServiceAreaForYourRole'));
+      return;
+    }
+
+    // First register the driver, then navigate to verification
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    setState(() => _loading = true);
+    try {
+      await auth.register(
+        name: _name.text.trim(),
+        email: _email.text.trim(),
+        password: _pass.text,
+        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+        role: 'driver',
+        area: _selectedArea,
+      );
+
+      if (mounted) {
+        // Navigate to driver verification screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DriverVerificationScreen()),
         );
       }
     } catch (e) {

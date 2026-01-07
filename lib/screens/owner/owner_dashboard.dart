@@ -206,7 +206,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(20),
                         child: Image.network(
-                          'https://images.unsplash.com/photo-1552728089-57bdde30beb3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
+                          'https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
                           width: double.infinity,
                           height: 240,
                           fit: BoxFit.cover,
@@ -596,7 +596,7 @@ class _OwnerHomeScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _SuccessStoryCard(
                           imageUrl:
-                              'https://images.unsplash.com/photo-1548124853-8d0e16544a01?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                              'https://images.unsplash.com/photo-1587300003388-59208cc962cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
                           quote: '"${context.tr('mobileVetServiceAmazing')}"',
                           author: 'James K., ${context.tr('dogLover')}',
                           colorScheme: colorScheme,

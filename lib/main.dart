@@ -22,10 +22,18 @@ import 'providers/notification_provider.dart';
 import 'providers/van_provider.dart';
 import 'providers/availability_provider.dart';
 import 'providers/schedule_provider.dart';
+import 'providers/driver_verification_provider.dart';
 import 'models/van.dart';
 import 'services/notification_service.dart';
 import 'services/calendar_service.dart';
 import 'screens/loading_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/role_based_home.dart';
+import 'screens/doctor/document_upload_screen.dart';
+import 'screens/doctor/medical_record_form_screen.dart';
+import 'models/medical_record.dart';
+import 'models/pet.dart';
+import 'models/appointment.dart';
 import 'theme/vet_theme.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -71,6 +79,9 @@ void main() async {
     // Initialize auth provider to check for existing session
     final authProvider = AuthProvider();
     await authProvider.initialize();
+
+    // Load pending doctor registration if exists
+    await authProvider.loadPendingDoctorRegistration();
 
     // Initialize sample vans for testing
     await _initializeSampleVans();
@@ -189,6 +200,11 @@ class MyApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, DriverVerificationProvider>(
+          create: (context) => DriverVerificationProvider(authProvider),
+          update: (context, auth, previous) =>
+              previous ?? DriverVerificationProvider(auth),
+        ),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, child) {
@@ -219,6 +235,32 @@ class MyApp extends StatelessWidget {
             darkTheme: VetTheme.dark(),
             themeMode: themeProvider.themeMode,
             home: const LoadingScreen(),
+            routes: {
+              '/role-based-home': (context) => const RoleBasedHome(),
+              '/login': (context) => const LoginScreen(),
+            },
+            onGenerateRoute: (settings) {
+              switch (settings.name) {
+                case '/doctor/document-upload':
+                  final args = settings.arguments as Map<String, dynamic>?;
+                  return MaterialPageRoute(
+                    builder: (context) => DocumentUploadScreen(),
+                    settings: settings,
+                  );
+                case '/doctor/medical-record-form':
+                  final args = settings.arguments as Map<String, dynamic>?;
+                  return MaterialPageRoute(
+                    builder: (context) => MedicalRecordFormScreen(
+                      record: args?['record'] as MedicalRecord?,
+                      pet: args?['pet'] as Pet?,
+                      appointment: args?['appointment'] as Appointment?,
+                    ),
+                    settings: settings,
+                  );
+                default:
+                  return null;
+              }
+            },
           );
         },
       ),

@@ -14,7 +14,7 @@ import '../../models/medical_record.dart';
 import '../../components/modern_cards.dart';
 import '../../../translations.dart';
 import '../../../translations/translations.dart';
-import 'package:get/get.dart' hide Translations;
+import 'doctor_dashboard.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
   const DocumentUploadScreen({super.key});
@@ -172,15 +172,12 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.tr('documentUploadedSuccessfully'))),
         );
-        // Reset form
-        setState(() {
-          _selectedFile = null;
-          _fileName = null;
-          _descriptionController.clear();
-          _selectedPet = null;
-          _uploadProgress = 0.0;
-          _fileBytes = null;
-        });
+        // Navigate to doctor dashboard after successful upload
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const DoctorDashboard()),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.tr('failedToUploadDocument'))),
@@ -192,8 +189,24 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       if (mounted) {
         setState(() => _uploadProgress = 0.0);
       }
+      // Show detailed error message
+      String errorMessage = context.tr('errorUploadingDocument');
+      if (e.toString().contains('File size exceeds')) {
+        errorMessage = 'File size too large. Please select a smaller file.';
+      } else if (e.toString().contains('File type not allowed')) {
+        errorMessage =
+            'File type not supported. Please select PDF, image, or document files.';
+      } else if (e.toString().contains('No file data provided')) {
+        errorMessage = 'Please select a file to upload.';
+      } else {
+        errorMessage =
+            '${context.tr('errorUploadingDocument')}: ${e.toString()}';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${context.tr('errorUploadingDocument')}: $e')),
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 5),
+        ),
       );
     } finally {
       if (mounted) {

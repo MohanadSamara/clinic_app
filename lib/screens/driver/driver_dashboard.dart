@@ -172,6 +172,9 @@ class _DriverDashboardState extends State<DriverDashboard>
         'online',
       );
 
+      // Simple verification: no check needed, driver can access after submitting documents
+      // Verification check removed for simplified flow
+
       // Load location separately as it may take longer (especially on web with API calls)
       _loadCurrentLocationAsync();
     }
@@ -2043,7 +2046,7 @@ class _DriverDashboardState extends State<DriverDashboard>
               selected: localeProvider.locale.languageCode == 'en',
             ),
             ListTile(
-              leading: const Text('🇸🇦', style: TextStyle(fontSize: 24)),
+              leading: const Text('🇸🇺', style: TextStyle(fontSize: 24)),
               title: Text(context.tr('arabic')),
               onTap: () {
                 localeProvider.setLocale(const Locale('ar'));
