@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // EmailJS Configuration - FREE Email Service
 // CRITICAL SETUP INSTRUCTIONS:
@@ -10,11 +11,12 @@ import 'dart:convert';
 // 3. IMPORTANT: In your email SERVICE settings, set the recipient email address
 // 4. Create an email template with these variables:
 //    - {{verification_code}}: The 6-digit verification code
+//    - {{to_email}}: The recipient's email address
 // 5. Replace the credentials below with your actual EmailJS values
 // 6. Test the integration - if not configured, it falls back to demo mode
 //
 // ERROR "recipients address is empty" means: You need to set the recipient email
-// in your EmailJS SERVICE configuration, not in the template parameters!
+// in your EmailJS SERVICE configuration, or pass it in template_params!
 
 const String _emailJsServiceId = 'service_v3hwr1n'; // Your EmailJS service ID
 const String _emailJsTemplateId =
@@ -58,12 +60,15 @@ class EmailService {
       }
 
       // Prepare EmailJS payload
-      // Note: Recipient email is configured in EmailJS service dashboard
+      // We include to_email in template_params so it can be used in the template
       final payload = {
         'service_id': _emailJsServiceId,
         'template_id': _emailJsTemplateId,
         'user_id': _emailJsPublicKey,
-        'template_params': {'verification_code': code},
+        'template_params': {
+          'verification_code': code,
+          'to_email': email,
+        },
       };
 
       // Send email via EmailJS
@@ -85,6 +90,8 @@ class EmailService {
         print(
           '❌ Failed to send email: ${response.statusCode} - ${response.body}',
         );
+        // Even if email fails, in some dev scenarios we might want to store the code
+        // but for production we return false.
         return false;
       }
     } catch (e) {
@@ -93,51 +100,95 @@ class EmailService {
     }
   }
 
-  // Store verification code in shared preferences (temporary storage)
+  // Store verification code in shared preferences (persistent storage)
   static Future<void> _storeVerificationCode(String email, String code) async {
-    // For simplicity, we'll use a simple in-memory map
-    // In production, you might want to use secure storage or a backend
-    _verificationCodes[email] = {
-      'code': code,
-      'timestamp': DateTime.now().toIso8601String(),
-    };
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? storedJson = prefs.getString(_verificationCodesKey);
+      Map<String, dynamic> codes = {};
+      
+      if (storedJson != null) {
+        codes = jsonDecode(storedJson) as Map<String, dynamic>;
+      }
+
+      codes[email] = {
+        'code': code,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      await prefs.setString(_verificationCodesKey, jsonEncode(codes));
+    } catch (e) {
+      print('❌ Error storing verification code: $e');
+      // Fallback to in-memory if SharedPreferences fails
+      _inMemoryCodes[email] = {
+        'code': code,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+    }
   }
 
   // Verify the entered code
   static Future<bool> verifyCode(String email, String enteredCode) async {
-    final storedData = _verificationCodes[email];
-    if (storedData == null) {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? storedJson = prefs.getString(_verificationCodesKey);
+      Map<String, dynamic> codes = {};
+      
+      if (storedJson != null) {
+        codes = jsonDecode(storedJson) as Map<String, dynamic>;
+      }
+
+      // Check in-memory fallback too
+      final storedData = codes[email] ?? _inMemoryCodes[email];
+      
+      if (storedData == null) {
+        return false;
+      }
+
+      final storedCode = storedData['code'] as String;
+      final timestamp = DateTime.parse(storedData['timestamp'] as String);
+
+      // Check if code is expired (15 minutes)
+      if (DateTime.now().difference(timestamp).inMinutes > 15) {
+        codes.remove(email);
+        _inMemoryCodes.remove(email);
+        await prefs.setString(_verificationCodesKey, jsonEncode(codes));
+        return false;
+      }
+
+      final isValid = storedCode == enteredCode;
+      if (isValid) {
+        // Remove the code after successful verification
+        codes.remove(email);
+        _inMemoryCodes.remove(email);
+        await prefs.setString(_verificationCodesKey, jsonEncode(codes));
+      }
+
+      return isValid;
+    } catch (e) {
+      print('❌ Error verifying code: $e');
+      // Fallback to in-memory check
+      final storedData = _inMemoryCodes[email];
+      if (storedData != null) {
+        final storedCode = storedData['code'] as String;
+        final timestamp = DateTime.parse(storedData['timestamp'] as String);
+        if (DateTime.now().difference(timestamp).inMinutes <= 15) {
+          final isValid = storedCode == enteredCode;
+          if (isValid) _inMemoryCodes.remove(email);
+          return isValid;
+        }
+      }
       return false;
     }
-
-    final storedCode = storedData['code'] as String;
-    final timestamp = DateTime.parse(storedData['timestamp'] as String);
-
-    // Check if code is expired (15 minutes)
-    if (DateTime.now().difference(timestamp).inMinutes > 15) {
-      _verificationCodes.remove(email);
-      return false;
-    }
-
-    final isValid = storedCode == enteredCode;
-    if (isValid) {
-      // Remove the code after successful verification
-      _verificationCodes.remove(email);
-    }
-
-    return isValid;
   }
 
   // Resend verification code
   static Future<String?> resendVerificationCode(String email) async {
-    final code = _generateVerificationCode();
-    final success = await sendVerificationEmail(email, code);
-    return success ? code : null;
+    return await sendVerificationCode(email);
   }
 
-  // In-memory storage for demo purposes
-  // In production, use secure storage or backend
-  static final Map<String, Map<String, dynamic>> _verificationCodes = {};
+  // In-memory storage for fallback
+  static final Map<String, Map<String, dynamic>> _inMemoryCodes = {};
 
   // Generate and send verification code for email
   static Future<String?> sendVerificationCode(String email) async {
@@ -147,12 +198,24 @@ class EmailService {
   }
 
   // Check if email has a pending verification
-  static bool hasPendingVerification(String email) {
-    return _verificationCodes.containsKey(email);
+  static Future<bool> hasPendingVerification(String email) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? storedJson = prefs.getString(_verificationCodesKey);
+      if (storedJson != null) {
+        final codes = jsonDecode(storedJson) as Map<String, dynamic>;
+        if (codes.containsKey(email)) return true;
+      }
+    } catch (_) {}
+    return _inMemoryCodes.containsKey(email);
   }
 
   // Clear all verification codes (for testing/cleanup)
-  static void clearAllCodes() {
-    _verificationCodes.clear();
+  static Future<void> clearAllCodes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_verificationCodesKey);
+    } catch (_) {}
+    _inMemoryCodes.clear();
   }
 }

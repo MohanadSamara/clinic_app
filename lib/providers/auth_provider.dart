@@ -838,8 +838,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Check if email has pending verification
-  bool hasPendingEmailVerification(String email) {
-    return EmailService.hasPendingVerification(email);
+  Future<bool> hasPendingEmailVerification(String email) async {
+    return await EmailService.hasPendingVerification(email);
   }
 
   // Register with email verification (modified register method)
