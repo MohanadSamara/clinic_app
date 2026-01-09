@@ -8,16 +8,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:appwrite/appwrite.dart';
 
 import 'package:clinic_app/main.dart';
 import 'package:clinic_app/providers/auth_provider.dart';
+import 'package:clinic_app/constants/appwrite_config.dart';
+import 'package:clinic_app/screens/loading_screen.dart';
 
 void main() {
   testWidgets('App loads smoke test', (WidgetTester tester) async {
+    // Create a mock Appwrite client for testing
+    final client = Client()
+        .setEndpoint(appwritePublicEndpoint)
+        .setProject(appwriteProjectId);
+
     // Build our app and trigger a frame.
     final authProvider = AuthProvider();
     await authProvider.initialize();
-    await tester.pumpWidget(MyApp(authProvider: authProvider));
+
+    // Use LoadingScreen directly with the required client parameter
+    await tester.pumpWidget(MaterialApp(home: LoadingScreen(client: client)));
 
     // Wait for the app to settle
     await tester.pumpAndSettle();

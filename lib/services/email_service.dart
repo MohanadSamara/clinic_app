@@ -36,29 +36,26 @@ class EmailService {
   // Send verification email using EmailJS (free service)
   static Future<bool> sendVerificationEmail(String email, String code) async {
     try {
-      // Check if EmailJS is configured with real credentials
-      final isConfigured =
-          _emailJsServiceId.isNotEmpty &&
-          _emailJsTemplateId.isNotEmpty &&
-          _emailJsPublicKey.isNotEmpty &&
-          _emailJsServiceId != 'service_v3hwr1n' &&
-          _emailJsTemplateId != 'template_38xcnsn' &&
-          _emailJsPublicKey != '_AG0cxQBNoMhgym53';
-
-      if (!isConfigured) {
-        // Fallback to demo mode if not configured
-        // Store the verification code temporarily
-        await _storeVerificationCode(email, code);
-        return true;
+      // Check if EmailJS credentials are configured
+      if (_emailJsServiceId.isEmpty ||
+          _emailJsTemplateId.isEmpty ||
+          _emailJsPublicKey.isEmpty) {
+        return false;
       }
 
       // Prepare EmailJS payload
-      // The recipient must be set in the EmailJS template as {{to_email}}
+      final expiryTime = DateTime.now()
+          .add(const Duration(minutes: 15))
+          .toString();
       final payload = {
         'service_id': _emailJsServiceId,
         'template_id': _emailJsTemplateId,
         'user_id': _emailJsPublicKey,
-        'template_params': {'verification_code': code, 'to_email': email},
+        'template_params': {
+          'passcode': code,
+          'to_email': email,
+          'time': expiryTime,
+        },
       };
 
       // Send email via EmailJS
@@ -66,24 +63,20 @@ class EmailService {
         Uri.parse(_emailJsUrl),
         headers: {
           'Content-Type': 'application/json',
-          'origin': 'http://localhost', // Required for CORS
+          'origin':
+              'http://localhost', // Configurable for different environments
         },
         body: jsonEncode(payload),
       );
 
       if (response.statusCode == 200) {
-        print('📧 Verification email sent successfully to $email');
         // Store the verification code temporarily
         await _storeVerificationCode(email, code);
         return true;
       } else {
-        print(
-          '❌ Failed to send email: ${response.statusCode} - ${response.body}',
-        );
         return false;
       }
     } catch (e) {
-      print('❌ Error sending verification email: $e');
       return false;
     }
   }
@@ -181,6 +174,7 @@ class EmailService {
   // Generate and send verification code for email
   static Future<String?> sendVerificationCode(String email) async {
     final code = _generateVerificationCode();
+    print('🔢 Generated OTP for $email: $code'); // For testing purposes
     final success = await sendVerificationEmail(email, code);
     return success ? code : null;
   }

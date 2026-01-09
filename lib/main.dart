@@ -1,11 +1,15 @@
 // lib/main.dart
-import 'package:flutter/material.dart';
+import 'dart:ui' show Locale;
+import 'package:flutter/material.dart' hide Locale;
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:appwrite/appwrite.dart' hide Locale;
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'constants/appwrite_config.dart';
+import 'appwrite_client.dart';
 import 'providers/admin_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider.dart';
@@ -26,6 +30,7 @@ import 'providers/driver_verification_provider.dart';
 import 'models/van.dart';
 import 'services/notification_service.dart';
 import 'services/calendar_service.dart';
+import 'services/qdrant_service.dart';
 import 'screens/loading_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/role_based_home.dart';
@@ -76,6 +81,15 @@ void main() async {
     final notificationService = NotificationService();
     await notificationService.initialize();
 
+    // Test Qdrant connection
+    try {
+      final qdrantService = QdrantService.withCredentials();
+      await qdrantService.testConnection();
+      debugPrint('Qdrant connection test successful');
+    } catch (e) {
+      debugPrint('Qdrant connection test failed: $e');
+    }
+
     // Initialize auth provider to check for existing session
     final authProvider = AuthProvider();
     await authProvider.initialize();
@@ -100,7 +114,7 @@ void main() async {
       }
     }
 
-    runApp(MyApp(authProvider: authProvider));
+    runApp(MyApp(authProvider: authProvider, client: client));
 
     // Setup web-specific close handling
     if (kIsWeb) {
@@ -167,8 +181,9 @@ Future<void> _initializeSampleVans() async {
 
 class MyApp extends StatelessWidget {
   final AuthProvider authProvider;
+  final Client client;
 
-  const MyApp({super.key, required this.authProvider});
+  const MyApp({super.key, required this.authProvider, required this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +249,7 @@ class MyApp extends StatelessWidget {
             theme: VetTheme.light(),
             darkTheme: VetTheme.dark(),
             themeMode: themeProvider.themeMode,
-            home: const LoadingScreen(),
+            home: LoadingScreen(client: client),
             routes: {
               '/role-based-home': (context) => const RoleBasedHome(),
               '/login': (context) => const LoginScreen(),

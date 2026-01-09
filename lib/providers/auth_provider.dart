@@ -889,13 +889,6 @@ class AuthProvider extends ChangeNotifier {
       final id = await DBHelper.instance.insertUser(u.toMap());
       _user = User.fromMap(u.toMap()..['id'] = id);
 
-      // Send verification email
-      final emailSent = await sendEmailVerificationCode(email);
-      if (!emailSent) {
-        // If email fails, still create user but mark as unverified
-        debugPrint('Warning: Failed to send verification email');
-      }
-
       // Save to secure storage
       await _saveUserToStorage(_user!);
 
