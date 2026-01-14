@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -104,8 +105,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             Icons.lock_outline,
                             color: colorScheme.onSurfaceVariant,
                           ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
-                        obscureText: true,
+                        obscureText: !_isPasswordVisible,
                         textInputAction: TextInputAction.done,
                       ),
                       const SizedBox(height: 24),
@@ -285,31 +299,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError(context.tr('pleaseEnterYourEmail'));
       return;
     }
-    if (_password.text.isEmpty) {
+    if (_password.text.trim().isEmpty) {
       _showError(context.tr('pleaseEnterYourPassword'));
       return;
     }
 
     setState(() => _loading = true);
     try {
-      await auth.login(email: _email.text.trim(), password: _password.text);
+      await auth.login(
+        email: _email.text.trim(),
+        password: _password.text.trim(),
+      );
       if (mounted) {
         // Check email verification first
         if (auth.user?.verificationStatus == 'unverified') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EmailVerificationScreen(email: auth.user!.email),
-            ),
-          );
-        } else if (auth.user?.verificationStatus == 'unverified') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EmailVerificationScreen(email: auth.user!.email),
-            ),
-          );
-        } else if (auth.user?.verificationStatus == 'unverified') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

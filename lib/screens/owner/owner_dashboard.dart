@@ -5,8 +5,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:ui' show SystemNavigator;
 import 'package:flutter/foundation.dart' show kIsWeb;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:universal_html/universal_html.dart' as html;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -53,6 +52,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     const BookingScreen(),
     const AppointmentsScreen(),
     const OwnerProfileScreen(),
+    const NotificationPreferencesScreen(),
+    const MedicalDocumentsScreen(),
   ];
 
   @override
@@ -77,7 +78,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.shifting,
         backgroundColor: colorScheme.surface,
         elevation: 0,
         selectedItemColor: colorScheme.primary,

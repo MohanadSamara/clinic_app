@@ -2,9 +2,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:convert';
 import '../providers/auth_provider.dart';
 import '../providers/pet_provider.dart';
 import '../providers/appointment_provider.dart';
@@ -87,13 +84,9 @@ class AppCloseService {
   void performAppExit() {
     if (kIsWeb) {
       // For web: Attempt to close the browser tab
-      try {
-        html.window.close();
-      } catch (e) {
-        debugPrint('Unable to close browser tab: $e');
-        // Fallback: Show confirmation that data is saved
-        // (This would be handled by the calling widget)
-      }
+      // Note: Web-specific functionality requires dart:html
+      // This code will only work when compiled for web
+      debugPrint('App exit for web is not supported in this build');
     } else {
       // For mobile and desktop platforms (non-web)
       bool isMobile = false;

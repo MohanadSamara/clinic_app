@@ -10,7 +10,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:html' as html;
+import 'package:universal_html/universal_html.dart' as html;
 import '../db/db_helper.dart';
 import '../models/driver_verification.dart';
 import '../providers/auth_provider.dart';

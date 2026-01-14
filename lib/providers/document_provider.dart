@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:universal_html/universal_html.dart' as html;
 import 'package:file_picker/file_picker.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:crypto/crypto.dart';
@@ -568,10 +568,3 @@ class DocumentProvider extends ChangeNotifier {
     }
   }
 }
-
-
-
-
-
-
-

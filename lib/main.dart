@@ -27,6 +27,7 @@ import 'providers/van_provider.dart';
 import 'providers/availability_provider.dart';
 import 'providers/schedule_provider.dart';
 import 'providers/driver_verification_provider.dart';
+import 'providers/page_provider.dart';
 import 'models/van.dart';
 import 'services/notification_service.dart';
 import 'services/calendar_service.dart';
@@ -34,6 +35,7 @@ import 'services/qdrant_service.dart';
 import 'screens/loading_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/role_based_home.dart';
+import 'screens/page_viewer_screen.dart';
 import 'screens/doctor/document_upload_screen.dart';
 import 'screens/doctor/medical_record_form_screen.dart';
 import 'models/medical_record.dart';
@@ -44,8 +46,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 // Web-specific imports
-import 'dart:html' as html;
-import 'dart:js' as js;
+import 'package:universal_html/universal_html.dart' as html;
 
 void _setupWebCloseHandling() {
   if (kIsWeb) {
@@ -220,6 +221,7 @@ class MyApp extends StatelessWidget {
           update: (context, auth, previous) =>
               previous ?? DriverVerificationProvider(auth),
         ),
+        ChangeNotifierProvider(create: (_) => PageProvider()),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, child) {
@@ -272,6 +274,15 @@ class MyApp extends StatelessWidget {
                     ),
                     settings: settings,
                   );
+                case '/page':
+                  final slug = settings.arguments as String?;
+                  if (slug != null) {
+                    return MaterialPageRoute(
+                      builder: (context) => PageViewerScreen(slug: slug),
+                      settings: settings,
+                    );
+                  }
+                  return null;
                 default:
                   return null;
               }

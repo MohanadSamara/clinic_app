@@ -67,7 +67,7 @@ class DBHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 37,
+      version: 38,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -790,6 +790,25 @@ class DBHelper {
         );
       }
     }
+    if (oldVersion < 38) {
+      // Create pages table for dynamic page content management
+      try {
+        await db.execute('''
+          CREATE TABLE pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            is_published INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          );
+        ''');
+        debugPrint('Created pages table in version 38');
+      } catch (e) {
+        debugPrint('Error creating pages table: $e');
+      }
+    }
     // Version 6 migration removed - simplified user table
   }
 
@@ -1155,6 +1174,19 @@ class DBHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         key TEXT UNIQUE NOT NULL,
         value TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    ''');
+
+    // Create pages table for dynamic page content management
+    await db.execute('''
+      CREATE TABLE pages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        is_published INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
@@ -2715,6 +2747,26 @@ class DBHelper {
     );
   }
 
+  Future<int> updateDoctorDocumentsStatus(int doctorId, String status) async {
+    final db = await instance.database;
+    return await db.update(
+      'doctor_verification_documents',
+      {'status': status},
+      where: 'doctor_id = ?',
+      whereArgs: [doctorId],
+    );
+  }
+
+  Future<int> updateDriverDocumentsStatus(int driverId, String status) async {
+    final db = await instance.database;
+    return await db.update(
+      'driver_verification_documents',
+      {'status': status},
+      where: 'driver_id = ?',
+      whereArgs: [driverId],
+    );
+  }
+
   // ---------- DRIVER VERIFICATION DOCUMENTS ----------
 
   /// Insert a new driver verification document
@@ -2992,5 +3044,59 @@ class DBHelper {
     });
 
     return updateResult;
+  }
+
+  // ---------- PAGES ----------
+
+  /// Insert a new page
+  Future<int> insertPage(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('pages', data);
+  }
+
+  /// Get all pages
+  Future<List<Map<String, dynamic>>> getAllPages() async {
+    final db = await instance.database;
+    return await db.query('pages', orderBy: 'title ASC');
+  }
+
+  /// Get published pages only
+  Future<List<Map<String, dynamic>>> getPublishedPages() async {
+    final db = await instance.database;
+    return await db.query(
+      'pages',
+      where: 'is_published = ?',
+      whereArgs: [1],
+      orderBy: 'title ASC',
+    );
+  }
+
+  /// Get page by slug
+  Future<Map<String, dynamic>?> getPageBySlug(String slug) async {
+    final db = await instance.database;
+    final res = await db.query('pages', where: 'slug = ?', whereArgs: [slug]);
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  /// Get page by ID
+  Future<Map<String, dynamic>?> getPageById(int id) async {
+    final db = await instance.database;
+    final res = await db.query('pages', where: 'id = ?', whereArgs: [id]);
+    if (res.isNotEmpty) return res.first;
+    return null;
+  }
+
+  /// Update page
+  Future<int> updatePage(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    data['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update('pages', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Delete page
+  Future<int> deletePage(int id) async {
+    final db = await instance.database;
+    return await db.delete('pages', where: 'id = ?', whereArgs: [id]);
   }
 }

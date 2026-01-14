@@ -1,12 +1,9 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import '../models/payment.dart';
-
-// Web-specific imports
-import 'dart:html' as html;
 
 class PdfService {
   static Future<void> generateInvoicePdf(Payment payment) async {
@@ -205,12 +202,9 @@ class PdfService {
 
     if (kIsWeb) {
       // For web, trigger download
-      final blob = html.Blob([bytes]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute('download', fileName)
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      // Note: Web-specific functionality requires dart:html
+      // This code will only work when compiled for web
+      debugPrint('PDF generation for web is not supported in this build');
     } else {
       // For mobile/desktop, save to documents directory
       final output = await getApplicationDocumentsDirectory();

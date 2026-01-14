@@ -25,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedRole = 'owner';
   String? _selectedArea;
   bool _loading = false;
+  bool _isPasswordVisible = false;
 
   final List<String> _ammanDistricts = [
     'Amman Qasaba District',
@@ -136,8 +137,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Icons.lock_outline,
                             color: colorScheme.onSurfaceVariant,
                           ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
-                        obscureText: true,
+                        obscureText: !_isPasswordVisible,
                         textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 16),
@@ -260,11 +274,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               )
                             : ElevatedButton(
-                                onPressed: _selectedRole == 'doctor'
-                                    ? _goToDoctorRegistration
-                                    : _selectedRole == 'driver'
-                                    ? _goToDriverVerification
-                                    : _register,
+                                onPressed: _register,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: colorScheme.primary,
                                   foregroundColor: colorScheme.onPrimary,
@@ -275,13 +285,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   textStyle: theme.textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
-                                child: Text(
-                                  _selectedRole == 'doctor'
-                                      ? 'Continue to Document Upload'
-                                      : _selectedRole == 'driver'
-                                      ? 'Continue to Verification'
-                                      : context.tr('createAccount'),
-                                ),
+                                child: Text(context.tr('createAccount')),
                               ),
                       ),
                     ],
@@ -448,14 +452,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _loading = true);
     try {
-      await auth.registerWithEmailVerification(
-        name: _name.text.trim(),
-        email: _email.text.trim(),
-        password: _pass.text,
-        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-        role: _selectedRole,
-        area: _selectedArea,
-      );
+      if (_selectedRole == 'doctor') {
+        // For doctors, store pending registration and send OTP
+        await auth.storePendingDoctorRegistration(
+          name: _name.text.trim(),
+          email: _email.text.trim(),
+          password: _pass.text.trim(),
+          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+          area: _selectedArea!,
+          documents: {}, // Empty documents initially
+        );
+        // Send verification code
+        final otpSent = await auth.sendEmailVerificationCode(
+          _email.text.trim(),
+        );
+        if (!otpSent) {
+          throw Exception('Failed to send verification code');
+        }
+      } else if (_selectedRole == 'driver') {
+        // For drivers, store pending registration and send OTP
+        await auth.storePendingDriverRegistration(
+          name: _name.text.trim(),
+          email: _email.text.trim(),
+          password: _pass.text.trim(),
+          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+          area: _selectedArea!,
+          documents: {}, // Empty documents initially
+        );
+        // Send verification code
+        final otpSent = await auth.sendEmailVerificationCode(
+          _email.text.trim(),
+        );
+        if (!otpSent) {
+          throw Exception('Failed to send verification code');
+        }
+      } else {
+        // For owners and other roles, use the standard registration with email verification
+        await auth.registerWithEmailVerification(
+          name: _name.text.trim(),
+          email: _email.text.trim(),
+          password: _pass.text.trim(),
+          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+          role: _selectedRole,
+          area: _selectedArea,
+        );
+      }
+
       if (mounted) {
         // Navigate to email verification screen
         Navigator.pushReplacement(
@@ -465,105 +507,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               email: _email.text.trim().toLowerCase(),
             ),
           ),
-        );
-      }
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  Future<void> _goToDoctorRegistration() async {
-    // Validation for doctor registration
-    if (_name.text.trim().isEmpty) {
-      _showError(context.tr('pleaseEnterYourFullName'));
-      return;
-    }
-    if (_email.text.trim().isEmpty) {
-      _showError(context.tr('pleaseEnterYourEmail'));
-      return;
-    }
-    if (!RegExp(
-      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-    ).hasMatch(_email.text.trim())) {
-      _showError(context.tr('pleaseEnterValidEmailAddress'));
-      return;
-    }
-    // Validate password strength
-    final passwordValidation = PasswordUtils.validatePassword(_pass.text);
-    if (!passwordValidation.isValid) {
-      _showError(passwordValidation.errors.join('. '));
-      return;
-    }
-    if (_selectedArea == null || _selectedArea!.isEmpty) {
-      _showError(context.tr('pleaseSelectServiceAreaForYourRole'));
-      return;
-    }
-
-    // Navigate to doctor document upload screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DoctorRegistrationDocumentsScreen(
-          name: _name.text.trim(),
-          email: _email.text.trim(),
-          password: _pass.text,
-          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-          area: _selectedArea!,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _goToDriverVerification() async {
-    // Validation for driver registration
-    if (_name.text.trim().isEmpty) {
-      _showError(context.tr('pleaseEnterYourFullName'));
-      return;
-    }
-    if (_email.text.trim().isEmpty) {
-      _showError(context.tr('pleaseEnterYourEmail'));
-      return;
-    }
-    if (!RegExp(
-      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-    ).hasMatch(_email.text.trim())) {
-      _showError(context.tr('pleaseEnterValidEmailAddress'));
-      return;
-    }
-    // Validate password strength
-    final passwordValidation = PasswordUtils.validatePassword(_pass.text);
-    if (!passwordValidation.isValid) {
-      _showError(passwordValidation.errors.join('. '));
-      return;
-    }
-    if (_selectedArea == null || _selectedArea!.isEmpty) {
-      _showError(context.tr('pleaseSelectServiceAreaForYourRole'));
-      return;
-    }
-
-    // First register the driver, then navigate to verification
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-
-    setState(() => _loading = true);
-    try {
-      await auth.register(
-        name: _name.text.trim(),
-        email: _email.text.trim(),
-        password: _pass.text,
-        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-        role: 'driver',
-        area: _selectedArea,
-      );
-
-      if (mounted) {
-        // Navigate to driver verification screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DriverVerificationScreen()),
         );
       }
     } catch (e) {

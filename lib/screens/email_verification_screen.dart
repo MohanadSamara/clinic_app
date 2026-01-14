@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import 'role_based_home.dart';
+import 'doctor/doctor_registration_documents_screen.dart';
+import 'driver/driver_verification_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
@@ -51,10 +53,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
-  void _sendInitialVerificationCode() {
-    // Send verification code when screen opens (in case registration failed to send)
+  void _sendInitialVerificationCode() async {
+    // Only send verification code if there's no pending verification
+    // (to avoid duplicate OTPs for doctors/drivers who already got one during registration)
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    auth.sendEmailVerificationCode(widget.email);
+    final hasPending = await auth.hasPendingEmailVerification(widget.email);
+    if (!hasPending) {
+      auth.sendEmailVerificationCode(widget.email);
+    }
   }
 
   @override
@@ -291,11 +297,64 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
         );
 
-        // Navigate to home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-        );
+        // Check user role and navigate accordingly
+        final user = auth.user;
+        if (auth.hasPendingDoctorRegistration) {
+          // Navigate to doctor document upload screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DoctorRegistrationDocumentsScreen(
+                name: auth.pendingDoctorRegistration!['name'],
+                email: auth.pendingDoctorRegistration!['email'],
+                password: '', // Password already hashed and stored
+                phone: auth.pendingDoctorRegistration!['phone'],
+                area: auth.pendingDoctorRegistration!['area'],
+              ),
+            ),
+          );
+        } else if (auth.hasPendingDriverRegistration) {
+          // Navigate to driver verification screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DriverVerificationScreen(
+                email: widget.email,
+                isPreLogin: true,
+              ),
+            ),
+          );
+        } else if (user != null) {
+          if (user.role == 'doctor') {
+            // Navigate to doctor document upload screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DoctorRegistrationDocumentsScreen(
+                  name: user.name,
+                  email: user.email,
+                  password: '', // Password already set
+                  phone: user.phone,
+                  area: user.area ?? '',
+                ),
+              ),
+            );
+          } else if (user.role == 'driver') {
+            // Navigate to driver verification screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DriverVerificationScreen(),
+              ),
+            );
+          } else {
+            // Navigate to home for other roles
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+            );
+          }
+        }
       } else {
         _showError('Invalid or expired verification code');
       }

@@ -5,8 +5,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:universal_html/universal_html.dart' as html;
 import '../../providers/auth_provider.dart';
 import '../../providers/service_provider.dart';
 import '../../providers/appointment_provider.dart';

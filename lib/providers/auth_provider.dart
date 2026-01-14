@@ -25,6 +25,9 @@ class AuthProvider extends ChangeNotifier {
   // Temporary doctor registration data (stored until verification is complete)
   Map<String, dynamic>? _pendingDoctorRegistration;
 
+  // Temporary driver registration data (stored until verification is complete)
+  Map<String, dynamic>? _pendingDriverRegistration;
+
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
   static const String _pendingDoctorKey = 'pending_doctor_registration';
@@ -165,7 +168,9 @@ class AuthProvider extends ChangeNotifier {
         email.trim().toLowerCase(),
       );
       if (userData == null) {
-        throw Exception('Invalid email or password');
+        throw Exception(
+          'No account found with this email. Please register first.',
+        );
       }
 
       // Verify password against hash
@@ -175,7 +180,9 @@ class AuthProvider extends ChangeNotifier {
         storedPassword,
       );
       if (!isPasswordValid) {
-        throw Exception('Invalid email or password');
+        throw Exception(
+          'Invalid password. Please check your password and try again.',
+        );
       }
 
       final res = userData;
@@ -641,6 +648,52 @@ class AuthProvider extends ChangeNotifier {
     _pendingDoctorRegistration = {...simpleData, 'documents': documents};
   }
 
+  // Store driver registration data temporarily (without saving to database)
+  Future<void> storePendingDriverRegistration({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    required String area,
+    required Map<String, dynamic> documents,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Hash the password before storing
+    final hashedPassword = PasswordUtils.hashPassword(password);
+
+    // Store simple data as string
+    final simpleData = {
+      'name': name,
+      'email': email.toLowerCase(),
+      'password': hashedPassword,
+      'phone': phone ?? '',
+      'area': area,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    final simpleDataString = simpleData.entries
+        .map((e) => '${e.key}:${e.value}')
+        .join(',');
+
+    // Store documents as JSON (but exclude file bytes for storage)
+    final documentsForStorage = <String, dynamic>{};
+    for (final entry in documents.entries) {
+      final docData = Map<String, dynamic>.from(entry.value);
+      // Remove file bytes - they'll be lost on restart
+      docData.remove('file_data');
+      documentsForStorage[entry.key] = docData;
+    }
+
+    await prefs.setString('pending_driver_registration', simpleDataString);
+    await prefs.setString(
+      'pending_driver_registration_documents',
+      jsonEncode(documentsForStorage),
+    );
+
+    _pendingDriverRegistration = {...simpleData, 'documents': documents};
+  }
+
   // Get pending doctor registration data
   Map<String, dynamic>? get pendingDoctorRegistration =>
       _pendingDoctorRegistration;
@@ -648,7 +701,14 @@ class AuthProvider extends ChangeNotifier {
   // Check if there's pending doctor registration
   bool get hasPendingDoctorRegistration => _pendingDoctorRegistration != null;
 
-  // Complete doctor registration (called after verification is done)
+  // Get pending driver registration data
+  Map<String, dynamic>? get pendingDriverRegistration =>
+      _pendingDriverRegistration;
+
+  // Check if there's pending driver registration
+  bool get hasPendingDriverRegistration => _pendingDriverRegistration != null;
+
+  // Complete doctor registration (called after OTP verification)
   Future<int?> completeDoctorRegistration() async {
     if (_pendingDoctorRegistration == null) {
       throw Exception('No pending doctor registration');
@@ -661,10 +721,14 @@ class AuthProvider extends ChangeNotifier {
       final data = _pendingDoctorRegistration!;
       final email = data['email'] as String;
 
-      // Check if email already exists
+      // Check if email already exists (only verified users should block registration)
       final existing = await DBHelper.instance.getUserByEmail(email);
       if (existing != null) {
-        throw Exception('Email already exists');
+        final existingUser = User.fromMap(existing);
+        if (existingUser.verificationStatus == 'verified') {
+          throw Exception('Email already exists');
+        }
+        // If unverified, we'll update this record
       }
 
       final u = User(
@@ -676,13 +740,14 @@ class AuthProvider extends ChangeNotifier {
             : data['phone'] as String?,
         role: 'doctor',
         area: data['area'] as String?,
-        verificationStatus: 'verified', // Auto-verify for simplicity
+        verificationStatus:
+            'verified', // Set to verified after document verification
       );
 
       final id = await DBHelper.instance.insertUser(u.toMap());
       _user = User.fromMap(u.toMap()..['id'] = id);
 
-      // Save documents
+      // Save documents with approved status (since verification is complete)
       final documents = data['documents'] as Map<String, dynamic>;
       for (final entry in documents.entries) {
         final doc = entry.value;
@@ -694,7 +759,7 @@ class AuthProvider extends ChangeNotifier {
             'file_path': doc['file_path'],
             'file_data': doc['file_data'],
             'upload_date': DateTime.now().toIso8601String(),
-            'status': 'approved', // Auto-approve for simplicity
+            'status': 'approved', // Documents are approved after verification
             'document_number': doc['documentNumber'] ?? '',
             'expiry_date': doc['expiry_date'],
             'issuing_authority': doc['issuingAuthority'] ?? '',
@@ -723,12 +788,105 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Complete driver registration (called after OTP verification)
+  Future<int?> completeDriverRegistration() async {
+    if (_pendingDriverRegistration == null) {
+      throw Exception('No pending driver registration');
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = _pendingDriverRegistration!;
+      final email = data['email'] as String;
+
+      // Check if email already exists
+      final existing = await DBHelper.instance.getUserByEmail(email);
+      if (existing != null) {
+        // If the existing user is unverified, we can proceed with registration
+        final existingUser = User.fromMap(existing);
+        if (existingUser.verificationStatus == 'unverified') {
+          // This is likely a retry of the registration process, so we can proceed
+          // The user will be updated during the completion process
+        } else {
+          throw Exception('Email already exists');
+        }
+      }
+
+      final u = User(
+        name: data['name'] as String,
+        email: email,
+        password: data['password'] as String,
+        phone: (data['phone'] as String?)?.isEmpty == true
+            ? null
+            : data['phone'] as String?,
+        role: 'driver',
+        area: data['area'] as String?,
+        verificationStatus:
+            'verified', // Set to verified after document verification
+      );
+
+      final id = await DBHelper.instance.insertUser(u.toMap());
+      _user = User.fromMap(u.toMap()..['id'] = id);
+
+      // Save documents with pending status
+      final documents = data['documents'] as Map<String, dynamic>;
+      for (final entry in documents.entries) {
+        final doc = entry.value;
+        if (doc['fileName'] != null) {
+          final documentData = {
+            'driver_id': id,
+            'document_type': doc['document_type'],
+            'document_number': doc['documentNumber'] ?? '',
+            'file_name': doc['fileName'],
+            'file_path': doc['file_path'],
+            'file_data': doc['file_data'],
+            'upload_date': DateTime.now().toIso8601String(),
+            'expiry_date': doc['expiry_date'],
+            'issue_date': doc['issue_date'],
+            'issuing_authority': doc['issuingAuthority'] ?? '',
+            'status': 'approved', // Documents are approved after verification
+            'verification_code': doc['verificationCode'] ?? '',
+            'vehicle_class': doc['vehicleClass'] ?? '',
+          };
+          await DBHelper.instance.insertDriverVerificationDocument(
+            documentData,
+          );
+        }
+      }
+
+      // Clear pending registration
+      await clearPendingDriverRegistration();
+
+      // Save user to storage
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return id;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   // Clear pending doctor registration
   Future<void> clearPendingDoctorRegistration() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_pendingDoctorKey);
     await prefs.remove('${_pendingDoctorKey}_documents');
     _pendingDoctorRegistration = null;
+  }
+
+  // Clear pending driver registration
+  Future<void> clearPendingDriverRegistration() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pending_driver_registration');
+    await prefs.remove('pending_driver_registration_documents');
+    _pendingDriverRegistration = null;
   }
 
   // Load pending doctor registration from storage
@@ -763,6 +921,43 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading pending doctor registration: $e');
+    }
+  }
+
+  // Load pending driver registration from storage
+  Future<void> loadPendingDriverRegistration() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dataString = prefs.getString('pending_driver_registration');
+      if (dataString != null) {
+        final dataMap = <String, dynamic>{};
+        for (final pair in dataString.split(',')) {
+          final parts = pair.split(':');
+          if (parts.length >= 2) {
+            final key = parts[0];
+            final value = parts.sublist(1).join(':');
+            dataMap[key] = value;
+          }
+        }
+
+        // Load documents from JSON
+        final docsString = prefs.getString(
+          'pending_driver_registration_documents',
+        );
+        if (docsString != null) {
+          try {
+            dataMap['documents'] = jsonDecode(docsString);
+          } catch (e) {
+            dataMap['documents'] = {};
+          }
+        } else {
+          dataMap['documents'] = {};
+        }
+
+        _pendingDriverRegistration = dataMap;
+      }
+    } catch (e) {
+      debugPrint('Error loading pending driver registration: $e');
     }
   }
 
@@ -868,10 +1063,24 @@ class AuthProvider extends ChangeNotifier {
         throw Exception(passwordValidation.errors.join('. '));
       }
 
-      // Check if email exists
+      // Check if email exists (only for unverified users)
       final existing = await DBHelper.instance.getUserByEmail(email);
       if (existing != null) {
-        throw Exception('Email already exists');
+        // Allow registration if the existing user is unverified
+        final existingUser = User.fromMap(existing);
+        if (existingUser.verificationStatus != 'unverified') {
+          // If user exists and is verified, check if it's the same user trying to register again
+          // This can happen during the OTP verification flow
+          if (existingUser.email == email &&
+              existingUser.verificationStatus == 'verified') {
+            // Allow the same user to proceed with OTP verification
+            _user = existingUser;
+            await _saveUserToStorage(_user!);
+            return existingUser.id;
+          }
+          throw Exception('Email already exists');
+        }
+        // If unverified, we'll update this user instead of creating a new one
       }
 
       final now = DateTime.now();
@@ -886,7 +1095,13 @@ class AuthProvider extends ChangeNotifier {
         verificationStatus: 'unverified', // Start as unverified
       );
 
-      final id = await DBHelper.instance.insertUser(u.toMap());
+      // Check if we already have a user from the existing check
+      final id =
+          existing != null &&
+              User.fromMap(existing).verificationStatus == 'unverified'
+          ? existing['id'] as int
+          : await DBHelper.instance.insertUser(u.toMap());
+
       _user = User.fromMap(u.toMap()..['id'] = id);
 
       // Save to secure storage
@@ -908,14 +1123,91 @@ class AuthProvider extends ChangeNotifier {
     try {
       final isValid = await verifyEmailCode(email, code);
       if (isValid) {
-        // Update user verification status
-        await updateVerificationStatus('verified');
+        // Update user verification status only if user exists (for owners)
+        if (_user != null) {
+          await updateVerificationStatus('verified');
+        }
+        // For pending registrations (doctors/drivers), OTP verification is complete
+        // Navigation will be handled by the UI layer
+
         return true;
       }
       return false;
     } catch (e) {
       debugPrint('Error completing email verification: $e');
       return false;
+    }
+  }
+
+  // Verify OTP and complete doctor registration
+  Future<bool> verifyOTPAndCompleteRegistration(
+    String email,
+    String otp,
+  ) async {
+    try {
+      final isValid = await verifyEmailCode(email, otp);
+      if (isValid) {
+        // Update user verification status
+        await updateVerificationStatus('verified');
+
+        // Update documents status to approved
+        if (_user != null && _user!.role == 'doctor') {
+          await DBHelper.instance.updateDoctorDocumentsStatus(
+            _user!.id!,
+            'approved',
+          );
+        }
+
+        // Update driver documents status to approved
+        if (_user != null && _user!.role == 'driver') {
+          await DBHelper.instance.updateDriverDocumentsStatus(
+            _user!.id!,
+            'approved',
+          );
+        }
+
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error verifying OTP and completing registration: $e');
+      return false;
+    }
+  }
+
+  // Get navigation route after successful OTP verification
+  String? getNavigationRouteAfterOTP() {
+    if (_user == null) return null;
+
+    switch (_user!.role) {
+      case 'doctor':
+        return '/doctor/dashboard';
+      case 'driver':
+        return '/driver/dashboard';
+      case 'owner':
+        return '/owner/dashboard';
+      case 'admin':
+        return '/admin/dashboard';
+      default:
+        return '/home';
+    }
+  }
+
+  // Get navigation route after successful document verification
+  String? getNavigationRouteAfterDocumentVerification() {
+    if (_user == null) return null;
+
+    switch (_user!.role) {
+      case 'doctor':
+        return '/doctor/dashboard';
+      case 'driver':
+        return '/driver/dashboard';
+      case 'owner':
+        return '/owner/dashboard';
+      case 'admin':
+        return '/admin/dashboard';
+      default:
+        return '/home';
     }
   }
 }

@@ -226,14 +226,73 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     setState(() => _isSubmitting = true);
 
     if (widget.isPreLogin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please create an account first to submit verification documents',
-          ),
-        ),
-      );
-      setState(() => _isSubmitting = false);
+      // For pre-login registration, store documents and complete registration
+      try {
+        final authProvider = context.read<AuthProvider>();
+
+        // Prepare documents data
+        final documentsData = <String, dynamic>{};
+        for (int i = 0; i < _documents.length; i++) {
+          final doc = _documents[i];
+          if (doc['file'] != null || doc['fileBytes'] != null) {
+            final requirement = doc['requirement'] as Map<String, dynamic>;
+
+            // Parse dates
+            String? expiryDateStr;
+            if (doc['expiryDate'] != null) {
+              expiryDateStr = (doc['expiryDate'] as DateTime).toIso8601String();
+            }
+            String? issueDateStr;
+            if (doc['issueDate'] != null) {
+              issueDateStr = (doc['issueDate'] as DateTime).toIso8601String();
+            }
+
+            documentsData[requirement['type']] = {
+              'document_type': requirement['type'],
+              'fileName': doc['fileName'],
+              'file_path': kIsWeb ? null : (doc['file'] as File?)?.path,
+              'file_data': kIsWeb ? doc['fileBytes'] : null,
+              'documentNumber': doc['documentNumber'] ?? '',
+              'expiry_date': expiryDateStr,
+              'issue_date': issueDateStr,
+              'issuingAuthority': doc['issuingAuthority'] ?? '',
+              'verificationCode': doc['verificationCode'] ?? '',
+              'vehicleClass': doc['vehicleClass'] ?? '',
+            };
+          }
+        }
+
+        // Update pending registration with documents
+        await authProvider.storePendingDriverRegistration(
+          name: authProvider.pendingDriverRegistration!['name'],
+          email: authProvider.pendingDriverRegistration!['email'],
+          password: authProvider.pendingDriverRegistration!['password'],
+          phone: authProvider.pendingDriverRegistration!['phone'],
+          area: authProvider.pendingDriverRegistration!['area'],
+          documents: documentsData,
+        );
+
+        // Complete registration
+        await authProvider.completeDriverRegistration();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration completed successfully!'),
+            ),
+          );
+          // Navigate to login screen
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error during registration: $e')),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+        }
+      }
       return;
     }
 

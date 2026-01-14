@@ -15,6 +15,7 @@ import 'van_management_screen.dart';
 import 'area_management_screen.dart';
 import 'system_settings_screen.dart';
 import 'audit_logs_screen.dart';
+import 'page_management_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -115,7 +116,7 @@ class AdminDashboard extends StatelessWidget {
             const SizedBox(height: 16),
             Expanded(
               child: GridView.count(
-                crossAxisCount: 4,
+                crossAxisCount: 5,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 children: [
@@ -215,6 +216,17 @@ class AdminDashboard extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const AuditLogsScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFunctionCard(
+                    context,
+                    context.tr('pageManagement'),
+                    Icons.description,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PageManagementScreen(),
                       ),
                     ),
                   ),
