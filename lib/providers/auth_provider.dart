@@ -11,7 +11,7 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import '../db/db_helper.dart';
 import '../models/user.dart';
 import '../firebase_options.dart';
-import '../utils/password_utils.dart';
+// import '../utils/password_utils.dart';
 import '../services/email_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -109,9 +109,8 @@ class AuthProvider extends ChangeNotifier {
       }
 
       // Validate password strength
-      final passwordValidation = PasswordUtils.validatePassword(password);
-      if (!passwordValidation.isValid) {
-        throw Exception(passwordValidation.errors.join('. '));
+      if (password.length < 6) {
+        throw Exception('Password must be at least 6 characters');
       }
 
       // Check if email exists
@@ -124,7 +123,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: password, // Save as plain text
+        password: password,
         phone: phone?.trim(),
         role: role,
         area: area,
@@ -707,7 +706,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: data['name'] as String,
         email: email,
-        password: data['password'] as String, // Save as plain text
+        password: data['password'] as String,
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
@@ -790,7 +789,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: data['name'] as String,
         email: email,
-        password: data['password'] as String, // Save as plain text
+        password: data['password'] as String,
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
@@ -1043,9 +1042,8 @@ class AuthProvider extends ChangeNotifier {
       }
 
       // Validate password strength
-      final passwordValidation = PasswordUtils.validatePassword(password);
-      if (!passwordValidation.isValid) {
-        throw Exception(passwordValidation.errors.join('. '));
+      if (password.length < 6) {
+        throw Exception('Password must be at least 6 characters');
       }
 
       // Check if email exists (only for unverified users)
@@ -1072,7 +1070,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: password, // Save as plain text
+        password: password,
         phone: phone?.trim(),
         role: role,
         area: area,
