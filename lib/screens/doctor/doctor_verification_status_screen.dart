@@ -45,6 +45,24 @@ class _DoctorVerificationStatusScreenState
           _calculateStatus();
           _isLoading = false;
         });
+
+        // If all documents are approved, update user verification status
+        if (_overallStatus == 'approved') {
+          final authProvider = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          );
+          if (authProvider.user?.verificationStatus != 'verified') {
+            await DBHelper.instance.updateUser(user.id!, {
+              'verification_status': 'verified',
+            });
+            // Update the user in provider
+            final updatedUser = authProvider.user!.copyWith(
+              verificationStatus: 'verified',
+            );
+            authProvider.updateUser(updatedUser);
+          }
+        }
       } catch (e) {
         setState(() {
           _isLoading = false;

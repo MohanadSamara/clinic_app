@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../db/db_helper.dart';
 import '../../../translations.dart';
+import '../role_based_home.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
   final String? email;
@@ -30,7 +31,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       'type': 'driving_license',
       'title': 'Driving License',
       'description': 'Upload your valid driving license',
-      'required': true,
+      'required': false,
       'helpText':
           'Must be current and valid. Include license number and expiry date.',
     },
@@ -38,7 +39,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
       'type': 'id_card',
       'title': 'National ID Card',
       'description': 'Upload your national ID or passport',
-      'required': true,
+      'required': false,
       'helpText': 'Must be clear and readable.',
     },
     {
@@ -281,8 +282,10 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               content: Text('Registration completed successfully!'),
             ),
           );
-          // Navigate to login screen
-          Navigator.of(context).pushReplacementNamed('/login');
+          // Navigate to driver home
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          );
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(

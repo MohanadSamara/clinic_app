@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../db/db_helper.dart';
 import '../../../translations.dart';
+import '../role_based_home.dart';
 
 class DoctorRegistrationDocumentsScreen extends StatefulWidget {
   final String name;
@@ -38,14 +39,14 @@ class _DoctorRegistrationDocumentsScreenState
       'type': 'license',
       'title': 'Veterinary License',
       'description': 'Upload your official veterinary license',
-      'required': true,
+      'required': false,
       'allowedExtensions': ['pdf', 'jpg', 'jpeg', 'png'],
     },
     {
       'type': 'id',
       'title': 'Government ID',
       'description': 'Upload your national ID or passport',
-      'required': true,
+      'required': false,
       'allowedExtensions': ['pdf', 'jpg', 'jpeg', 'png'],
     },
   ];
@@ -177,8 +178,10 @@ class _DoctorRegistrationDocumentsScreenState
         await authProvider.completeDoctorRegistration();
 
         if (mounted) {
-          // Navigate to login screen with success message
-          Navigator.of(context).pushReplacementNamed('/login');
+          // Navigate to doctor home
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          );
         }
       }
     } catch (e) {

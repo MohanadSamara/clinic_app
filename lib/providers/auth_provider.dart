@@ -61,6 +61,12 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
 
+  // Update current user
+  void updateUser(User user) {
+    _user = user;
+    notifyListeners();
+  }
+
   // Initialize auth state from shared preferences
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -69,25 +75,14 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final userData = prefs.getString(_userKey);
       if (userData != null) {
-        final userMap = Map<String, dynamic>.from(
-          userData.split(',').fold<Map<String, dynamic>>({}, (map, pair) {
-            final parts = pair.split(':');
-            if (parts.length == 2) {
-              final key = parts[0];
-              final value = parts[1];
-              if (key == 'id') {
-                map[key] = int.tryParse(value);
-              } else {
-                map[key] = value;
-              }
-            }
-            return map;
-          }),
-        );
+        final userMap = jsonDecode(userData) as Map<String, dynamic>;
         _user = User.fromMap(userMap);
       }
     } catch (e) {
       debugPrint('Error initializing auth: $e');
+      // Clear corrupted data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_userKey);
     } finally {
       _isInitialized = true;
       notifyListeners();
@@ -126,11 +121,10 @@ class AuthProvider extends ChangeNotifier {
       }
 
       final now = DateTime.now();
-      final hashedPassword = PasswordUtils.hashPassword(password);
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: hashedPassword,
+        password: PasswordUtils.hashPassword(password), // Hash the password
         phone: phone?.trim(),
         role: role,
         area: area,
@@ -173,13 +167,20 @@ class AuthProvider extends ChangeNotifier {
         );
       }
 
-      // Verify password against hash
+      // Verify password
       final storedPassword = userData['password'] as String;
-      final isPasswordValid = PasswordUtils.verifyPassword(
-        password,
-        storedPassword,
-      );
-      if (!isPasswordValid) {
+      bool passwordValid = false;
+
+      // Check if stored password is hashed (bcrypt hashes start with $2)
+      if (storedPassword.startsWith('\$2')) {
+        // Hashed password
+        passwordValid = PasswordUtils.verifyPassword(password, storedPassword);
+      } else {
+        // Plain text password (for backward compatibility)
+        passwordValid = storedPassword == password;
+      }
+
+      if (!passwordValid) {
         throw Exception(
           'Invalid password. Please check your password and try again.',
         );
@@ -448,11 +449,18 @@ class AuthProvider extends ChangeNotifier {
 
         // Verify current password if provided
         if (currentPassword != null && currentPassword.isNotEmpty) {
-          final isValidPassword = PasswordUtils.verifyPassword(
-            currentPassword,
-            _user!.password,
-          );
-          if (!isValidPassword) {
+          bool currentPasswordValid = false;
+          if (_user!.password.startsWith('\$2')) {
+            // Hashed password
+            currentPasswordValid = PasswordUtils.verifyPassword(
+              currentPassword,
+              _user!.password,
+            );
+          } else {
+            // Plain text password
+            currentPasswordValid = currentPassword == _user!.password;
+          }
+          if (!currentPasswordValid) {
             throw Exception('Current password is incorrect');
           }
         }
@@ -479,20 +487,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _saveUserToStorage(User user) async {
-    final userData = {
-      'id': user.id.toString(),
-      'name': user.name,
-      'email': user.email,
-      'role': user.role,
-      'phone': user.phone ?? '',
-    };
-
-    final dataString = userData.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(',');
-
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userKey, dataString);
+    await prefs.setString(_userKey, jsonEncode(user.toMap()));
   }
 
   // Check if user has specific role
@@ -613,14 +609,11 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Hash the password before storing
-    final hashedPassword = PasswordUtils.hashPassword(password);
-
     // Store simple data as string
     final simpleData = {
       'name': name,
       'email': email.toLowerCase(),
-      'password': hashedPassword,
+      'password': password,
       'phone': phone ?? '',
       'area': area,
       'created_at': DateTime.now().toIso8601String(),
@@ -659,14 +652,11 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Hash the password before storing
-    final hashedPassword = PasswordUtils.hashPassword(password);
-
     // Store simple data as string
     final simpleData = {
       'name': name,
       'email': email.toLowerCase(),
-      'password': hashedPassword,
+      'password': password,
       'phone': phone ?? '',
       'area': area,
       'created_at': DateTime.now().toIso8601String(),
@@ -1084,11 +1074,10 @@ class AuthProvider extends ChangeNotifier {
       }
 
       final now = DateTime.now();
-      final hashedPassword = PasswordUtils.hashPassword(password);
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: hashedPassword,
+        password: PasswordUtils.hashPassword(password),
         phone: phone?.trim(),
         role: role,
         area: area,
