@@ -124,7 +124,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: PasswordUtils.hashPassword(password), // Hash the password
+        password: password, // Save as plain text
         phone: phone?.trim(),
         role: role,
         area: area,
@@ -167,18 +167,9 @@ class AuthProvider extends ChangeNotifier {
         );
       }
 
-      // Verify password
+      // Verify password (using plain text comparison)
       final storedPassword = userData['password'] as String;
-      bool passwordValid = false;
-
-      // Check if stored password is hashed (bcrypt hashes start with $2)
-      if (storedPassword.startsWith('\$2')) {
-        // Hashed password
-        passwordValid = PasswordUtils.verifyPassword(password, storedPassword);
-      } else {
-        // Plain text password (for backward compatibility)
-        passwordValid = storedPassword == password;
-      }
+      bool passwordValid = storedPassword == password;
 
       if (!passwordValid) {
         throw Exception(
@@ -724,7 +715,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: data['name'] as String,
         email: email,
-        password: PasswordUtils.hashPassword(data['password'] as String),
+        password: data['password'] as String, // Save as plain text
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
@@ -807,7 +798,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: data['name'] as String,
         email: email,
-        password: PasswordUtils.hashPassword(data['password'] as String),
+        password: data['password'] as String, // Save as plain text
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
@@ -1077,7 +1068,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: PasswordUtils.hashPassword(password),
+        password: password, // Save as plain text
         phone: phone?.trim(),
         role: role,
         area: area,
