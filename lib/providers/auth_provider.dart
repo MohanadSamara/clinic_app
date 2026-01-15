@@ -724,7 +724,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: data['name'] as String,
         email: email,
-        password: data['password'] as String,
+        password: PasswordUtils.hashPassword(data['password'] as String),
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
@@ -807,7 +807,7 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: data['name'] as String,
         email: email,
-        password: data['password'] as String,
+        password: PasswordUtils.hashPassword(data['password'] as String),
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
