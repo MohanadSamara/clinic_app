@@ -600,7 +600,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Store simple data as string
+    // Store simple data as JSON to handle special characters in passwords
     final simpleData = {
       'name': name,
       'email': email.toLowerCase(),
@@ -609,10 +609,6 @@ class AuthProvider extends ChangeNotifier {
       'area': area,
       'created_at': DateTime.now().toIso8601String(),
     };
-
-    final simpleDataString = simpleData.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(',');
 
     // Store documents as JSON (but exclude file bytes for storage)
     final documentsForStorage = <String, dynamic>{};
@@ -623,7 +619,7 @@ class AuthProvider extends ChangeNotifier {
       documentsForStorage[entry.key] = docData;
     }
 
-    await prefs.setString(_pendingDoctorKey, simpleDataString);
+    await prefs.setString(_pendingDoctorKey, jsonEncode(simpleData));
     await prefs.setString(
       '${_pendingDoctorKey}_documents',
       jsonEncode(documentsForStorage),
@@ -643,7 +639,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Store simple data as string
+    // Store simple data as JSON to handle special characters in passwords
     final simpleData = {
       'name': name,
       'email': email.toLowerCase(),
@@ -652,10 +648,6 @@ class AuthProvider extends ChangeNotifier {
       'area': area,
       'created_at': DateTime.now().toIso8601String(),
     };
-
-    final simpleDataString = simpleData.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(',');
 
     // Store documents as JSON (but exclude file bytes for storage)
     final documentsForStorage = <String, dynamic>{};
@@ -666,7 +658,7 @@ class AuthProvider extends ChangeNotifier {
       documentsForStorage[entry.key] = docData;
     }
 
-    await prefs.setString('pending_driver_registration', simpleDataString);
+    await prefs.setString('pending_driver_registration', jsonEncode(simpleData));
     await prefs.setString(
       'pending_driver_registration_documents',
       jsonEncode(documentsForStorage),
@@ -876,13 +868,19 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final dataString = prefs.getString(_pendingDoctorKey);
       if (dataString != null) {
-        final dataMap = <String, dynamic>{};
-        for (final pair in dataString.split(',')) {
-          final parts = pair.split(':');
-          if (parts.length >= 2) {
-            final key = parts[0];
-            final value = parts.sublist(1).join(':');
-            dataMap[key] = value;
+        Map<String, dynamic> dataMap;
+        try {
+          dataMap = jsonDecode(dataString);
+        } catch (e) {
+          // Fallback for old string format
+          dataMap = <String, dynamic>{};
+          for (final pair in dataString.split(',')) {
+            final parts = pair.split(':');
+            if (parts.length >= 2) {
+              final key = parts[0];
+              final value = parts.sublist(1).join(':');
+              dataMap[key] = value;
+            }
           }
         }
 
@@ -911,13 +909,19 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final dataString = prefs.getString('pending_driver_registration');
       if (dataString != null) {
-        final dataMap = <String, dynamic>{};
-        for (final pair in dataString.split(',')) {
-          final parts = pair.split(':');
-          if (parts.length >= 2) {
-            final key = parts[0];
-            final value = parts.sublist(1).join(':');
-            dataMap[key] = value;
+        Map<String, dynamic> dataMap;
+        try {
+          dataMap = jsonDecode(dataString);
+        } catch (e) {
+          // Fallback for old string format
+          dataMap = <String, dynamic>{};
+          for (final pair in dataString.split(',')) {
+            final parts = pair.split(':');
+            if (parts.length >= 2) {
+              final key = parts[0];
+              final value = parts.sublist(1).join(':');
+              dataMap[key] = value;
+            }
           }
         }
 
