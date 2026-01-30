@@ -48,3 +48,6 @@ app.*.map.json
 gradle_cache/
 
 .env
+
+# Local Netlify folder
+.netlify
