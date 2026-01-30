@@ -319,23 +319,8 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (_) => EmailVerificationScreen(email: auth.user!.email),
             ),
           );
-        } else if (auth.user?.role == 'driver' &&
-            auth.user?.verificationStatus != 'verified') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const DriverVerificationStatusScreen(),
-            ),
-          );
-        } else if (auth.user?.role == 'doctor' &&
-            auth.user?.verificationStatus != 'verified') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const DoctorVerificationStatusScreen(),
-            ),
-          );
         } else {
+          // For all verified users, go directly to home
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const RoleBasedHome()),
@@ -373,23 +358,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             );
-          } else if (auth.user?.role == 'driver' &&
-              auth.user?.verificationStatus != 'verified') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DriverVerificationStatusScreen(),
-              ),
-            );
-          } else if (auth.user?.role == 'doctor' &&
-              auth.user?.verificationStatus != 'verified') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DoctorVerificationStatusScreen(),
-              ),
-            );
           } else {
+            // For all verified users, go directly to home
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const RoleBasedHome()),

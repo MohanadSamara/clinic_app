@@ -1312,9 +1312,17 @@ class DBHelper {
   // ---------- USERS ----------
   Future<int> insertUser(Map<String, dynamic> data) async {
     final db = await instance.database;
+    // Ensure password field exists and is a string (avoid nulls overwriting)
+    final insertData = Map<String, dynamic>.from(data);
+    if (!insertData.containsKey('password') || insertData['password'] == null) {
+      insertData['password'] = '';
+    } else {
+      insertData['password'] = insertData['password'].toString();
+    }
+
     return await db.insert(
       'users',
-      data,
+      insertData,
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
   }

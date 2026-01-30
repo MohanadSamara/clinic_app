@@ -8,29 +8,29 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../db/db_helper.dart';
 import '../models/user.dart';
 import '../firebase_options.dart';
-// import '../utils/password_utils.dart';
+import '../utils/password_utils.dart';
 import '../services/email_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   bool _isInitialized = false;
+  bool _firestoreAvailable = false; // Track if Firestore is available
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Temporary data for social login role selection
   Map<String, dynamic>? _pendingSocialUser;
 
-  // Temporary doctor registration data (stored until verification is complete)
-  Map<String, dynamic>? _pendingDoctorRegistration;
-
-  // Temporary driver registration data (stored until verification is complete)
-  Map<String, dynamic>? _pendingDriverRegistration;
+  // Temporary registration data (stored until verification is complete) - UNIFIED for all roles
+  Map<String, dynamic>? _pendingRegistration;
 
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
-  static const String _pendingDoctorKey = 'pending_doctor_registration';
+  static const String _pendingRegistrationKey = 'pending_registration';
 
   // Web profile image storage
   static Future<void> _saveWebProfileImage(
@@ -199,7 +199,11 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = false;
 
     // Sign out from Firebase
-    await firebase_auth.FirebaseAuth.instance.signOut();
+    try {
+      await firebase_auth.FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint('Firebase sign out error: $e');
+    }
 
     // Clear shared preferences
     final prefs = await SharedPreferences.getInstance();
@@ -208,6 +212,205 @@ class AuthProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  // ========== FIRESTORE SYNC HELPER METHODS ==========
+
+  /// Sync user to Firestore directly (without using FirestoreService class)
+  Future<void> _syncUserToFirestore(User user) async {
+    try {
+      final emailKey = user.email.toLowerCase().replaceAll('.', '_');
+      await _firestore.collection('users').doc(emailKey).set({
+        'id': user.id,
+        'email': user.email.toLowerCase(),
+        'emailKey': emailKey,
+        'name': user.name,
+        'phone': user.phone,
+        'role': user.role,
+        'area': user.area,
+        'provider': user.provider,
+        'providerId': user.providerId,
+        'profileImage': user.profileImage,
+        'verificationStatus': user.verificationStatus,
+        'linkedDoctorId': user.linkedDoctorId,
+        'linkedDriverId': user.linkedDriverId,
+        'availabilityStatus': user.availabilityStatus,
+        'lastSeen': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      _firestoreAvailable = true;
+      debugPrint('✅ User synced to Firestore: ${user.email}');
+    } catch (e) {
+      debugPrint('❌ Firestore sync error: $e');
+      _firestoreAvailable = false;
+    }
+  }
+
+  /// Get user from Firestore directly
+  Future<User?> _getUserFromFirestore(String email) async {
+    try {
+      final emailKey = email.toLowerCase().replaceAll('.', '_');
+      final doc = await _firestore.collection('users').doc(emailKey).get();
+      if (doc.exists) {
+        return User.fromMap(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Firestore get user error: $e');
+      return null;
+    }
+  }
+
+  /// Register with Firebase Auth and sync to Firestore (NEW - for web deployment)
+  Future<int?> registerWithFirebase({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String role = 'owner',
+    String? area,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Validate input
+      if (name.trim().isEmpty) throw Exception('Name is required');
+      if (email.trim().isEmpty) throw Exception('Email is required');
+      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+        throw Exception('Invalid email format');
+      }
+
+      // Validate password strength
+      if (password.length < 6) {
+        throw Exception('Password must be at least 6 characters');
+      }
+
+      // Create user in Firebase Auth
+      final firebaseUserCredential = await firebase_auth.FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: email.trim().toLowerCase(),
+            password: password,
+          );
+
+      // Determine verification status based on role
+      final verificationStatus = (role == 'doctor' || role == 'driver')
+          ? 'pending'
+          : 'verified';
+
+      // Create user object
+      final u = User(
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: password, // Stored locally (consider hashing for security)
+        phone: phone?.trim(),
+        role: role,
+        area: area,
+        verificationStatus: verificationStatus,
+      );
+
+      // Save to local SQLite database
+      final id = await DBHelper.instance.insertUser(u.toMap());
+      _user = User.fromMap(u.toMap()..['id'] = id);
+
+      // Sync to Firestore (cloud database) - this enables admin to see users
+      await _syncUserToFirestore(_user!);
+
+      // Save to secure storage
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return id;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Registration error: $e');
+      rethrow;
+    }
+  }
+
+  /// Login with Firebase Auth and sync with local database
+  Future<void> loginWithFirebase({
+    required String email,
+    required String password,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Validate input
+      if (email.trim().isEmpty) throw Exception('Email is required');
+      if (password.isEmpty) throw Exception('Password is required');
+
+      // Sign in with Firebase Auth
+      final userCredential = await firebase_auth.FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: email.trim().toLowerCase(),
+            password: password,
+          );
+
+      // Get user from local database (fallback to Firestore if not found locally)
+      User? user;
+
+      // First try local database
+      final localUserData = await DBHelper.instance.getUserByEmail(
+        email.trim().toLowerCase(),
+      );
+
+      if (localUserData != null) {
+        user = User.fromMap(localUserData);
+      } else {
+        // If not in local DB, try Firestore
+        final firestoreUser = await _getUserFromFirestore(email.trim());
+        if (firestoreUser != null) {
+          user = firestoreUser;
+          // Sync to local database for future offline access
+          await DBHelper.instance.insertUser(user.toMap());
+        }
+      }
+
+      if (user == null) {
+        // Create user from Firebase Auth data
+        user = User(
+          name: userCredential.user?.displayName ?? email.split('@')[0],
+          email: email.trim().toLowerCase(),
+          password: password,
+          role: 'owner',
+          verificationStatus: 'verified',
+        );
+
+        final id = await DBHelper.instance.insertUser(user.toMap());
+        user = User.fromMap(user.toMap()..['id'] = id);
+      }
+
+      _user = user;
+
+      // Sync to Firestore to ensure user exists in cloud
+      await _syncUserToFirestore(_user!);
+
+      // Save to secure storage
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Login error: $e');
+      rethrow;
+    }
+  }
+
+  /// Sync user to Firestore (call this after any user update)
+  Future<void> syncUserToCloud() async {
+    if (_user == null) return;
+    await _syncUserToFirestore(_user!);
+  }
+
+  /// Check if Firestore is available
+  bool get firestoreAvailable => _firestoreAvailable;
 
   // Social Authentication Methods
   Future<void> signInWithGoogle({String? role}) async {
@@ -586,9 +789,70 @@ class AuthProvider extends ChangeNotifier {
   // Get pending social user data
   Map<String, dynamic>? get pendingSocialUser => _pendingSocialUser;
 
-  // ===== Doctor Registration Methods =====
+  // ===== Unified Registration Methods =====
 
-  // Store doctor registration data temporarily (without saving to database)
+  /// Store registration data temporarily (without saving to database) - UNIFIED for all roles
+  /// This method stores pending registration data for all user types (owner, doctor, driver, admin)
+  Future<void> storePendingRegistration({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    required String role,
+    String? area,
+    Map<String, dynamic>? documents,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Preserve existing pending password if caller passed an empty string
+    String? existingPassword;
+    final existingString = prefs.getString(_pendingRegistrationKey);
+    if (existingString != null) {
+      try {
+        final existingMap = jsonDecode(existingString) as Map<String, dynamic>;
+        existingPassword = existingMap['password'] as String?;
+      } catch (_) {
+        existingPassword = null;
+      }
+    }
+
+    // Determine which password to store: prefer provided non-empty, else keep existing
+    final passwordToStore = (password.isNotEmpty)
+        ? password
+        : (existingPassword ?? '');
+
+    // Store simple data as JSON to handle special characters in passwords
+    final simpleData = {
+      'name': name,
+      'email': email.toLowerCase(),
+      'password': passwordToStore,
+      'phone': phone ?? '',
+      'role': role,
+      'area': area ?? '',
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    // Store documents as JSON (but exclude file bytes for storage)
+    final documentsForStorage = <String, dynamic>{};
+    if (documents != null) {
+      for (final entry in documents.entries) {
+        final docData = Map<String, dynamic>.from(entry.value);
+        // Remove file bytes - they'll be lost on restart
+        docData.remove('file_data');
+        documentsForStorage[entry.key] = docData;
+      }
+    }
+
+    await prefs.setString(_pendingRegistrationKey, jsonEncode(simpleData));
+    await prefs.setString(
+      '${_pendingRegistrationKey}_documents',
+      jsonEncode(documentsForStorage),
+    );
+
+    _pendingRegistration = {...simpleData, 'documents': documents ?? {}};
+  }
+
+  // Legacy methods for backward compatibility (to be deprecated)
   Future<void> storePendingDoctorRegistration({
     required String name,
     required String email,
@@ -597,37 +861,17 @@ class AuthProvider extends ChangeNotifier {
     required String area,
     required Map<String, dynamic> documents,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Store simple data as JSON to handle special characters in passwords
-    final simpleData = {
-      'name': name,
-      'email': email.toLowerCase(),
-      'password': password,
-      'phone': phone ?? '',
-      'area': area,
-      'created_at': DateTime.now().toIso8601String(),
-    };
-
-    // Store documents as JSON (but exclude file bytes for storage)
-    final documentsForStorage = <String, dynamic>{};
-    for (final entry in documents.entries) {
-      final docData = Map<String, dynamic>.from(entry.value);
-      // Remove file bytes - they'll be lost on restart
-      docData.remove('file_data');
-      documentsForStorage[entry.key] = docData;
-    }
-
-    await prefs.setString(_pendingDoctorKey, jsonEncode(simpleData));
-    await prefs.setString(
-      '${_pendingDoctorKey}_documents',
-      jsonEncode(documentsForStorage),
+    await storePendingRegistration(
+      name: name,
+      email: email,
+      password: password,
+      phone: phone,
+      role: 'doctor',
+      area: area,
+      documents: documents,
     );
-
-    _pendingDoctorRegistration = {...simpleData, 'documents': documents};
   }
 
-  // Store driver registration data temporarily (without saving to database)
   Future<void> storePendingDriverRegistration({
     required String name,
     required String email,
@@ -636,62 +880,53 @@ class AuthProvider extends ChangeNotifier {
     required String area,
     required Map<String, dynamic> documents,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Store simple data as JSON to handle special characters in passwords
-    final simpleData = {
-      'name': name,
-      'email': email.toLowerCase(),
-      'password': password,
-      'phone': phone ?? '',
-      'area': area,
-      'created_at': DateTime.now().toIso8601String(),
-    };
-
-    // Store documents as JSON (but exclude file bytes for storage)
-    final documentsForStorage = <String, dynamic>{};
-    for (final entry in documents.entries) {
-      final docData = Map<String, dynamic>.from(entry.value);
-      // Remove file bytes - they'll be lost on restart
-      docData.remove('file_data');
-      documentsForStorage[entry.key] = docData;
-    }
-
-    await prefs.setString('pending_driver_registration', jsonEncode(simpleData));
-    await prefs.setString(
-      'pending_driver_registration_documents',
-      jsonEncode(documentsForStorage),
+    await storePendingRegistration(
+      name: name,
+      email: email,
+      password: password,
+      phone: phone,
+      role: 'driver',
+      area: area,
+      documents: documents,
     );
-
-    _pendingDriverRegistration = {...simpleData, 'documents': documents};
   }
 
-  // Get pending doctor registration data
+  // Unified getters for pending registration
+  Map<String, dynamic>? get pendingRegistration => _pendingRegistration;
+
+  bool get hasPendingRegistration => _pendingRegistration != null;
+
+  // Legacy getters for backward compatibility
   Map<String, dynamic>? get pendingDoctorRegistration =>
-      _pendingDoctorRegistration;
+      hasPendingRegistration && _pendingRegistration!['role'] == 'doctor'
+      ? _pendingRegistration
+      : null;
 
-  // Check if there's pending doctor registration
-  bool get hasPendingDoctorRegistration => _pendingDoctorRegistration != null;
+  bool get hasPendingDoctorRegistration =>
+      hasPendingRegistration && _pendingRegistration!['role'] == 'doctor';
 
-  // Get pending driver registration data
   Map<String, dynamic>? get pendingDriverRegistration =>
-      _pendingDriverRegistration;
+      hasPendingRegistration && _pendingRegistration!['role'] == 'driver'
+      ? _pendingRegistration
+      : null;
 
-  // Check if there's pending driver registration
-  bool get hasPendingDriverRegistration => _pendingDriverRegistration != null;
+  bool get hasPendingDriverRegistration =>
+      hasPendingRegistration && _pendingRegistration!['role'] == 'driver';
 
-  // Complete doctor registration (called after OTP verification)
-  Future<int?> completeDoctorRegistration() async {
-    if (_pendingDoctorRegistration == null) {
-      throw Exception('No pending doctor registration');
+  /// Complete registration (called after OTP verification and document upload)
+  /// This is the unified method for completing registration for all user types
+  Future<int?> completeRegistration() async {
+    if (_pendingRegistration == null) {
+      throw Exception('No pending registration');
     }
 
     _isLoading = true;
     notifyListeners();
 
     try {
-      final data = _pendingDoctorRegistration!;
+      final data = _pendingRegistration!;
       final email = data['email'] as String;
+      final role = data['role'] as String;
 
       // Check if email already exists (only verified users should block registration)
       final existing = await DBHelper.instance.getUserByEmail(email);
@@ -703,88 +938,12 @@ class AuthProvider extends ChangeNotifier {
         // If unverified, we'll update this record
       }
 
-      final u = User(
-        name: data['name'] as String,
-        email: email,
-        password: data['password'] as String,
-        phone: (data['phone'] as String?)?.isEmpty == true
-            ? null
-            : data['phone'] as String?,
-        role: 'doctor',
-        area: data['area'] as String?,
-        verificationStatus:
-            'verified', // Set to verified after document verification
-      );
-
-      final id = await DBHelper.instance.insertUser(u.toMap());
-      _user = User.fromMap(u.toMap()..['id'] = id);
-
-      // Save documents with approved status (since verification is complete)
-      final documents = data['documents'] as Map<String, dynamic>;
-      for (final entry in documents.entries) {
-        final doc = entry.value;
-        if (doc['fileName'] != null) {
-          final documentData = {
-            'doctor_id': id,
-            'document_type': doc['document_type'],
-            'file_name': doc['fileName'],
-            'file_path': doc['file_path'],
-            'file_data': doc['file_data'],
-            'upload_date': DateTime.now().toIso8601String(),
-            'status': 'approved', // Documents are approved after verification
-            'document_number': doc['documentNumber'] ?? '',
-            'expiry_date': doc['expiry_date'],
-            'issuing_authority': doc['issuingAuthority'] ?? '',
-            'verification_code': doc['verificationCode'] ?? '',
-          };
-          await DBHelper.instance.insertDoctorVerificationDocument(
-            documentData,
-          );
-        }
-      }
-
-      // Clear pending registration
-      await clearPendingDoctorRegistration();
-
-      // Save user to storage
-      await _saveUserToStorage(_user!);
-
-      _isLoading = false;
-      notifyListeners();
-
-      return id;
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  // Complete driver registration (called after OTP verification)
-  Future<int?> completeDriverRegistration() async {
-    if (_pendingDriverRegistration == null) {
-      throw Exception('No pending driver registration');
-    }
-
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final data = _pendingDriverRegistration!;
-      final email = data['email'] as String;
-
-      // Check if email already exists
-      final existing = await DBHelper.instance.getUserByEmail(email);
-      if (existing != null) {
-        // If the existing user is unverified, we can proceed with registration
-        final existingUser = User.fromMap(existing);
-        if (existingUser.verificationStatus == 'unverified') {
-          // This is likely a retry of the registration process, so we can proceed
-          // The user will be updated during the completion process
-        } else {
-          throw Exception('Email already exists');
-        }
-      }
+      // Determine verification status based on role
+      // - Doctors and Drivers need document verification
+      // - Owners and Admins are verified immediately after OTP
+      final verificationStatus = (role == 'doctor' || role == 'driver')
+          ? 'pending' // Will be set to 'verified' after document verification
+          : 'verified';
 
       final u = User(
         name: data['name'] as String,
@@ -793,120 +952,124 @@ class AuthProvider extends ChangeNotifier {
         phone: (data['phone'] as String?)?.isEmpty == true
             ? null
             : data['phone'] as String?,
-        role: 'driver',
+        role: role,
         area: data['area'] as String?,
-        verificationStatus:
-            'verified', // Set to verified after document verification
+        verificationStatus: verificationStatus,
       );
 
       final id = await DBHelper.instance.insertUser(u.toMap());
       _user = User.fromMap(u.toMap()..['id'] = id);
 
-      // Save documents with pending status
+      // Save documents based on role
       final documents = data['documents'] as Map<String, dynamic>;
-      for (final entry in documents.entries) {
-        final doc = entry.value;
-        if (doc['fileName'] != null) {
-          final documentData = {
-            'driver_id': id,
-            'document_type': doc['document_type'],
-            'document_number': doc['documentNumber'] ?? '',
-            'file_name': doc['fileName'],
-            'file_path': doc['file_path'],
-            'file_data': doc['file_data'],
-            'upload_date': DateTime.now().toIso8601String(),
-            'expiry_date': doc['expiry_date'],
-            'issue_date': doc['issue_date'],
-            'issuing_authority': doc['issuingAuthority'] ?? '',
-            'status': 'approved', // Documents are approved after verification
-            'verification_code': doc['verificationCode'] ?? '',
-            'vehicle_class': doc['vehicleClass'] ?? '',
-          };
-          await DBHelper.instance.insertDriverVerificationDocument(
-            documentData,
-          );
-        }
-      }
-
-      // Clear pending registration
-      await clearPendingDriverRegistration();
-
-      // Save user to storage
-      await _saveUserToStorage(_user!);
-
-      _isLoading = false;
-      notifyListeners();
-
-      return id;
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  // Clear pending doctor registration
-  Future<void> clearPendingDoctorRegistration() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_pendingDoctorKey);
-    await prefs.remove('${_pendingDoctorKey}_documents');
-    _pendingDoctorRegistration = null;
-  }
-
-  // Clear pending driver registration
-  Future<void> clearPendingDriverRegistration() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('pending_driver_registration');
-    await prefs.remove('pending_driver_registration_documents');
-    _pendingDriverRegistration = null;
-  }
-
-  // Load pending doctor registration from storage
-  Future<void> loadPendingDoctorRegistration() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final dataString = prefs.getString(_pendingDoctorKey);
-      if (dataString != null) {
-        Map<String, dynamic> dataMap;
-        try {
-          dataMap = jsonDecode(dataString);
-        } catch (e) {
-          // Fallback for old string format
-          dataMap = <String, dynamic>{};
-          for (final pair in dataString.split(',')) {
-            final parts = pair.split(':');
-            if (parts.length >= 2) {
-              final key = parts[0];
-              final value = parts.sublist(1).join(':');
-              dataMap[key] = value;
+      if (documents.isNotEmpty) {
+        if (role == 'doctor') {
+          for (final entry in documents.entries) {
+            final doc = entry.value;
+            if (doc['fileName'] != null) {
+              final documentData = {
+                'doctor_id': id,
+                'document_type': doc['document_type'],
+                'file_name': doc['fileName'],
+                'file_path': doc['file_path'],
+                'file_data': doc['file_data'],
+                'upload_date': DateTime.now().toIso8601String(),
+                'status':
+                    'approved', // Documents are automatically approved when uploaded
+                'document_number': doc['documentNumber'] ?? '',
+                'expiry_date': doc['expiry_date'],
+                'issuing_authority': doc['issuingAuthority'] ?? '',
+                'verification_code': doc['verificationCode'] ?? '',
+              };
+              await DBHelper.instance.insertDoctorVerificationDocument(
+                documentData,
+              );
+            }
+          }
+        } else if (role == 'driver') {
+          for (final entry in documents.entries) {
+            final doc = entry.value;
+            if (doc['fileName'] != null) {
+              final documentData = {
+                'driver_id': id,
+                'document_type': doc['document_type'],
+                'document_number': doc['documentNumber'] ?? '',
+                'file_name': doc['fileName'],
+                'file_path': doc['file_path'],
+                'file_data': doc['file_data'],
+                'upload_date': DateTime.now().toIso8601String(),
+                'expiry_date': doc['expiry_date'],
+                'issue_date': doc['issue_date'],
+                'issuing_authority': doc['issuingAuthority'] ?? '',
+                'status':
+                    'approved', // Documents are automatically approved when uploaded
+                'verification_code': doc['verificationCode'] ?? '',
+                'vehicle_class': doc['vehicleClass'] ?? '',
+              };
+              await DBHelper.instance.insertDriverVerificationDocument(
+                documentData,
+              );
             }
           }
         }
-
-        // Load documents from JSON
-        final docsString = prefs.getString('${_pendingDoctorKey}_documents');
-        if (docsString != null) {
-          try {
-            dataMap['documents'] = jsonDecode(docsString);
-          } catch (e) {
-            dataMap['documents'] = {};
-          }
-        } else {
-          dataMap['documents'] = {};
-        }
-
-        _pendingDoctorRegistration = dataMap;
       }
+
+      // Clear pending registration
+      await clearPendingRegistration();
+
+      // Save user to storage
+      await _saveUserToStorage(_user!);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return id;
     } catch (e) {
-      debugPrint('Error loading pending doctor registration: $e');
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
     }
   }
 
-  // Load pending driver registration from storage
-  Future<void> loadPendingDriverRegistration() async {
+  // Legacy completion methods for backward compatibility
+  Future<int?> completeDoctorRegistration() async {
+    if (_pendingRegistration == null ||
+        _pendingRegistration!['role'] != 'doctor') {
+      throw Exception('No pending doctor registration');
+    }
+    return await completeRegistration();
+  }
+
+  Future<int?> completeDriverRegistration() async {
+    if (_pendingRegistration == null ||
+        _pendingRegistration!['role'] != 'driver') {
+      throw Exception('No pending driver registration');
+    }
+    return await completeRegistration();
+  }
+
+  // Unified clear method
+  Future<void> clearPendingRegistration() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingRegistrationKey);
+    await prefs.remove('${_pendingRegistrationKey}_documents');
+    _pendingRegistration = null;
+  }
+
+  // Legacy clear methods for backward compatibility
+  Future<void> clearPendingDoctorRegistration() async {
+    await clearPendingRegistration();
+  }
+
+  Future<void> clearPendingDriverRegistration() async {
+    await clearPendingRegistration();
+  }
+
+  // Unified load method
+  Future<void> loadPendingRegistration() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final dataString = prefs.getString('pending_driver_registration');
+      final dataString = prefs.getString(_pendingRegistrationKey);
       if (dataString != null) {
         Map<String, dynamic> dataMap;
         try {
@@ -926,7 +1089,7 @@ class AuthProvider extends ChangeNotifier {
 
         // Load documents from JSON
         final docsString = prefs.getString(
-          'pending_driver_registration_documents',
+          '${_pendingRegistrationKey}_documents',
         );
         if (docsString != null) {
           try {
@@ -938,16 +1101,20 @@ class AuthProvider extends ChangeNotifier {
           dataMap['documents'] = {};
         }
 
-        _pendingDriverRegistration = dataMap;
+        _pendingRegistration = dataMap;
       }
     } catch (e) {
-      debugPrint('Error loading pending driver registration: $e');
+      debugPrint('Error loading pending registration: $e');
     }
   }
 
-  // Remove the old parse method
-  void _parseDocumentsString(String docsStr) {
-    // No longer needed - using JSON now
+  // Legacy load methods for backward compatibility
+  Future<void> loadPendingDoctorRegistration() async {
+    await loadPendingRegistration();
+  }
+
+  Future<void> loadPendingDriverRegistration() async {
+    await loadPendingRegistration();
   }
 
   // Get profile image bytes for web

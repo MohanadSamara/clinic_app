@@ -1,0 +1,74 @@
+name: Deploy app and proxy
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGION: us-central1
+  CLOUD_RUN_SERVICE: qdrant-proxy
+  IMAGE: gcr.io/${{ secrets.GCP_PROJECT }}/qdrant-proxy
+
+jobs:
+  deploy-proxy:
+    name: Build & Deploy Proxy to Cloud Run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for Google
+        run: |-
+          gcloud auth configure-docker --quiet
+
+      - name: Build and push Docker image
+        run: |-
+          docker build -t $IMAGE:latest server-proxy
+          docker push $IMAGE:latest
+
+      - name: Deploy to Cloud Run
+        run: |-
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --image $IMAGE:latest \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --quiet
+
+  deploy-web:
+    name: Build Flutter web and deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    needs: deploy-proxy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web
+        run: |
+          flutter build web --release --dart-define=QDRANT_PROXY_BASE=https://$GCP_REGION-run.googleapis.com
+
+      - name: Install Firebase CLI
+        run: |
+          curl -sL "https://firebase.tools" | bash
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN"

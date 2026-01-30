@@ -452,50 +452,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _loading = true);
     try {
-      if (_selectedRole == 'doctor') {
-        // For doctors, store pending registration and send OTP
-        await auth.storePendingDoctorRegistration(
-          name: _name.text.trim(),
-          email: _email.text.trim(),
-          password: _pass.text.trim(),
-          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-          area: _selectedArea!,
-          documents: {}, // Empty documents initially
-        );
-        // Send verification code
-        final otpSent = await auth.sendEmailVerificationCode(
-          _email.text.trim(),
-        );
-        if (!otpSent) {
-          throw Exception('Failed to send verification code');
-        }
-      } else if (_selectedRole == 'driver') {
-        // For drivers, store pending registration and send OTP
-        await auth.storePendingDriverRegistration(
-          name: _name.text.trim(),
-          email: _email.text.trim(),
-          password: _pass.text.trim(),
-          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-          area: _selectedArea!,
-          documents: {}, // Empty documents initially
-        );
-        // Send verification code
-        final otpSent = await auth.sendEmailVerificationCode(
-          _email.text.trim(),
-        );
-        if (!otpSent) {
-          throw Exception('Failed to send verification code');
-        }
-      } else {
-        // For owners and other roles, use the standard registration with email verification
-        await auth.registerWithEmailVerification(
-          name: _name.text.trim(),
-          email: _email.text.trim(),
-          password: _pass.text.trim(),
-          phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-          role: _selectedRole,
-          area: _selectedArea,
-        );
+      // UNIFIED REGISTRATION FLOW for all roles
+      // Store pending registration data for ALL user types
+      await auth.storePendingRegistration(
+        name: _name.text.trim(),
+        email: _email.text.trim(),
+        password: _pass.text.trim(),
+        phone: (_phone.text ?? '').trim().isEmpty
+            ? null
+            : (_phone.text ?? '').trim(),
+        role: _selectedRole,
+        area: _selectedArea,
+        documents:
+            {}, // Empty documents initially - will be filled during document upload
+      );
+
+      // Send verification code
+      final otpSent = await auth.sendEmailVerificationCode(_email.text.trim());
+      if (!otpSent) {
+        throw Exception('Failed to send verification code');
       }
 
       if (mounted) {
@@ -533,10 +508,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => RoleSelectionScreen(
-                  name: pending['name'],
-                  email: pending['email'],
-                  provider: pending['provider'],
-                  providerId: pending['providerId'],
+                  name: pending['name'] ?? '',
+                  email: pending['email'] ?? '',
+                  provider: pending['provider'] ?? '',
+                  providerId: pending['providerId'] ?? '',
                 ),
               ),
             );

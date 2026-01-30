@@ -75,7 +75,8 @@ class AppCloseService {
       // Log out the user before closing the app
       authProvider.logout();
 
-      debugPrint('Data saved before app exit');
+      // Commented out to remove loop text from terminal
+      // debugPrint('Data saved before app exit');
     } catch (e) {
       debugPrint('Error saving data before exit: $e');
     }

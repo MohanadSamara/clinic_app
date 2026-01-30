@@ -2467,4 +2467,32 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get online => 'متصل';
+
+  @override
+  String get verificationStatus => 'حالة التحقق';
+
+  @override
+  String get verified => 'تم التحقق';
+
+  @override
+  String get verificationFailed => 'فشل التحقق';
+
+  @override
+  String get underReview => 'قيد المراجعة';
+
+  @override
+  String get congratulationsVerificationComplete => 'مبروك! تم التحقق بنجاح';
+
+  @override
+  String get documentsRejectedPleaseResubmit =>
+      'تم رفض المستندات. يرجى إعادة التقديم';
+
+  @override
+  String get approved => 'موافق عليه';
+
+  @override
+  String get pending => 'قيد الانتظار';
+
+  @override
+  String get rejected => 'مرفوض';
 }

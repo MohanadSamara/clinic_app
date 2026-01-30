@@ -178,7 +178,8 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
         );
       }
 
-      debugPrint('Auto-saved user data at ${DateTime.now()}');
+      // Commented out to remove loop text from terminal
+      // debugPrint('Auto-saved user data at ${DateTime.now()}');
     } catch (e) {
       debugPrint('Error during auto-save: $e');
     }
@@ -888,7 +889,8 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
       }
 
       // Any other data saving logic can be added here
-      debugPrint('Data saved before app exit');
+      // Commented out to remove loop text from terminal
+      // debugPrint('Data saved before app exit');
     } catch (e) {
       debugPrint('Error saving data before exit: $e');
     }

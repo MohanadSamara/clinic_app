@@ -155,12 +155,13 @@ class _DoctorRegistrationDocumentsScreenState
         }
       }
 
-      // Store pending registration (user NOT saved to database yet)
-      await authProvider.storePendingDoctorRegistration(
+      // Update pending registration with documents (using unified method)
+      await authProvider.storePendingRegistration(
         name: widget.name,
         email: widget.email,
         password: widget.password,
         phone: widget.phone,
+        role: 'doctor',
         area: widget.area,
         documents: documentsData,
       );
@@ -174,8 +175,15 @@ class _DoctorRegistrationDocumentsScreenState
           ),
         );
 
-        // Complete registration and auto-verify
-        await authProvider.completeDoctorRegistration();
+        // Complete registration using unified method
+        await authProvider.completeRegistration();
+
+        if (mounted) {
+          // Navigate to doctor home
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          );
+        }
 
         if (mounted) {
           // Navigate to doctor home

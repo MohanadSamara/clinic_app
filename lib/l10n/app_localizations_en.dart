@@ -2498,4 +2498,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get online => 'Online';
+
+  @override
+  String get verificationStatus => 'Verification Status';
+
+  @override
+  String get verified => 'Verified';
+
+  @override
+  String get verificationFailed => 'Verification Failed';
+
+  @override
+  String get underReview => 'Under Review';
+
+  @override
+  String get congratulationsVerificationComplete =>
+      'Congratulations! Verification Complete';
+
+  @override
+  String get documentsRejectedPleaseResubmit =>
+      'Documents Rejected. Please Resubmit';
+
+  @override
+  String get approved => 'Approved';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get rejected => 'Rejected';
 }

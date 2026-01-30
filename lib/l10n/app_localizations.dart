@@ -3862,6 +3862,60 @@ abstract class AppLocalizations {
   /// **'Appointment rejected'**
   String get appointmentRejected;
 
+  /// No description provided for @verificationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Status'**
+  String get verificationStatus;
+
+  /// No description provided for @verified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get verified;
+
+  /// No description provided for @verificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Failed'**
+  String get verificationFailed;
+
+  /// No description provided for @underReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Review'**
+  String get underReview;
+
+  /// No description provided for @congratulationsVerificationComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations! Verification Complete'**
+  String get congratulationsVerificationComplete;
+
+  /// No description provided for @documentsRejectedPleaseResubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents Rejected. Please Resubmit'**
+  String get documentsRejectedPleaseResubmit;
+
+  /// No description provided for @approved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get approved;
+
+  /// No description provided for @pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pending;
+
+  /// No description provided for @rejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejected;
+
   /// No description provided for @locationUpdatedSuccessfully.
   ///
   /// In en, this message translates to:

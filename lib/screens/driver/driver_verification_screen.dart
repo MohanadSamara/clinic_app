@@ -227,7 +227,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     setState(() => _isSubmitting = true);
 
     if (widget.isPreLogin) {
-      // For pre-login registration, store documents and complete registration
+      // For pre-login registration, store documents and complete registration using unified flow
       try {
         final authProvider = context.read<AuthProvider>();
 
@@ -263,18 +263,32 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
           }
         }
 
-        // Update pending registration with documents
-        await authProvider.storePendingDriverRegistration(
-          name: authProvider.pendingDriverRegistration!['name'],
-          email: authProvider.pendingDriverRegistration!['email'],
-          password: authProvider.pendingDriverRegistration!['password'],
-          phone: authProvider.pendingDriverRegistration!['phone'],
-          area: authProvider.pendingDriverRegistration!['area'],
+        // Get pending registration data
+        final pendingReg = authProvider.pendingRegistration;
+        if (pendingReg == null) {
+          throw Exception('No pending registration found');
+        }
+
+        // Update pending registration with documents using unified method
+        await authProvider.storePendingRegistration(
+          name: pendingReg['name'],
+          email: pendingReg['email'],
+          password: pendingReg['password'],
+          phone: pendingReg['phone'],
+          role: 'driver',
+          area: pendingReg['area'],
           documents: documentsData,
         );
 
-        // Complete registration
-        await authProvider.completeDriverRegistration();
+        // Complete registration using unified method
+        await authProvider.completeRegistration();
+
+        if (mounted) {
+          // Navigate to driver home
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          );
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

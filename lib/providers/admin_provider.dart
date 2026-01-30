@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../db/db_helper.dart';
 import '../models/user.dart';
 
@@ -8,6 +9,8 @@ class AdminProvider with ChangeNotifier {
   List<User> _users = [];
   Map<String, dynamic> _systemSettings = {};
   List<Map<String, dynamic>> _auditLogs = [];
+  bool _useCloudData = false;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -16,11 +19,87 @@ class AdminProvider with ChangeNotifier {
   Map<String, dynamic> get systemSettings => _systemSettings;
   List<Map<String, dynamic>> get auditLogs => _auditLogs;
 
-  // Load all users
-  Future<void> loadUsers() async {
+  /// Get all users from Firestore directly
+  Future<List<User>> _getUsersFromFirestore() async {
+    try {
+      final snapshot = await _firestore.collection('users').get();
+      return snapshot.docs
+          .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting users from Firestore: $e');
+      return [];
+    }
+  }
+
+  /// Get users by role from Firestore
+  Future<List<User>> _getUsersByRoleFromFirestore(String role) async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: role)
+          .get();
+      return snapshot.docs
+          .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting users by role from Firestore: $e');
+      return [];
+    }
+  }
+
+  // Load all users - try Firestore first, fall back to local
+  Future<void> loadUsers({bool forceRefresh = false}) async {
     _setLoading(true);
     try {
+      // Try to load from Firestore first (cloud database)
+      if (!forceRefresh) {
+        try {
+          final cloudUsers = await _getUsersFromFirestore();
+          if (cloudUsers.isNotEmpty) {
+            _users = cloudUsers;
+            _useCloudData = true;
+            _error = null;
+            _setLoading(false);
+            return;
+          }
+        } catch (e) {
+          debugPrint('Firestore unavailable, using local database: $e');
+          _useCloudData = false;
+        }
+      }
+
+      // Fall back to local database
       final userMaps = await DBHelper.instance.getAllUsers();
+      _users = userMaps.map((map) => User.fromMap(map)).toList();
+      _error = null;
+    } catch (e) {
+      _error = 'Failed to load users: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Load users by role from cloud
+  Future<void> loadUsersByRole(String role) async {
+    _setLoading(true);
+    try {
+      // Try Firestore first
+      try {
+        final cloudUsers = await _getUsersByRoleFromFirestore(role);
+        if (cloudUsers.isNotEmpty) {
+          _users = cloudUsers;
+          _useCloudData = true;
+          _error = null;
+          _setLoading(false);
+          return;
+        }
+      } catch (e) {
+        debugPrint('Firestore unavailable for role query: $e');
+      }
+
+      // Fall back to local
+      final userMaps = await DBHelper.instance.getAllUsers(role: role);
       _users = userMaps.map((map) => User.fromMap(map)).toList();
       _error = null;
     } catch (e) {
@@ -226,10 +305,3 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
-
-
-
-

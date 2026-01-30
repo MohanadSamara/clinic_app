@@ -1,15 +1,11 @@
 // lib/screens/loading_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:appwrite/appwrite.dart';
 import '../../translations.dart';
 import 'role_based_home.dart';
-import '../../constants/appwrite_config.dart';
 
 class LoadingScreen extends StatefulWidget {
-  final Client client;
-
-  const LoadingScreen({super.key, required this.client});
+  const LoadingScreen({super.key});
 
   @override
   State<LoadingScreen> createState() => _LoadingScreenState();
@@ -22,7 +18,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   late AnimationController _scaleController;
   late Animation<double> _scaleAnimation;
 
-  bool _isPinging = false;
+  bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
 
@@ -53,9 +49,9 @@ class _LoadingScreenState extends State<LoadingScreen>
     _fadeController.forward();
     _scaleController.forward();
 
-    // Auto-ping Appwrite when screen loads
+    // Start initialization after animations
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _pingAppwrite();
+      _initializeApp();
     });
   }
 
@@ -66,95 +62,41 @@ class _LoadingScreenState extends State<LoadingScreen>
     super.dispose();
   }
 
-  /// OFFICIAL APPWRITE SDK WAY FOR FLUTTER
-  /// ======================================
-  ///
-  /// WHY MANUAL HTTP CALLS ARE WRONG:
-  /// 1. You need to manually construct endpoints and handle headers
-  /// 2. You might call wrong endpoints (/health vs /health/project)
-  /// 3. Manual HTTP can cause CORS issues in web builds
-  /// 4. SDK handles authentication context automatically
-  ///
-  /// WHY 401/404 ERRORS OCCUR:
-  /// 401 (Unauthorized):
-  ///   - Wrong endpoint for the context
-  ///   - Missing/incorrect authentication header
-  ///   - Project ID not properly configured
-  ///   - Using /health (public) with project header confuses server
-  /// 404 (Not Found):
-  ///   - Endpoint doesn't exist
-  ///   - Wrong SDK version
-  ///   - Region-specific endpoint issues
-  ///
-  Future<void> _pingAppwrite() async {
-    if (_isPinging) return;
+  Future<void> _initializeApp() async {
+    if (!mounted) return;
 
     setState(() {
-      _isPinging = true;
+      _isLoading = true;
       _hasError = false;
       _errorMessage = '';
     });
 
     try {
-      // Ping Appwrite using client.ping()
-      await widget.client.ping().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException(
-            'Connection timed out. Please check your internet connection.',
-          );
-        },
+      // Simulate initialization delay
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (!mounted) return;
+
+      // Navigate to home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RoleBasedHome()),
       );
-
-      // If we get here, Appwrite is reachable and client is configured correctly
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Appwrite ping successful!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate to home
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-        );
-      }
-    } on AppwriteException catch (e) {
-      _handleError('Appwrite Error: ${e.message} (Code: ${e.code})');
-    } on TimeoutException catch (e) {
-      _handleError(e.message ?? 'Connection timed out');
     } catch (e) {
-      _handleError(e.toString());
-    } finally {
       if (mounted) {
-        setState(() => _isPinging = false);
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
       }
     }
   }
 
-  void _handleError(String message) {
-    if (mounted) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = message;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ping failed: $message'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(label: 'Retry', onPressed: _pingAppwrite),
-        ),
-      );
-    }
-  }
-
-  void _retryConnection() {
+  void _retryInitialization() {
     setState(() {
       _hasError = false;
       _errorMessage = '';
     });
-    _pingAppwrite();
+    _initializeApp();
   }
 
   @override
@@ -214,7 +156,7 @@ class _LoadingScreenState extends State<LoadingScreen>
               ),
               const SizedBox(height: 48),
               // Loading indicator
-              if (_isPinging)
+              if (_isLoading)
                 Column(
                   children: [
                     CircularProgressIndicator(
@@ -229,7 +171,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Connecting to Appwrite...',
+                      'Initializing app...',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
@@ -244,7 +186,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                     Icon(Icons.error_outline, size: 48, color: Colors.red),
                     const SizedBox(height: 16),
                     Text(
-                      'Connection Error',
+                      'Initialization Error',
                       style: Theme.of(
                         context,
                       ).textTheme.titleMedium?.copyWith(color: Colors.red),
@@ -264,9 +206,9 @@ class _LoadingScreenState extends State<LoadingScreen>
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
-                      onPressed: _retryConnection,
+                      onPressed: _retryInitialization,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retry Connection'),
+                      label: const Text('Retry'),
                     ),
                   ],
                 )
@@ -285,18 +227,6 @@ class _LoadingScreenState extends State<LoadingScreen>
                     ),
                   ],
                 ),
-              const SizedBox(height: 24),
-              // Send Ping button
-              ElevatedButton(
-                onPressed: _isPinging ? null : _pingAppwrite,
-                child: _isPinging
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send Ping'),
-              ),
             ],
           ),
         ),

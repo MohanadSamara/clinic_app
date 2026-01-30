@@ -937,6 +937,17 @@ extension LocalizationExtension on BuildContext {
       'alertPreferences': (l) => l.alertPreferences,
       'notificationSettingsComingSoon': (l) => l.notificationSettingsComingSoon,
       'linkedDriver': (l) => l.linkedDriver,
+      'verificationStatus': (l) => l.verificationStatus,
+      'verified': (l) => l.verified,
+      'verificationFailed': (l) => l.verificationFailed,
+      'underReview': (l) => l.underReview,
+      'congratulationsVerificationComplete': (l) =>
+          l.congratulationsVerificationComplete,
+      'documentsRejectedPleaseResubmit': (l) =>
+          l.documentsRejectedPleaseResubmit,
+      'approved': (l) => l.approved,
+      'pending': (l) => l.pending,
+      'rejected': (l) => l.rejected,
 
       // Page management
       'pageManagement': (l) => 'Page Management',

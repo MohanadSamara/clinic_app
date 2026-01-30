@@ -136,7 +136,8 @@ class _DriverDashboardState extends State<DriverDashboard>
         );
       }
 
-      debugPrint('Auto-saved driver data at ${DateTime.now()}');
+      // Commented out to remove loop text from terminal
+      // debugPrint('Auto-saved driver data at ${DateTime.now()}');
     } catch (e) {
       debugPrint('Error during driver auto-save: $e');
     }
@@ -2018,7 +2019,8 @@ class _DriverDashboardState extends State<DriverDashboard>
       }
 
       // Any other data saving logic can be added here
-      debugPrint('Data saved before app exit');
+      // Commented out to remove loop text from terminal
+      // debugPrint('Data saved before app exit');
     } catch (e) {
       debugPrint('Error saving data before exit: $e');
     }

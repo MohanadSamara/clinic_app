@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'role_based_home.dart';
 import '../../translations.dart';
-
+import 'doctor/doctor_registration_documents_screen.dart';
+import 'driver/driver_verification_screen.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   final String name;
@@ -240,31 +241,74 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     setState(() => _loading = true);
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.completeSocialRegistration(
-        name: widget.name,
-        email: widget.email,
-        role: _selectedRole!,
-        provider: widget.provider,
-        providerId: widget.providerId,
-        area: _selectedArea,
-      );
 
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-          );
-        });
+      // For doctors and drivers, store pending registration and go to document upload
+      if (_selectedRole == 'doctor' || _selectedRole == 'driver') {
+        // Store pending registration data for document upload flow
+        await auth.storePendingRegistration(
+          name: widget.name,
+          email: widget.email,
+          password: '', // Social users don't have passwords
+          phone: null,
+          role: _selectedRole!,
+          area: _selectedArea,
+          documents: {}, // Empty documents initially
+        );
+
+        if (mounted) {
+          if (_selectedRole == 'doctor') {
+            // Navigate to doctor document upload screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DoctorRegistrationDocumentsScreen(
+                  name: widget.name,
+                  email: widget.email,
+                  password: '', // Social users don't have passwords
+                  phone: null,
+                  area: _selectedArea ?? '',
+                ),
+              ),
+            );
+          } else if (_selectedRole == 'driver') {
+            // Navigate to driver document upload screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverVerificationScreen(
+                  email: widget.email,
+                  isPreLogin: true,
+                ),
+              ),
+            );
+          }
+        }
+      } else {
+        // For owners and admins, complete registration immediately
+        await auth.completeSocialRegistration(
+          name: widget.name,
+          email: widget.email,
+          role: _selectedRole!,
+          provider: widget.provider,
+          providerId: widget.providerId,
+          area: _selectedArea,
+        );
+
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+            );
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              '${context.tr('error')}: ${e.toString()}',
-            ),
+            content: Text('${context.tr('error')}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -276,10 +320,3 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     }
   }
 }
-
-
-
-
-
-
-

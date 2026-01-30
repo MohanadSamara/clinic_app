@@ -1,15 +1,11 @@
-// lib/main.dart
 import 'dart:ui' show Locale;
 import 'package:flutter/material.dart' hide Locale;
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:appwrite/appwrite.dart' hide Locale;
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
-import 'constants/appwrite_config.dart';
-import 'appwrite_client.dart';
 import 'providers/admin_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider.dart';
@@ -69,6 +65,12 @@ void _setupWebCloseHandling() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Optional: provide proxy base at build time for web via --dart-define
+  const String qdrantProxyBase = String.fromEnvironment(
+    'QDRANT_PROXY_BASE',
+    defaultValue: '',
+  );
+
   try {
     // Initialize Firebase globally
     await Firebase.initializeApp(
@@ -82,11 +84,17 @@ void main() async {
     final notificationService = NotificationService();
     await notificationService.initialize();
 
-    // Test Qdrant connection
+    // Test Qdrant connection — uses proxy on web when provided via --dart-define
     try {
-      final qdrantService = QdrantService.withCredentials();
-      await qdrantService.testConnection();
-      debugPrint('Qdrant connection test successful');
+      final qdrantService = QdrantService.auto(proxyBaseUrl: qdrantProxyBase);
+      if (!kIsWeb) {
+        await qdrantService.testConnection();
+        debugPrint('Qdrant connection test successful');
+      } else {
+        debugPrint(
+          'Using proxy base: ${qdrantProxyBase.isEmpty ? '<none>' : qdrantProxyBase}',
+        );
+      }
     } catch (e) {
       debugPrint('Qdrant connection test failed: $e');
     }
@@ -115,7 +123,7 @@ void main() async {
       }
     }
 
-    runApp(MyApp(authProvider: authProvider, client: client));
+    runApp(MyApp(authProvider: authProvider));
 
     // Setup web-specific close handling
     if (kIsWeb) {
@@ -182,9 +190,8 @@ Future<void> _initializeSampleVans() async {
 
 class MyApp extends StatelessWidget {
   final AuthProvider authProvider;
-  final Client client;
 
-  const MyApp({super.key, required this.authProvider, required this.client});
+  const MyApp({super.key, required this.authProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +258,7 @@ class MyApp extends StatelessWidget {
             theme: VetTheme.light(),
             darkTheme: VetTheme.dark(),
             themeMode: themeProvider.themeMode,
-            home: LoadingScreen(client: client),
+            home: const LoadingScreen(),
             routes: {
               '/role-based-home': (context) => const RoleBasedHome(),
               '/login': (context) => const LoginScreen(),

@@ -297,34 +297,51 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
         );
 
-        // Check user role and navigate accordingly
+        // Check user role and navigate accordingly - UNIFIED FLOW
+        final pendingRegistration = auth.pendingRegistration;
         final user = auth.user;
-        if (auth.hasPendingDoctorRegistration) {
-          // Navigate to doctor document upload screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DoctorRegistrationDocumentsScreen(
-                name: auth.pendingDoctorRegistration!['name'],
-                email: auth.pendingDoctorRegistration!['email'],
-                password: '', // Password already hashed and stored
-                phone: auth.pendingDoctorRegistration!['phone'],
-                area: auth.pendingDoctorRegistration!['area'],
+
+        if (pendingRegistration != null) {
+          // Pending registration exists - determine next step based on role
+          final role = pendingRegistration['role'] as String? ?? 'owner';
+
+          if (role == 'doctor') {
+            // Navigate to doctor document upload screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DoctorRegistrationDocumentsScreen(
+                  name: pendingRegistration['name'],
+                  email: pendingRegistration['email'],
+                  password: pendingRegistration['password'] ?? '',
+                  phone: pendingRegistration['phone'],
+                  area: pendingRegistration['area'] ?? '',
+                ),
               ),
-            ),
-          );
-        } else if (auth.hasPendingDriverRegistration) {
-          // Navigate to driver verification screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DriverVerificationScreen(
-                email: widget.email,
-                isPreLogin: true,
+            );
+          } else if (role == 'driver') {
+            // Navigate to driver verification screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverVerificationScreen(
+                  email: pendingRegistration['email'],
+                  isPreLogin: true,
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            // Owner or Admin - complete registration and go home (SAME FLOW)
+            await auth.completeRegistration();
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+              );
+            }
+          }
         } else if (user != null) {
+          // User already exists - navigate based on role
           if (user.role == 'doctor') {
             // Navigate to doctor document upload screen
             Navigator.pushReplacement(
@@ -333,7 +350,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 builder: (_) => DoctorRegistrationDocumentsScreen(
                   name: user.name,
                   email: user.email,
-                  password: '', // Password already set
+                  password: '', // Password already set in DB
                   phone: user.phone,
                   area: user.area ?? '',
                 ),
@@ -344,7 +361,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => const DriverVerificationScreen(),
+                builder: (_) => DriverVerificationScreen(
+                  email: user.email,
+                  isPreLogin: false,
+                ),
               ),
             );
           } else {
@@ -354,6 +374,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               MaterialPageRoute(builder: (_) => const RoleBasedHome()),
             );
           }
+        } else {
+          // No pending registration and no user - go to home
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RoleBasedHome()),
+          );
         }
       } else {
         _showError('Invalid or expired verification code');
