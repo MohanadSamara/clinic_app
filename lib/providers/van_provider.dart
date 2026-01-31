@@ -1,245 +1,410 @@
+// lib/providers/van_provider.dart
+// Van Provider using Firestore as the single source of truth
+// All data synced globally across devices
+// OTP Authentication remains UNCHANGED
+
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/van.dart';
-import '../models/user.dart';
-import '../db/db_helper.dart';
 
 class VanProvider with ChangeNotifier {
   List<Van> _vans = [];
   bool _isLoading = false;
+  String? _error;
 
   List<Van> get vans => _vans;
   bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // Firestore instance
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Helper to convert any ID to int
+  int _toIntId(dynamic id) {
+    if (id == null) return 0;
+    if (id is int) return id;
+    if (id is String) {
+      return int.tryParse(id) ?? id.hashCode;
+    }
+    return id.hashCode;
+  }
+
+  // ========== LOAD DATA ==========
 
   Future<void> loadVans() async {
     try {
       _isLoading = true;
-      // Don't call notifyListeners() here to avoid build-time notifications
-
-      final dbHelper = DBHelper.instance;
-      final vanData = await dbHelper.getAllVans();
-      _vans = vanData.map((data) => Van.fromMap(data)).toList();
-
-      _isLoading = false;
+      _error = null;
       notifyListeners();
+
+      final snapshot = await _firestore
+          .collection('vans')
+          .orderBy('name')
+          .get();
+
+      _vans = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = _toIntId(doc.id);
+        return Van.fromMap(data);
+      }).toList();
     } catch (e) {
       debugPrint('Error loading vans: $e');
+      _error = 'Error loading vans: $e';
       _vans = [];
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  // ========== ADD VAN ==========
+
   Future<void> addVan(Van van) async {
     try {
-      final dbHelper = DBHelper.instance;
-      final id = await dbHelper.insertVan(van.toMap());
+      _isLoading = true;
+      notifyListeners();
+
+      final docRef = await _firestore.collection('vans').add({
+        'name': van.name,
+        'licensePlate': van.licensePlate,
+        'model': van.model,
+        'capacity': van.capacity,
+        'status': van.status,
+        'description': van.description,
+        'area': van.area,
+        'assignedDriverId': van.assignedDriverId?.toString(),
+        'assignedDoctorId': van.assignedDoctorId?.toString(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      await docRef.update({'id': docRef.id});
+
       final newVan = van.copyWith(
-        id: id,
+        id: _toIntId(docRef.id),
         createdAt: DateTime.now().toIso8601String(),
       );
+
       _vans.add(newVan);
       notifyListeners();
     } catch (e) {
       debugPrint('Error adding van: $e');
+      _error = 'Error adding van: $e';
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  Future<void> updateVan(int id, Van updatedVan) async {
+  // ========== UPDATE VAN ==========
+
+  Future<void> updateVan(dynamic id, Van updatedVan) async {
     try {
-      final dbHelper = DBHelper.instance;
-      await dbHelper.updateVan(id, updatedVan.toMap());
-      final index = _vans.indexWhere((van) => van.id == id);
-      if (index != -1) {
-        _vans[index] = updatedVan;
-        notifyListeners();
-      }
+      final idInt = _toIntId(id);
+      final index = _vans.indexWhere((van) => van.id == idInt);
+      if (index == -1) return;
+
+      final docIdStr =
+          _vans[index].licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          idInt.toString();
+
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'name': updatedVan.name,
+        'licensePlate': updatedVan.licensePlate,
+        'model': updatedVan.model,
+        'capacity': updatedVan.capacity,
+        'status': updatedVan.status,
+        'description': updatedVan.description,
+        'area': updatedVan.area,
+        'assignedDriverId': updatedVan.assignedDriverId?.toString(),
+        'assignedDoctorId': updatedVan.assignedDoctorId?.toString(),
+      });
+
+      _vans[index] = updatedVan.copyWith(id: idInt);
+      notifyListeners();
     } catch (e) {
       debugPrint('Error updating van: $e');
+      _error = 'Error updating van: $e';
       rethrow;
     }
   }
 
-  Future<void> deleteVan(int id) async {
+  // ========== DELETE VAN ==========
+
+  Future<void> deleteVan(dynamic id) async {
     try {
-      final dbHelper = DBHelper.instance;
-      await dbHelper.deleteVan(id);
-      _vans.removeWhere((van) => van.id == id);
+      final idInt = _toIntId(id);
+      final index = _vans.indexWhere((van) => van.id == idInt);
+      if (index == -1) return;
+
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          idInt.toString();
+
+      await _firestore.collection('vans').doc(docIdStr).delete();
+
+      _vans.removeAt(index);
       notifyListeners();
     } catch (e) {
       debugPrint('Error deleting van: $e');
+      _error = 'Error deleting van: $e';
       rethrow;
     }
   }
 
-  Future<Van?> getVanById(int id) async {
+  // ========== GET VAN BY ID ==========
+
+  Van? getVanById(dynamic id) {
+    final idInt = _toIntId(id);
     try {
-      final dbHelper = DBHelper.instance;
-      final vanData = await dbHelper.getVanById(id);
-      return vanData != null ? Van.fromMap(vanData) : null;
+      return _vans.firstWhere((van) => van.id == idInt);
     } catch (e) {
-      debugPrint('Error getting van by id: $e');
       return null;
     }
   }
 
-  Future<Van?> getVanByDriverId(int driverId) async {
+  // ========== GET VAN BY DRIVER ID ==========
+
+  Future<Van?> getVanByDriverId(dynamic driverId) async {
     try {
-      final dbHelper = DBHelper.instance;
-      final vanData = await dbHelper.getVanByDriverId(driverId);
-      return vanData != null ? Van.fromMap(vanData) : null;
+      final driverIdStr = _toIntId(driverId).toString();
+      final snapshot = await _firestore
+          .collection('vans')
+          .where('assignedDriverId', isEqualTo: driverIdStr)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+
+      final data = snapshot.docs.first.data();
+      data['id'] = _toIntId(snapshot.docs.first.id);
+      return Van.fromMap(data);
     } catch (e) {
       debugPrint('Error getting van by driver id: $e');
       return null;
     }
   }
 
-  Future<Van?> getVanByDoctorId(int doctorId) async {
+  // ========== GET VAN BY DOCTOR ID ==========
+
+  Future<Van?> getVanByDoctorId(dynamic doctorId) async {
     try {
-      final dbHelper = DBHelper.instance;
-      final vanData = await dbHelper.getVanByDoctorId(doctorId);
-      return vanData != null ? Van.fromMap(vanData) : null;
+      final doctorIdStr = _toIntId(doctorId).toString();
+      final snapshot = await _firestore
+          .collection('vans')
+          .where('assignedDoctorId', isEqualTo: doctorIdStr)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+
+      final data = snapshot.docs.first.data();
+      data['id'] = _toIntId(snapshot.docs.first.id);
+      return Van.fromMap(data);
     } catch (e) {
       debugPrint('Error getting van by doctor id: $e');
       return null;
     }
   }
 
-  Future<void> assignVanToDriver(int vanId, int driverId) async {
+  // ========== ASSIGN VAN ==========
+
+  Future<void> assignVanToDriver(dynamic vanId, dynamic driverId) async {
     try {
-      // Get driver user to check linked doctor
-      final driverData = await DBHelper.instance.getUserById(driverId);
-      if (driverData == null) {
-        throw Exception('Driver not found');
-      }
-      final driver = User.fromMap(driverData);
-      final linkedDoctorId = driver.linkedDoctorId;
-      if (linkedDoctorId == null) {
-        throw Exception('Driver must be linked to a doctor before assignment');
-      }
+      final vanIdInt = _toIntId(vanId);
+      final index = _vans.indexWhere((van) => van.id == vanIdInt);
+      if (index == -1) return;
 
-      // Verify the linked doctor exists and is linked back
-      final doctorData = await DBHelper.instance.getUserById(linkedDoctorId);
-      if (doctorData == null) {
-        throw Exception('Linked doctor not found');
-      }
-      final doctor = User.fromMap(doctorData);
-      if (doctor.linkedDriverId != driverId) {
-        throw Exception('Doctor is not properly linked to this driver');
-      }
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          vanIdInt.toString();
 
-      final van = _vans.firstWhere((v) => v.id == vanId);
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'assignedDriverId': _toIntId(driverId).toString(),
+        'status': 'assigned',
+      });
+
       final updatedVan = van.copyWith(
-        assignedDriverId: driverId,
-        assignedDoctorId: linkedDoctorId,
-        status: 'assigned', // Both are assigned
+        assignedDriverId: _toIntId(driverId),
+        status: 'assigned',
       );
-      await updateVan(vanId, updatedVan);
+
+      _vans[index] = updatedVan;
+      notifyListeners();
     } catch (e) {
       debugPrint('Error assigning van to driver: $e');
+      _error = 'Error assigning van: $e';
       rethrow;
     }
   }
 
-  Future<void> assignVanToDoctor(int vanId, int doctorId) async {
+  Future<void> assignVanToDoctor(dynamic vanId, dynamic doctorId) async {
     try {
-      // Get doctor user to check linked driver
-      final doctorData = await DBHelper.instance.getUserById(doctorId);
-      if (doctorData == null) {
-        throw Exception('Doctor not found');
-      }
-      final doctor = User.fromMap(doctorData);
-      final linkedDriverId = doctor.linkedDriverId;
-      if (linkedDriverId == null) {
-        throw Exception('Doctor must be linked to a driver before assignment');
-      }
+      final vanIdInt = _toIntId(vanId);
+      final index = _vans.indexWhere((van) => van.id == vanIdInt);
+      if (index == -1) return;
 
-      // Verify the linked driver exists and is linked back
-      final driverData = await DBHelper.instance.getUserById(linkedDriverId);
-      if (driverData == null) {
-        throw Exception('Linked driver not found');
-      }
-      final driver = User.fromMap(driverData);
-      if (driver.linkedDoctorId != doctorId) {
-        throw Exception('Driver is not properly linked to this doctor');
-      }
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          vanIdInt.toString();
 
-      final van = _vans.firstWhere((v) => v.id == vanId);
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'assignedDoctorId': _toIntId(doctorId).toString(),
+        'status': 'assigned',
+      });
+
       final updatedVan = van.copyWith(
-        assignedDoctorId: doctorId,
-        assignedDriverId: linkedDriverId,
-        status: 'assigned', // Both are assigned
+        assignedDoctorId: _toIntId(doctorId),
+        status: 'assigned',
       );
-      await updateVan(vanId, updatedVan);
+
+      _vans[index] = updatedVan;
+      notifyListeners();
     } catch (e) {
       debugPrint('Error assigning van to doctor: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> unassignVanFromDriver(int vanId) async {
-    try {
-      final van = _vans.firstWhere((v) => v.id == vanId);
-      final updatedVan = van.copyWith(
-        assignedDriverId: null,
-        assignedDoctorId: null, // Unassign both since they are paired
-        status: 'available',
-      );
-      await updateVan(vanId, updatedVan);
-    } catch (e) {
-      debugPrint('Error unassigning van from driver: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> unassignVanFromDoctor(int vanId) async {
-    try {
-      final van = _vans.firstWhere((v) => v.id == vanId);
-      final updatedVan = van.copyWith(
-        assignedDoctorId: null,
-        assignedDriverId: null, // Unassign both since they are paired
-        status: 'available',
-      );
-      await updateVan(vanId, updatedVan);
-    } catch (e) {
-      debugPrint('Error unassigning van from doctor: $e');
+      _error = 'Error assigning van: $e';
       rethrow;
     }
   }
 
   Future<void> assignVanToDoctorAndDriver(
-    int vanId,
-    int doctorId,
-    int driverId,
+    dynamic vanId,
+    dynamic doctorId,
+    dynamic driverId,
   ) async {
     try {
-      final van = _vans.firstWhere((v) => v.id == vanId);
+      final vanIdInt = _toIntId(vanId);
+      final index = _vans.indexWhere((van) => van.id == vanIdInt);
+      if (index == -1) return;
+
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          vanIdInt.toString();
+
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'assignedDoctorId': _toIntId(doctorId).toString(),
+        'assignedDriverId': _toIntId(driverId).toString(),
+        'status': 'assigned',
+      });
+
       final updatedVan = van.copyWith(
-        assignedDoctorId: doctorId,
-        assignedDriverId: driverId,
+        assignedDoctorId: _toIntId(doctorId),
+        assignedDriverId: _toIntId(driverId),
         status: 'assigned',
       );
-      await updateVan(vanId, updatedVan);
+
+      _vans[index] = updatedVan;
+      notifyListeners();
     } catch (e) {
       debugPrint('Error assigning van to doctor and driver: $e');
+      _error = 'Error assigning van: $e';
       rethrow;
     }
   }
 
-  Future<void> unassignVanFromDoctorAndDriver(int vanId) async {
+  // ========== UNASSIGN VAN ==========
+
+  Future<void> unassignVanFromDriver(dynamic vanId) async {
     try {
-      final van = _vans.firstWhere((v) => v.id == vanId);
+      final vanIdInt = _toIntId(vanId);
+      final index = _vans.indexWhere((van) => van.id == vanIdInt);
+      if (index == -1) return;
+
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          vanIdInt.toString();
+
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'assignedDriverId': null,
+        'assignedDoctorId': null,
+        'status': 'available',
+      });
+
+      final updatedVan = van.copyWith(
+        assignedDriverId: null,
+        assignedDoctorId: null,
+        status: 'available',
+      );
+
+      _vans[index] = updatedVan;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error unassigning van from driver: $e');
+      _error = 'Error unassigning van: $e';
+      rethrow;
+    }
+  }
+
+  Future<void> unassignVanFromDoctor(dynamic vanId) async {
+    try {
+      final vanIdInt = _toIntId(vanId);
+      final index = _vans.indexWhere((van) => van.id == vanIdInt);
+      if (index == -1) return;
+
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          vanIdInt.toString();
+
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'assignedDoctorId': null,
+        'assignedDriverId': null,
+        'status': 'available',
+      });
+
       final updatedVan = van.copyWith(
         assignedDoctorId: null,
         assignedDriverId: null,
         status: 'available',
       );
-      await updateVan(vanId, updatedVan);
+
+      _vans[index] = updatedVan;
+      notifyListeners();
     } catch (e) {
-      debugPrint('Error unassigning van from doctor and driver: $e');
+      debugPrint('Error unassigning van from doctor: $e');
+      _error = 'Error unassigning van: $e';
       rethrow;
     }
   }
+
+  Future<void> unassignVanFromDoctorAndDriver(dynamic vanId) async {
+    try {
+      final vanIdInt = _toIntId(vanId);
+      final index = _vans.indexWhere((van) => van.id == vanIdInt);
+      if (index == -1) return;
+
+      final van = _vans[index];
+      final docIdStr =
+          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
+          vanIdInt.toString();
+
+      await _firestore.collection('vans').doc(docIdStr).update({
+        'assignedDoctorId': null,
+        'assignedDriverId': null,
+        'status': 'available',
+      });
+
+      final updatedVan = van.copyWith(
+        assignedDoctorId: null,
+        assignedDriverId: null,
+        status: 'available',
+      );
+
+      _vans[index] = updatedVan;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error unassigning van: $e');
+      _error = 'Error unassigning van: $e';
+      rethrow;
+    }
+  }
+
+  // ========== FILTERS ==========
 
   List<Van> getAvailableVans() {
     return _vans.where((van) => van.isAvailable).toList();
@@ -252,11 +417,11 @@ class VanProvider with ChangeNotifier {
   List<Van> getVansByStatus(String status) {
     return _vans.where((van) => van.status == status).toList();
   }
+
+  // ========== CLEAR ==========
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
 }
-
-
-
-
-
-
-

@@ -1,6 +1,10 @@
+// lib/providers/admin_provider.dart
+// Admin Provider using Firestore as the single source of truth
+// All data synced globally across devices
+// OTP Authentication remains UNCHANGED
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../db/db_helper.dart';
 import '../models/user.dart';
 
 class AdminProvider with ChangeNotifier {
@@ -9,7 +13,6 @@ class AdminProvider with ChangeNotifier {
   List<User> _users = [];
   Map<String, dynamic> _systemSettings = {};
   List<Map<String, dynamic>> _auditLogs = [];
-  bool _useCloudData = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Getters
@@ -19,150 +22,165 @@ class AdminProvider with ChangeNotifier {
   Map<String, dynamic> get systemSettings => _systemSettings;
   List<Map<String, dynamic>> get auditLogs => _auditLogs;
 
-  /// Get all users from Firestore directly
-  Future<List<User>> _getUsersFromFirestore() async {
+  // Helper to convert any ID to int
+  int _toIntId(dynamic id) {
+    if (id == null) return 0;
+    if (id is int) return id;
+    if (id is String) {
+      return int.tryParse(id) ?? id.hashCode;
+    }
+    return id.hashCode;
+  }
+
+  // ========== LOAD USERS ==========
+
+  Future<void> loadUsers({bool forceRefresh = false}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
       final snapshot = await _firestore.collection('users').get();
-      return snapshot.docs
-          .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
+
+      _users = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = _toIntId(doc.id);
+        return User.fromMap(data);
+      }).toList();
     } catch (e) {
-      debugPrint('❌ Error getting users from Firestore: $e');
-      return [];
+      debugPrint('Error loading users from Firestore: $e');
+      _error = 'Failed to load users: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  /// Get users by role from Firestore
-  Future<List<User>> _getUsersByRoleFromFirestore(String role) async {
+  // ========== LOAD USERS BY ROLE ==========
+
+  Future<void> loadUsersByRole(String role) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
       final snapshot = await _firestore
           .collection('users')
           .where('role', isEqualTo: role)
           .get();
-      return snapshot.docs
-          .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      debugPrint('❌ Error getting users by role from Firestore: $e');
-      return [];
-    }
-  }
 
-  // Load all users - try Firestore first, fall back to local
-  Future<void> loadUsers({bool forceRefresh = false}) async {
-    _setLoading(true);
-    try {
-      // Try to load from Firestore first (cloud database)
-      if (!forceRefresh) {
-        try {
-          final cloudUsers = await _getUsersFromFirestore();
-          if (cloudUsers.isNotEmpty) {
-            _users = cloudUsers;
-            _useCloudData = true;
-            _error = null;
-            _setLoading(false);
-            return;
-          }
-        } catch (e) {
-          debugPrint('Firestore unavailable, using local database: $e');
-          _useCloudData = false;
-        }
-      }
-
-      // Fall back to local database
-      final userMaps = await DBHelper.instance.getAllUsers();
-      _users = userMaps.map((map) => User.fromMap(map)).toList();
-      _error = null;
+      _users = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = _toIntId(doc.id);
+        return User.fromMap(data);
+      }).toList();
     } catch (e) {
+      debugPrint('Error loading users by role: $e');
       _error = 'Failed to load users: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Load users by role from cloud
-  Future<void> loadUsersByRole(String role) async {
-    _setLoading(true);
-    try {
-      // Try Firestore first
-      try {
-        final cloudUsers = await _getUsersByRoleFromFirestore(role);
-        if (cloudUsers.isNotEmpty) {
-          _users = cloudUsers;
-          _useCloudData = true;
-          _error = null;
-          _setLoading(false);
-          return;
-        }
-      } catch (e) {
-        debugPrint('Firestore unavailable for role query: $e');
-      }
+  // ========== UPDATE USER ROLE ==========
 
-      // Fall back to local
-      final userMaps = await DBHelper.instance.getAllUsers(role: role);
-      _users = userMaps.map((map) => User.fromMap(map)).toList();
-      _error = null;
-    } catch (e) {
-      _error = 'Failed to load users: $e';
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Update user role
   Future<bool> updateUserRole(User user, String newRole) async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      await DBHelper.instance.updateUser(user.id!, {'role': newRole});
+      // Update in Firestore
+      await _firestore.collection('users').doc(user.id.toString()).update({
+        'role': newRole,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // Update local state
       final index = _users.indexWhere((u) => u.id == user.id);
       if (index != -1) {
         _users[index] = user.copyWith(role: newRole);
       }
+
+      // Log audit action
       await logAuditAction(
         'update_user_role',
         'Updated ${user.name} role to $newRole',
+        userId: user.id.toString(),
       );
+
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('Error updating user role: $e');
       _error = 'Failed to update user role: $e';
       return false;
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Delete user
+  // ========== DELETE USER ==========
+
   Future<bool> deleteUser(User user) async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      await DBHelper.instance.deleteUser(user.id!);
+      // Delete from Firestore
+      await _firestore.collection('users').doc(user.id.toString()).delete();
+
+      // Remove from local state
       _users.removeWhere((u) => u.id == user.id);
-      await logAuditAction('delete_user', 'Deleted user ${user.name}');
+
+      // Log audit action
+      await logAuditAction(
+        'delete_user',
+        'Deleted user ${user.name}',
+        userId: user.id.toString(),
+      );
+
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('Error deleting user: $e');
       _error = 'Failed to delete user: $e';
       return false;
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Link doctor to driver
+  // ========== LINK DOCTOR TO DRIVER ==========
+
   Future<bool> linkDoctorToDriver(User doctor, User driver) async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      await DBHelper.instance.updateUser(doctor.id!, {
+      // Update doctor in Firestore
+      await _firestore.collection('users').doc(doctor.id.toString()).update({
+        'linkedDriverId': driver.id,
         'linked_driver_id': driver.id,
+        'updatedAt': DateTime.now().toIso8601String(),
       });
-      await DBHelper.instance.updateUser(driver.id!, {
+
+      // Update driver in Firestore
+      await _firestore.collection('users').doc(driver.id.toString()).update({
+        'linkedDoctorId': doctor.id,
         'linked_doctor_id': doctor.id,
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       // Update local state
       final doctorIndex = _users.indexWhere((u) => u.id == doctor.id);
       final driverIndex = _users.indexWhere((u) => u.id == driver.id);
+
       if (doctorIndex != -1) {
         _users[doctorIndex] = doctor.copyWith(linkedDriverId: driver.id);
       }
@@ -170,34 +188,51 @@ class AdminProvider with ChangeNotifier {
         _users[driverIndex] = driver.copyWith(linkedDoctorId: doctor.id);
       }
 
+      // Log audit action
       await logAuditAction(
         'link_users',
         'Linked Dr. ${doctor.name} to driver ${driver.name}',
+        userId: doctor.id.toString(),
       );
+
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('Error linking users: $e');
       _error = 'Failed to link users: $e';
       return false;
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Unlink doctor from driver
+  // ========== UNLINK DOCTOR FROM DRIVER ==========
+
   Future<bool> unlinkDoctorFromDriver(User doctor, User driver) async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      await DBHelper.instance.updateUser(doctor.id!, {
+      // Update doctor in Firestore
+      await _firestore.collection('users').doc(doctor.id.toString()).update({
+        'linkedDriverId': null,
         'linked_driver_id': null,
+        'updatedAt': DateTime.now().toIso8601String(),
       });
-      await DBHelper.instance.updateUser(driver.id!, {
+
+      // Update driver in Firestore
+      await _firestore.collection('users').doc(driver.id.toString()).update({
+        'linkedDoctorId': null,
         'linked_doctor_id': null,
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       // Update local state
       final doctorIndex = _users.indexWhere((u) => u.id == doctor.id);
       final driverIndex = _users.indexWhere((u) => u.id == driver.id);
+
       if (doctorIndex != -1) {
         _users[doctorIndex] = doctor.copyWith(linkedDriverId: null);
       }
@@ -205,103 +240,195 @@ class AdminProvider with ChangeNotifier {
         _users[driverIndex] = driver.copyWith(linkedDoctorId: null);
       }
 
+      // Log audit action
       await logAuditAction(
         'unlink_users',
         'Unlinked Dr. ${doctor.name} from driver ${driver.name}',
+        userId: doctor.id.toString(),
       );
+
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('Error unlinking users: $e');
       _error = 'Failed to unlink users: $e';
       return false;
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Load system settings
+  // ========== SYSTEM SETTINGS ==========
+
   Future<void> loadSystemSettings() async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      final settings = await DBHelper.instance.getSystemSettings();
-      _systemSettings = settings;
-      _error = null;
+      final snapshot = await _firestore.collection('system_settings').get();
+
+      _systemSettings = {};
+      for (var doc in snapshot.docs) {
+        _systemSettings[doc.id] = doc.data()['value'];
+      }
     } catch (e) {
+      debugPrint('Error loading system settings: $e');
       _error = 'Failed to load system settings: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Update system setting
   Future<bool> updateSystemSetting(String key, dynamic value) async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      await DBHelper.instance.updateSystemSetting(key, value);
+      await _firestore.collection('system_settings').doc(key).set({
+        'value': value.toString(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
       _systemSettings[key] = value;
+
       await logAuditAction(
         'update_setting',
         'Updated system setting $key to $value',
       );
+
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('Error updating system setting: $e');
       _error = 'Failed to update system setting: $e';
       return false;
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Load audit logs
+  // ========== AUDIT LOGS ==========
+
   Future<void> loadAuditLogs({int limit = 100}) async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      final logs = await DBHelper.instance.getAuditLogs(limit: limit);
-      _auditLogs = logs;
-      _error = null;
+      final snapshot = await _firestore
+          .collection('audit_logs')
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .get();
+
+      _auditLogs = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
     } catch (e) {
+      debugPrint('Error loading audit logs: $e');
       _error = 'Failed to load audit logs: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Get dashboard statistics
+  // ========== DASHBOARD STATS ==========
+
   Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      final stats = await DBHelper.instance.getDashboardStats();
-      return stats;
+      // Get user counts by role
+      final ownerSnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'owner')
+          .count()
+          .get();
+      final doctorSnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'doctor')
+          .count()
+          .get();
+      final driverSnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'driver')
+          .count()
+          .get();
+      final adminSnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .count()
+          .get();
+
+      final appointmentSnapshot = await _firestore
+          .collection('appointments')
+          .count()
+          .get();
+
+      final paymentSnapshot = await _firestore
+          .collection('payments')
+          .count()
+          .get();
+
+      return {
+        'owner_count': ownerSnapshot.count ?? 0,
+        'doctor_count': doctorSnapshot.count ?? 0,
+        'driver_count': driverSnapshot.count ?? 0,
+        'admin_count': adminSnapshot.count ?? 0,
+        'total_appointments': appointmentSnapshot.count ?? 0,
+        'total_payments': paymentSnapshot.count ?? 0,
+      };
     } catch (e) {
+      debugPrint('Error getting dashboard stats: $e');
       _error = 'Failed to load dashboard stats: $e';
       return {};
     }
   }
 
-  // Private methods
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
+  // ========== AUDIT LOGGING ==========
 
-  Future<void> logAuditAction(String action, String details) async {
+  Future<void> logAuditAction(
+    String action,
+    String details, {
+    String? userId,
+  }) async {
     try {
-      await DBHelper.instance.insertAuditLog({
+      await _firestore.collection('audit_logs').add({
         'action': action,
         'details': details,
-        'timestamp': DateTime.now().toIso8601String(),
-        'user_id': null, // TODO: Add current user ID when auth is available
-        'document_id': null,
-        'ip_address': null,
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'documentId': null,
+        'ipAddress': null,
       });
     } catch (e) {
       debugPrint('Failed to log audit action: $e');
     }
   }
 
-  // Clear error
+  // ========== HELPERS ==========
+
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  User? getUserById(dynamic id) {
+    final idInt = _toIntId(id);
+    try {
+      return _users.firstWhere((u) => u.id == idInt);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<User> getUsersByRole(String role) {
+    return _users.where((u) => u.role == role).toList();
   }
 }

@@ -1,7 +1,9 @@
 // lib/models/pet.dart
+// Pet Model - Original structure preserved
+// Firestore integration handled by provider layer
+
 import 'dart:convert';
 
-// lib/models/pet.dart
 class Pet {
   final int? id;
   final int ownerId;
@@ -11,9 +13,9 @@ class Pet {
   final String? dob;
   final String? notes;
   final String? medicalHistorySummary;
-  final Map<String, dynamic>? vaccinationStatus; // JSON object
+  final Map<String, dynamic>? vaccinationStatus;
   final String? photoPath;
-  final String serialNumber; // Unique identifier for pet tracking
+  final String serialNumber;
 
   Pet({
     this.id,
@@ -49,7 +51,7 @@ class Pet {
 
   factory Pet.fromMap(Map<String, dynamic> m) => Pet(
     id: m['id'],
-    ownerId: m['owner_id'],
+    ownerId: m['owner_id'] is int ? m['owner_id'] as int : 0,
     name: m['name'] ?? '',
     species: m['species'] ?? '',
     breed: m['breed'],
@@ -57,10 +59,10 @@ class Pet {
     notes: m['notes'],
     medicalHistorySummary: m['medical_history_summary'],
     vaccinationStatus: m['vaccination_status'] != null
-        ? jsonDecode(m['vaccination_status'])
+        ? jsonDecode(m['vaccination_status'].toString())
         : null,
     photoPath: m['photo_path'],
-    serialNumber: m['serial_number'] ?? _generateSerialNumber(),
+    serialNumber: m['serial_number'] ?? '',
   );
 
   int? get ageInYears {
@@ -116,14 +118,12 @@ class Pet {
     );
   }
 
-  // Generate a unique serial number for new pets
-  static String _generateSerialNumber() {
+  static String generateSerialNumber() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = timestamp % 10000; // Last 4 digits for uniqueness
+    final random = timestamp % 10000;
     return 'PET-${timestamp.toString().substring(8)}-${random.toString().padLeft(4, '0')}';
   }
 
-  // Factory method to create a new pet with auto-generated serial number
   factory Pet.create({
     required int ownerId,
     required String name,
@@ -145,7 +145,7 @@ class Pet {
       medicalHistorySummary: medicalHistorySummary,
       vaccinationStatus: vaccinationStatus,
       photoPath: photoPath,
-      serialNumber: _generateSerialNumber(),
+      serialNumber: generateSerialNumber(),
     );
   }
 }

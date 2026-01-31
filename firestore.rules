@@ -1,0 +1,281 @@
+// firestore.rules
+// Firestore Security Rules for Vet2U Veterinary Platform
+// Copy these rules to your Firebase Console: https://console.firebase.google.com
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========== HELPER FUNCTIONS ==========
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Get user's role from their document
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Check if user has specific role
+    function hasRole(role) {
+      return isAuthenticated() && getUserRole() == role;
+    }
+    
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user is doctor for this appointment
+    function isDoctorForAppointment(appointmentId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/appointments/$(appointmentId)).data.doctorId == request.auth.uid;
+    }
+    
+    // Check if user is driver for this appointment
+    function isDriverForAppointment(appointmentId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/appointments/$(appointmentId)).data.driverId == request.auth.uid;
+    }
+    
+    // ========== USERS COLLECTION ==========
+    
+    match /users/{userId} {
+      // Users can read their own profile
+      // Doctors and Drivers can read their profiles
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        hasRole('admin') ||
+        (hasRole('doctor') && request.auth.uid == userId) ||
+        (hasRole('driver') && request.auth.uid == userId)
+      );
+      
+      // Only the user themselves or admin can create/update
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        hasRole('admin')
+      );
+      allow delete: if hasRole('admin');
+      
+      // Subcollections for users (if using subcollections)
+      match /pets/{petId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+      match /appointments/{appointmentId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == userId ||
+          isDoctorForAppointment(appointmentId) ||
+          isDriverForAppointment(appointmentId) ||
+          hasRole('admin')
+        );
+        allow write: if isAuthenticated() && (
+          request.auth.uid == userId ||
+          hasRole('admin')
+        );
+      }
+    }
+    
+    // ========== PETS COLLECTION ==========
+    
+    match /pets/{petId} {
+      // Owners can read their own pets
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        hasRole('admin') ||
+        hasRole('doctor')
+      );
+      
+      // Owners can create/update their pets
+      // Doctors can update medical info
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        hasRole('admin') ||
+        hasRole('doctor')
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        hasRole('admin')
+      );
+    }
+    
+    // ========== APPOINTMENTS COLLECTION ==========
+    
+    match /appointments/{appointmentId} {
+      // Anyone involved can read
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.doctorId == request.auth.uid ||
+        resource.data.driverId == request.auth.uid ||
+        hasRole('admin')
+      );
+      
+      // Owners can create appointments
+      allow create: if isAuthenticated();
+      
+      // Doctors can update status and add notes
+      // Drivers can update status
+      // Admins can update anything
+      allow update: if isAuthenticated() && (
+        hasRole('admin') ||
+        resource.data.doctorId == request.auth.uid ||
+        resource.data.driverId == request.auth.uid
+      );
+      
+      // Only admins can delete
+      allow delete: if hasRole('admin');
+    }
+    
+    // ========== MEDICAL RECORDS COLLECTION ==========
+    
+    match /medicalRecords/{recordId} {
+      // Pet owner and doctor can read
+      allow read: if isAuthenticated() && (
+        hasRole('admin') ||
+        hasRole('doctor') ||
+        get(/databases/$(database)/documents/pets/$(resource.data.petId)).data.ownerId == request.auth.uid
+      );
+      
+      // Doctors can create medical records
+      allow create: if hasRole('doctor') || hasRole('admin');
+      
+      // Doctors can update their own records
+      allow update: if isAuthenticated() && (
+        hasRole('admin') ||
+        (hasRole('doctor') && resource.data.doctorId == request.auth.uid)
+      );
+      
+      // Only admins can delete
+      allow delete: if hasRole('admin');
+    }
+    
+    // ========== PAYMENTS COLLECTION ==========
+    
+    match /payments/{paymentId} {
+      // Owner and admin can read
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        hasRole('admin')
+      );
+      
+      // Only admin can create (payment processing)
+      allow create: if hasRole('admin');
+      allow update: if hasRole('admin');
+      allow delete: if hasRole('admin');
+    }
+    
+    // ========== NOTIFICATIONS COLLECTION ==========
+    
+    match /notifications/{notificationId} {
+      // User can read their own notifications
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        hasRole('admin')
+      );
+      
+      // System can create notifications
+      allow create: if true; // Allow server-side creation
+      
+      // User can mark as read
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        hasRole('admin')
+      );
+    }
+    
+    // ========== SERVICE REQUESTS COLLECTION ==========
+    
+    match /serviceRequests/{requestId} {
+      // Owner and admin can read
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        hasRole('admin') ||
+        (hasRole('doctor') && resource.data.assignedDoctorId == request.auth.uid)
+      );
+      
+      // Owners can create
+      allow create: if isAuthenticated();
+      
+      // Doctors and admins can update
+      allow update: if isAuthenticated() && (
+        hasRole('admin') ||
+        (hasRole('doctor') && resource.data.assignedDoctorId == request.auth.uid)
+      );
+    }
+    
+    // ========== AUDIT LOGS COLLECTION ==========
+    
+    match /auditLogs/{logId} {
+      // Only admins can read audit logs
+      allow read: if hasRole('admin');
+      
+      // System can create
+      allow create: if true;
+    }
+    
+    // ========== VANS COLLECTION ==========
+    
+    match /vans/{vanId} {
+      // All authenticated users can read vans
+      allow read: if isAuthenticated();
+      
+      // Only admins can create/update/delete
+      allow write: if hasRole('admin');
+    }
+    
+    // ========== SCHEDULES COLLECTION ==========
+    
+    match /schedules/{scheduleId} {
+      // Doctors can read their own schedules
+      // Admins can read all
+      allow read: if isAuthenticated() && (
+        resource.data.doctorId == request.auth.uid ||
+        hasRole('admin')
+      );
+      
+      // Doctors can manage their own schedules
+      // Admins can manage all
+      allow write: if isAuthenticated() && (
+        hasRole('admin') ||
+        (hasRole('doctor') && resource.data.doctorId == request.auth.uid)
+      );
+    }
+    
+    // ========== DOCUMENTS COLLECTION ==========
+    
+    match /documents/{documentId} {
+      // Owner and involved doctors can read
+      allow read: if isAuthenticated() && (
+        hasRole('admin') ||
+        hasRole('doctor') ||
+        resource.data.uploadedBy == request.auth.uid
+      );
+      
+      // Users can upload documents
+      allow create: if isAuthenticated();
+      
+      // Owner and admins can update
+      allow update: if isAuthenticated() && (
+        hasRole('admin') ||
+        resource.data.uploadedBy == request.auth.uid
+      );
+    }
+    
+    // ========== DRIVER STATUS COLLECTION ==========
+    
+    match /driverStatus/{statusId} {
+      // All authenticated users can read driver status
+      allow read: if isAuthenticated();
+      
+      // Drivers can update their own status
+      allow write: if isAuthenticated() && (
+        hasRole('admin') ||
+        (hasRole('driver') && resource.data.driverId == request.auth.uid)
+      );
+    }
+  }
+}
+

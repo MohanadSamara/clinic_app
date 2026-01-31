@@ -40,7 +40,9 @@ class _ScheduleSettingsScreenState extends State<ScheduleSettingsScreen> {
       final scheduleProvider = context.read<ScheduleProvider>();
 
       if (authProvider.user?.id != null) {
-        scheduleProvider.loadSchedules(authProvider.user!.id!);
+        // Convert int to String for Firestore
+        final userId = authProvider.user!.id!.toString();
+        scheduleProvider.loadSchedules(userId);
         scheduleProvider.loadSystemSettings();
       }
     });
@@ -68,7 +70,7 @@ class _ScheduleSettingsScreenState extends State<ScheduleSettingsScreen> {
                   dayOfWeek: day,
                   dayLabel: _dayLabels[day]!,
                   schedule: scheduleProvider.getScheduleForDay(
-                    context.read<AuthProvider>().user?.id ?? 0,
+                    context.read<AuthProvider>().user?.id?.toString() ?? '',
                     day,
                   ),
                   onScheduleChanged: (schedule) async {
@@ -245,8 +247,11 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
   }
 
   void _saveSchedule() {
-    final doctorId = context.read<AuthProvider>().user?.id;
-    if (doctorId == null) return;
+    final doctorId = context.read<AuthProvider>().user?.id?.toString();
+    if (doctorId == null) {
+      debugPrint('DEBUG: Cannot save schedule - doctorId is null');
+      return;
+    }
 
     // Determine isActive based on holiday/free day status
     final isActive = !_isHoliday; // Active unless it's a holiday
@@ -261,6 +266,19 @@ class _DayScheduleCardState extends State<_DayScheduleCard> {
       isHoliday: _isHoliday,
       isFreeDay: _isFreeDay,
     );
+
+    // DEBUG: Log when date/time is being stored
+    debugPrint('===========================================');
+    debugPrint('DEBUG: Date/Time being stored to console');
+    debugPrint('DEBUG: Doctor ID: $doctorId');
+    debugPrint('DEBUG: Day of Week: ${widget.dayOfWeek}');
+    debugPrint('DEBUG: Start Time: ${_formatTimeOfDay(_startTime)}');
+    debugPrint('DEBUG: End Time: ${_formatTimeOfDay(_endTime)}');
+    debugPrint('DEBUG: Is Holiday: $_isHoliday');
+    debugPrint('DEBUG: Is Free Day: $_isFreeDay');
+    debugPrint('DEBUG: Is Active: $isActive');
+    debugPrint('DEBUG: Timestamp: ${DateTime.now().toIso8601String()}');
+    debugPrint('===========================================');
 
     widget.onScheduleChanged(schedule);
   }
