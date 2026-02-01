@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_html/universal_html.dart' as html;
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/driver_verification.dart';
 import '../providers/auth_provider.dart';
 
@@ -134,13 +134,14 @@ class DriverVerificationProvider extends ChangeNotifier {
   }
 
   /// Load verification documents for a driver
-  Future<void> loadDriverVerificationDocuments(int driverId) async {
+  Future<void> loadDriverVerificationDocuments(String driverId) async {
     _isLoading = true;
     _error = null;
     Future.microtask(() => notifyListeners());
 
     try {
-      final data = await DBHelper.instance.getDriverVerificationDocuments(
+      final supabaseService = SupabaseCompleteService.instance;
+      final data = await supabaseService.getDriverVerificationDocuments(
         driverId,
       );
       _documents = data
@@ -159,9 +160,11 @@ class DriverVerificationProvider extends ChangeNotifier {
   }
 
   /// Calculate and update verification status based on documents
-  void _calculateVerificationStatus(int driverId) {
+  void _calculateVerificationStatus(String driverId) {
     if (_documents.isEmpty) {
-      _verificationStatus = DriverVerificationStatus(driverId: driverId);
+      _verificationStatus = DriverVerificationStatus(
+        driverId: int.parse(driverId),
+      );
       return;
     }
 
@@ -217,7 +220,7 @@ class DriverVerificationProvider extends ChangeNotifier {
     );
 
     _verificationStatus = DriverVerificationStatus(
-      driverId: driverId,
+      driverId: int.parse(driverId),
       overallStatus: overallStatus,
       lastUpdated: DateTime.now(),
       totalDocuments: _documents.length,
@@ -232,7 +235,7 @@ class DriverVerificationProvider extends ChangeNotifier {
 
   /// Upload a new verification document
   Future<DriverVerificationDocument?> uploadVerificationDocument({
-    required int driverId,
+    required String driverId,
     required String documentType,
     required String fileName,
     File? file,
@@ -314,9 +317,11 @@ class DriverVerificationProvider extends ChangeNotifier {
         downloadUrl = encryptedFilePath;
       }
 
+      final supabaseService = SupabaseCompleteService.instance;
+
       // Create document record
       final document = DriverVerificationDocument(
-        driverId: driverId,
+        driverId: int.parse(driverId),
         documentType: documentType,
         fileName: fileName,
         filePath: downloadUrl,
@@ -329,12 +334,13 @@ class DriverVerificationProvider extends ChangeNotifier {
         vehicleClass: vehicleClass,
       );
 
-      final id = await DBHelper.instance.insertDriverVerificationDocument(
+      final idStr = await supabaseService.insertDriverVerificationDocument(
         document.toMap()
           ..['file_data'] = null
           ..['file_path'] = downloadUrl
           ..['encryption_key'] = encryptionKey,
       );
+      final id = int.tryParse(idStr ?? '');
       final newDocument = document.copyWith(id: id);
 
       // Add audit log
@@ -358,17 +364,18 @@ class DriverVerificationProvider extends ChangeNotifier {
 
   /// Approve a verification document (for admin use)
   Future<bool> approveDocument(
-    int documentId, {
+    String documentId, {
     String? notes,
-    int? reviewerId,
+    String? reviewerId,
   }) async {
     if (!_authProvider.hasRole('admin')) return false;
 
     try {
-      await DBHelper.instance.updateDriverVerificationDocument(documentId, {
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.updateDriverVerificationDocument(documentId, {
         'status': 'approved',
         'review_date': DateTime.now().toIso8601String(),
-        'reviewer_id': reviewerId ?? _authProvider.user?.id,
+        'reviewer_id': reviewerId ?? _authProvider.user?.id?.toString(),
         'review_notes': notes,
       });
 
@@ -378,14 +385,14 @@ class DriverVerificationProvider extends ChangeNotifier {
         _documents[index] = _documents[index].copyWith(
           status: 'approved',
           reviewDate: DateTime.now(),
-          reviewerId: reviewerId ?? _authProvider.user?.id,
+          reviewerId: reviewerId != null ? int.parse(reviewerId) : null,
           reviewNotes: notes,
         );
-        _calculateVerificationStatus(_documents[index].driverId);
+        _calculateVerificationStatus(_documents[index].driverId.toString());
       }
 
       await _addAuditLog(
-        documentId,
+        int.parse(documentId),
         'verify',
         'Document approved${notes != null ? ': $notes' : ''}',
       );
@@ -401,17 +408,18 @@ class DriverVerificationProvider extends ChangeNotifier {
 
   /// Reject a verification document (for admin use)
   Future<bool> rejectDocument(
-    int documentId, {
+    String documentId, {
     required String reason,
-    int? reviewerId,
+    String? reviewerId,
   }) async {
     if (!_authProvider.hasRole('admin')) return false;
 
     try {
-      await DBHelper.instance.updateDriverVerificationDocument(documentId, {
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.updateDriverVerificationDocument(documentId, {
         'status': 'rejected',
         'review_date': DateTime.now().toIso8601String(),
-        'reviewer_id': reviewerId ?? _authProvider.user?.id,
+        'reviewer_id': reviewerId ?? _authProvider.user?.id?.toString(),
         'review_notes': reason,
       });
 
@@ -421,13 +429,17 @@ class DriverVerificationProvider extends ChangeNotifier {
         _documents[index] = _documents[index].copyWith(
           status: 'rejected',
           reviewDate: DateTime.now(),
-          reviewerId: reviewerId ?? _authProvider.user?.id,
+          reviewerId: reviewerId != null ? int.parse(reviewerId) : null,
           reviewNotes: reason,
         );
-        _calculateVerificationStatus(_documents[index].driverId);
+        _calculateVerificationStatus(_documents[index].driverId.toString());
       }
 
-      await _addAuditLog(documentId, 'reject', 'Document rejected: $reason');
+      await _addAuditLog(
+        int.parse(documentId),
+        'reject',
+        'Document rejected: $reason',
+      );
 
       Future.microtask(() => notifyListeners());
       return true;
@@ -439,7 +451,7 @@ class DriverVerificationProvider extends ChangeNotifier {
   }
 
   /// Delete a verification document
-  Future<bool> deleteVerificationDocument(int documentId) async {
+  Future<bool> deleteVerificationDocument(String documentId) async {
     if (!_authProvider.isLoggedIn) return false;
 
     try {
@@ -456,13 +468,14 @@ class DriverVerificationProvider extends ChangeNotifier {
       }
 
       // Delete from database
-      await DBHelper.instance.deleteDriverVerificationDocument(documentId);
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.deleteDriverVerificationDocument(documentId);
 
       // Add audit log
-      await _addAuditLog(documentId, 'delete', 'Document deleted');
+      await _addAuditLog(int.parse(documentId), 'delete', 'Document deleted');
 
       _documents.removeWhere((doc) => doc.id == documentId);
-      _calculateVerificationStatus(document.driverId);
+      _calculateVerificationStatus(document.driverId.toString());
 
       Future.microtask(() => notifyListeners());
       return true;
@@ -476,7 +489,8 @@ class DriverVerificationProvider extends ChangeNotifier {
   /// Get pending verification documents (for admin)
   Future<List<DriverVerificationDocument>> getPendingDocuments() async {
     try {
-      final data = await DBHelper.instance
+      final supabaseService = SupabaseCompleteService.instance;
+      final data = await supabaseService
           .getPendingDriverVerificationDocuments();
       return data
           .map((item) => DriverVerificationDocument.fromMap(item))
@@ -544,9 +558,12 @@ class DriverVerificationProvider extends ChangeNotifier {
   }
 
   /// Get audit logs for a document
-  Future<List<DriverVerificationAuditLog>> getAuditLogs(int documentId) async {
+  Future<List<DriverVerificationAuditLog>> getAuditLogs(
+    String documentId,
+  ) async {
     try {
-      final data = await DBHelper.instance
+      final supabaseService = SupabaseCompleteService.instance;
+      final data = await supabaseService
           .getDriverVerificationAuditLogsByDocument(documentId);
       return data
           .map((item) => DriverVerificationAuditLog.fromMap(item))
@@ -579,13 +596,14 @@ class DriverVerificationProvider extends ChangeNotifier {
 
     final auditLog = DriverVerificationAuditLog(
       documentId: documentId,
-      userId: _authProvider.user!.id!,
+      userId: int.parse(_authProvider.user!.id!),
       action: action,
       timestamp: DateTime.now(),
       details: details,
     );
 
-    await DBHelper.instance.insertDriverVerificationAuditLog(auditLog.toMap());
+    final supabaseService = SupabaseCompleteService.instance;
+    await supabaseService.insertDriverVerificationAuditLog(auditLog.toMap());
   }
 
   /// Check if driver has required documents

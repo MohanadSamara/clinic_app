@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 
@@ -37,8 +37,8 @@ class _AreaManagementScreenState extends State<AreaManagementScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final dbHelper = DBHelper.instance;
-      final allUsers = await dbHelper.getAllUsers();
+      final supabaseService = SupabaseCompleteService.instance;
+      final allUsers = await supabaseService.getAllUsers();
 
       final usersByArea = <String, List<User>>{};
 
@@ -218,10 +218,3 @@ class _AreaManagementScreenState extends State<AreaManagementScreen> {
     );
   }
 }
-
-
-
-
-
-
-

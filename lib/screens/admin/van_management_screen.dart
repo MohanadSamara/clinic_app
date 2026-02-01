@@ -4,7 +4,7 @@ import '../../providers/van_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/van.dart';
 import '../../models/user.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../translations.dart';
 
 class VanManagementScreen extends StatefulWidget {
@@ -43,7 +43,10 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
   @override
   void initState() {
     super.initState();
-    _loadVans();
+    // Defer loading until after first frame to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadVans();
+    });
   }
 
   @override
@@ -64,15 +67,17 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
 
   Future<void> _loadLinkedPairs() async {
     try {
-      final dbHelper = DBHelper.instance;
+      final supabaseService = SupabaseCompleteService.instance;
       // Get doctors with their linked drivers
-      final doctors = await dbHelper.getAllUsers(role: 'doctor');
+      final doctors = await supabaseService.getAllUsers(role: 'doctor');
       final linkedPairs = <Map<String, dynamic>>[];
 
       for (final doctorData in doctors) {
         final doctor = User.fromMap(doctorData);
         if (doctor.linkedDriverId != null) {
-          final driverData = await dbHelper.getUserById(doctor.linkedDriverId!);
+          final driverData = await supabaseService.getUserById(
+            doctor.linkedDriverId!,
+          );
           if (driverData != null) {
             final driver = User.fromMap(driverData);
             linkedPairs.add({
@@ -264,9 +269,13 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
     }
 
     try {
-      final dbHelper = DBHelper.instance;
-      final doctorData = await dbHelper.getUserById(van.assignedDoctorId!);
-      final driverData = await dbHelper.getUserById(van.assignedDriverId!);
+      final supabaseService = SupabaseCompleteService.instance;
+      final doctorData = await supabaseService.getUserById(
+        SupabaseCompleteService.parseId(van.assignedDoctorId),
+      );
+      final driverData = await supabaseService.getUserById(
+        SupabaseCompleteService.parseId(van.assignedDriverId),
+      );
 
       if (doctorData != null && driverData != null) {
         return {

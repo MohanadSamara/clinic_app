@@ -4,7 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/service_request_provider.dart';
 import '../../providers/appointment_provider.dart';
 import '../../models/service_request.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 
 import '../../components/modern_cards.dart';
 import '../../../translations.dart';
@@ -50,9 +50,9 @@ class _DriverEmergencyScreenState extends State<DriverEmergencyScreen> {
 
     // Also update the corresponding appointment status to 'in_progress'
     if (success && serviceRequest.id != null) {
-      await DBHelper.instance.updateAppointmentStatusByServiceRequestId(
-        serviceRequest.id!,
-        'in_progress',
+      await SupabaseCompleteService.instance.updateAppointment(
+        serviceRequest.id!.toString(),
+        {'status': 'in_progress'},
       );
     }
 
@@ -84,9 +84,9 @@ class _DriverEmergencyScreenState extends State<DriverEmergencyScreen> {
 
     // Also update the corresponding appointment status to 'completed'
     if (success && serviceRequest.id != null) {
-      await DBHelper.instance.updateAppointmentStatusByServiceRequestId(
-        serviceRequest.id!,
-        'completed',
+      await SupabaseCompleteService.instance.updateAppointment(
+        serviceRequest.id!.toString(),
+        {'status': 'completed'},
       );
     }
 

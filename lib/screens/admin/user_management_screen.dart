@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/user.dart';
 import '../../models/van.dart';
 import '../../providers/admin_provider.dart';
@@ -8,7 +8,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/van_provider.dart';
 import '../../../translations.dart';
 // import '../../utils/password_utils.dart';
-
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -30,7 +29,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Future<void> _loadUsers() async {
     setState(() => _loading = true);
     try {
-      final userMaps = await DBHelper.instance.getAllUsers();
+      final supabaseService = SupabaseCompleteService.instance;
+      final userMaps = await supabaseService.getAllUsers();
       final users = userMaps.map((map) => User.fromMap(map)).toList();
       setState(() => _users = users);
     } catch (e) {
@@ -74,7 +74,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     setState(() => _loading = true);
     try {
-      await DBHelper.instance.updateUser(user.id!, {'role': newRole});
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.updateUser(
+        SupabaseCompleteService.parseId(user.id),
+        {'role': newRole},
+      );
       setState(() {
         final index = _users.indexWhere((u) => u.id == user.id);
         if (index != -1) {
@@ -154,7 +158,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     setState(() => _loading = true);
     try {
-      await DBHelper.instance.deleteUser(user.id!);
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.deleteUser(
+        SupabaseCompleteService.parseId(user.id),
+      );
       setState(() => _users.removeWhere((u) => u.id == user.id));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${user.name} ${context.tr('hasBeenDeleted')}')),
@@ -222,13 +229,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     if (selectedDriver != null) {
       try {
+        final supabaseService = SupabaseCompleteService.instance;
         // Link the users first
-        await DBHelper.instance.updateUser(doctor.id!, {
-          'linked_driver_id': selectedDriver.id,
-        });
-        await DBHelper.instance.updateUser(selectedDriver.id!, {
-          'linked_doctor_id': doctor.id,
-        });
+        await supabaseService.updateUser(
+          SupabaseCompleteService.parseId(doctor.id),
+          {'linked_driver_id': selectedDriver.id},
+        );
+        await supabaseService.updateUser(
+          SupabaseCompleteService.parseId(selectedDriver.id),
+          {'linked_doctor_id': doctor.id},
+        );
 
         // Update local state
         setState(() {
@@ -344,12 +354,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     } else {
       // If no van was selected, undo the linking
       try {
-        await DBHelper.instance.updateUser(doctor.id!, {
-          'linked_driver_id': null,
-        });
-        await DBHelper.instance.updateUser(driver.id!, {
-          'linked_doctor_id': null,
-        });
+        final supabaseService = SupabaseCompleteService.instance;
+        await supabaseService.updateUser(
+          SupabaseCompleteService.parseId(doctor.id),
+          {'linked_driver_id': null},
+        );
+        await supabaseService.updateUser(
+          SupabaseCompleteService.parseId(driver.id),
+          {'linked_doctor_id': null},
+        );
 
         setState(() {
           final doctorIndex = _users.indexWhere((u) => u.id == doctor.id);
@@ -380,12 +393,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
 
     try {
-      await DBHelper.instance.updateUser(doctor.id!, {
-        'linked_driver_id': null,
-      });
-      await DBHelper.instance.updateUser(driver.id!, {
-        'linked_doctor_id': null,
-      });
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.updateUser(
+        SupabaseCompleteService.parseId(doctor.id),
+        {'linked_driver_id': null},
+      );
+      await supabaseService.updateUser(
+        SupabaseCompleteService.parseId(driver.id),
+        {'linked_doctor_id': null},
+      );
       setState(() {
         final doctorIndex = _users.indexWhere((u) => u.id == doctor.id);
         final driverIndex = _users.indexWhere((u) => u.id == driver.id);
@@ -583,7 +599,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     selectedArea == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(context.tr('areaRequiredForDoctorsDrivers')),
+                      content: Text(
+                        context.tr('areaRequiredForDoctorsDrivers'),
+                      ),
                     ),
                   );
                   return;
@@ -608,6 +626,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result != null) {
       setState(() => _loading = true);
       try {
+        final supabaseService = SupabaseCompleteService.instance;
         final userData = {
           'name': result['name'],
           'email': result['email'],
@@ -617,7 +636,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           'area': result['area'],
         };
 
-        final userId = await DBHelper.instance.insertUser(userData);
+        final userId = await supabaseService.insertUser(userData);
         final newUser = User(
           id: userId,
           name: result['name'],
@@ -813,5 +832,3 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 }
-
-

@@ -1,19 +1,28 @@
 // lib/providers/admin_provider.dart
-// Admin Provider using Firestore as the single source of truth
-// All data synced globally across devices
-// OTP Authentication remains UNCHANGED
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+// All data synced globally across devices via Supabase
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/user.dart';
 
+/// AdminProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: users, system_settings, audit_logs
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class AdminProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   List<User> _users = [];
   Map<String, dynamic> _systemSettings = {};
   List<Map<String, dynamic>> _auditLogs = [];
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Supabase service instance for database operations (singleton)
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -40,15 +49,14 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final snapshot = await _firestore.collection('users').get();
+      final users = await _supabaseService.getAllUsers();
 
-      _users = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = _toIntId(doc.id);
+      _users = users.map((data) {
+        data['id'] = _toIntId(data['id']);
         return User.fromMap(data);
       }).toList();
     } catch (e) {
-      debugPrint('Error loading users from Firestore: $e');
+      debugPrint('Error loading users from Supabase: $e');
       _error = 'Failed to load users: $e';
     } finally {
       _isLoading = false;
@@ -64,14 +72,10 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: role)
-          .get();
+      final users = await _supabaseService.getAllUsers(role: role);
 
-      _users = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = _toIntId(doc.id);
+      _users = users.map((data) {
+        data['id'] = _toIntId(data['id']);
         return User.fromMap(data);
       }).toList();
     } catch (e) {
@@ -91,10 +95,10 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Update in Firestore
-      await _firestore.collection('users').doc(user.id.toString()).update({
+      // Update in Supabase
+      await _supabaseService.updateUser(user.id.toString(), {
         'role': newRole,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       // Update local state
@@ -130,8 +134,8 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Delete from Firestore
-      await _firestore.collection('users').doc(user.id.toString()).delete();
+      // Delete from Supabase
+      await _supabaseService.deleteUser(user.id.toString());
 
       // Remove from local state
       _users.removeWhere((u) => u.id == user.id);
@@ -163,18 +167,16 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Update doctor in Firestore
-      await _firestore.collection('users').doc(doctor.id.toString()).update({
-        'linkedDriverId': driver.id,
+      // Update doctor in Supabase
+      await _supabaseService.updateUser(doctor.id.toString(), {
         'linked_driver_id': driver.id,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
-      // Update driver in Firestore
-      await _firestore.collection('users').doc(driver.id.toString()).update({
-        'linkedDoctorId': doctor.id,
+      // Update driver in Supabase
+      await _supabaseService.updateUser(driver.id.toString(), {
         'linked_doctor_id': doctor.id,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       // Update local state
@@ -215,18 +217,16 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Update doctor in Firestore
-      await _firestore.collection('users').doc(doctor.id.toString()).update({
-        'linkedDriverId': null,
+      // Update doctor in Supabase
+      await _supabaseService.updateUser(doctor.id.toString(), {
         'linked_driver_id': null,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
-      // Update driver in Firestore
-      await _firestore.collection('users').doc(driver.id.toString()).update({
-        'linkedDoctorId': null,
+      // Update driver in Supabase
+      await _supabaseService.updateUser(driver.id.toString(), {
         'linked_doctor_id': null,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       // Update local state
@@ -267,12 +267,7 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final snapshot = await _firestore.collection('system_settings').get();
-
-      _systemSettings = {};
-      for (var doc in snapshot.docs) {
-        _systemSettings[doc.id] = doc.data()['value'];
-      }
+      _systemSettings = await _supabaseService.getSystemSettings();
     } catch (e) {
       debugPrint('Error loading system settings: $e');
       _error = 'Failed to load system settings: $e';
@@ -288,10 +283,7 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _firestore.collection('system_settings').doc(key).set({
-        'value': value.toString(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _supabaseService.updateSystemSetting(key, value);
 
       _systemSettings[key] = value;
 
@@ -320,17 +312,8 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final snapshot = await _firestore
-          .collection('audit_logs')
-          .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .get();
-
-      _auditLogs = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
+      final logs = await _supabaseService.getAuditLogs(limit: limit);
+      _auditLogs = logs;
     } catch (e) {
       debugPrint('Error loading audit logs: $e');
       _error = 'Failed to load audit logs: $e';
@@ -344,45 +327,20 @@ class AdminProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      // Get user counts by role
-      final ownerSnapshot = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'owner')
-          .count()
-          .get();
-      final doctorSnapshot = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'doctor')
-          .count()
-          .get();
-      final driverSnapshot = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'driver')
-          .count()
-          .get();
-      final adminSnapshot = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'admin')
-          .count()
-          .get();
+      // Get all users
+      final allUsers = await _supabaseService.getAllUsers();
 
-      final appointmentSnapshot = await _firestore
-          .collection('appointments')
-          .count()
-          .get();
-
-      final paymentSnapshot = await _firestore
-          .collection('payments')
-          .count()
-          .get();
+      final ownerCount = allUsers.where((u) => u['role'] == 'owner').length;
+      final doctorCount = allUsers.where((u) => u['role'] == 'doctor').length;
+      final driverCount = allUsers.where((u) => u['role'] == 'driver').length;
+      final adminCount = allUsers.where((u) => u['role'] == 'admin').length;
 
       return {
-        'owner_count': ownerSnapshot.count ?? 0,
-        'doctor_count': doctorSnapshot.count ?? 0,
-        'driver_count': driverSnapshot.count ?? 0,
-        'admin_count': adminSnapshot.count ?? 0,
-        'total_appointments': appointmentSnapshot.count ?? 0,
-        'total_payments': paymentSnapshot.count ?? 0,
+        'owner_count': ownerCount,
+        'doctor_count': doctorCount,
+        'driver_count': driverCount,
+        'admin_count': adminCount,
+        'total_users': allUsers.length,
       };
     } catch (e) {
       debugPrint('Error getting dashboard stats: $e');
@@ -399,13 +357,12 @@ class AdminProvider with ChangeNotifier {
     String? userId,
   }) async {
     try {
-      await _firestore.collection('audit_logs').add({
+      await _supabaseService.insertAuditLog({
         'action': action,
         'details': details,
-        'userId': userId,
-        'timestamp': FieldValue.serverTimestamp(),
-        'documentId': null,
-        'ipAddress': null,
+        'user_id': userId,
+        'document_id': null,
+        'ip_address': null,
       });
     } catch (e) {
       debugPrint('Failed to log audit action: $e');

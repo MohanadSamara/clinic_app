@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/payment_provider.dart';
 import '../../models/payment.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../../translations.dart';
 
 class PaymentProcessingScreen extends StatefulWidget {
@@ -413,10 +413,12 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
     );
   }
 
-  Future<bool> _confirmCashPayment(int paymentId) async {
+  Future<bool> _confirmCashPayment(String paymentId) async {
     try {
-      // Just update the payment method to cash, status remains pending until completion
-      await DBHelper.instance.updatePayment(paymentId, {'method': 'cash'});
+      // Update the payment method to cash using Supabase
+      await SupabaseCompleteService.instance.updatePayment(paymentId, {
+        'method': 'cash',
+      });
       return true;
     } catch (e) {
       debugPrint('Error confirming cash payment: $e');
@@ -483,10 +485,3 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
     }
   }
 }
-
-
-
-
-
-
-

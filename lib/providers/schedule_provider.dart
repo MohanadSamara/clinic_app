@@ -1,28 +1,37 @@
 // lib/providers/schedule_provider.dart
-// Schedule Provider using Firestore for global sync
-// Supports both int (local DB) and String (Firebase Auth) doctor IDs
-// OTP Authentication remains UNCHANGED
+// Schedule Provider using Supabase for global sync
+// Supports both int (local DB) and String (UUID) doctor IDs
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/schedule.dart';
 
+/// ScheduleProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: schedules, system_settings
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class ScheduleProvider extends ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   List<DoctorSchedule> _schedules = [];
   Map<String, dynamic> _systemSettings = {};
   bool _isLoading = false;
-  String? _currentDoctorId; // String for Firestore queries
+  String? _currentDoctorId; // String for Supabase UUID queries
 
   List<DoctorSchedule> get schedules => _schedules;
   bool get isLoading => _isLoading;
 
   // Set current doctor and load their schedules
-  // Accepts both int (local) and String (Firebase) IDs
+  // Accepts both int (local) and String (UUID) IDs
   void setCurrentDoctorId(dynamic doctorId) {
-    // Convert to String for Firestore
+    // Convert to String for Supabase
     if (doctorId == null) {
       _currentDoctorId = null;
       return;
@@ -31,7 +40,7 @@ class ScheduleProvider extends ChangeNotifier {
     loadSchedules(_currentDoctorId!);
   }
 
-  // Load schedules from Firestore
+  // Load schedules from Supabase
   Future<void> loadSchedules(String doctorId) async {
     _isLoading = true;
     notifyListeners();
@@ -39,30 +48,27 @@ class ScheduleProvider extends ChangeNotifier {
     try {
       // DEBUG: Log database read operation
       debugPrint('===========================================');
-      debugPrint('DATABASE READ: Loading schedules from Firestore');
+      debugPrint('DATABASE READ: Loading schedules from Supabase');
       debugPrint('DATABASE READ: Doctor ID: $doctorId');
-      debugPrint('DATABASE READ: Collection: schedules');
-      debugPrint('DATABASE READ: Query: where(doctorId, isEqualTo: $doctorId)');
+      debugPrint('DATABASE READ: Table: schedules');
 
-      final snapshot = await _firestore
-          .collection('schedules')
-          .where('doctorId', isEqualTo: doctorId)
-          .get();
+      final schedulesData = await _supabaseService.getSchedulesByDoctor(
+        doctorId,
+      );
 
-      debugPrint('DATABASE READ: Found ${snapshot.docs.length} documents');
+      debugPrint('DATABASE READ: Found ${schedulesData.length} records');
 
-      _schedules = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        debugPrint('DATABASE READ: Document ID: ${doc.id}');
-        debugPrint('DATABASE READ: Document Data: $data');
+      _schedules = schedulesData.map((data) {
+        // Keep String UUID for Supabase compatibility
+        debugPrint('DATABASE READ: Schedule ID: ${data['id']}');
+        debugPrint('DATABASE READ: Schedule Data: $data');
         return DoctorSchedule.fromMap(data);
       }).toList();
 
       debugPrint('DATABASE READ: All schedules loaded successfully');
       debugPrint('===========================================');
     } catch (e) {
-      debugPrint('Error loading schedules from Firestore: $e');
+      debugPrint('Error loading schedules from Supabase: $e');
       _schedules = [];
     } finally {
       _isLoading = false;
@@ -70,28 +76,10 @@ class ScheduleProvider extends ChangeNotifier {
     }
   }
 
-  // Stream schedules in real-time
-  Stream<List<DoctorSchedule>> streamSchedules(String doctorId) {
-    return _firestore
-        .collection('schedules')
-        .where('doctorId', isEqualTo: doctorId)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            data['id'] = doc.id;
-            return DoctorSchedule.fromMap(data);
-          }).toList();
-        });
-  }
-
-  // Load system settings from Firestore
+  // Load system settings from Supabase
   Future<void> loadSystemSettings() async {
     try {
-      final snapshot = await _firestore.collection('system_settings').get();
-      for (final doc in snapshot.docs) {
-        _systemSettings[doc.id] = doc.data()['value'];
-      }
+      _systemSettings = await _supabaseService.getSystemSettings();
     } catch (e) {
       debugPrint('Error loading system settings: $e');
       _systemSettings = {};
@@ -159,7 +147,7 @@ class ScheduleProvider extends ChangeNotifier {
     }
   }
 
-  // Add or update a schedule in Firestore
+  // Add or update a schedule in Supabase
   Future<bool> saveSchedule(DoctorSchedule schedule) async {
     if (!isScheduleValid(schedule)) {
       debugPrint(
@@ -178,17 +166,18 @@ class ScheduleProvider extends ChangeNotifier {
     }
 
     try {
-      // Ensure doctorId is a String for Firestore
-      final firestoreDoctorId = schedule.doctorId.toString();
+      // Ensure doctorId is a String for Supabase
+      final supabaseDoctorId = schedule.doctorId.toString();
 
       final scheduleData = schedule.toMap()..remove('id');
-      scheduleData['doctorId'] = firestoreDoctorId;
+      scheduleData['doctor_id'] = supabaseDoctorId;
+      scheduleData.remove('doctorId');
 
-      // DEBUG: Log data being sent to Firestore
+      // DEBUG: Log data being sent to Supabase
       debugPrint('===========================================');
-      debugPrint('PROVIDER DEBUG: Saving schedule to Firestore');
+      debugPrint('PROVIDER DEBUG: Saving schedule to Supabase');
       debugPrint('PROVIDER DEBUG: Schedule ID: ${schedule.id ?? "NEW"}');
-      debugPrint('PROVIDER DEBUG: Doctor ID: $firestoreDoctorId');
+      debugPrint('PROVIDER DEBUG: Doctor ID: $supabaseDoctorId');
       debugPrint('PROVIDER DEBUG: Day: ${schedule.dayOfWeek}');
       debugPrint('PROVIDER DEBUG: Start Time: ${schedule.startTime}');
       debugPrint('PROVIDER DEBUG: End Time: ${schedule.endTime}');
@@ -202,46 +191,44 @@ class ScheduleProvider extends ChangeNotifier {
 
       if (schedule.id == null || schedule.id!.isEmpty) {
         // Create new schedule
-        final docRef = await _firestore
-            .collection('schedules')
-            .add(scheduleData);
+        final scheduleId = await _supabaseService.insertSchedule(scheduleData);
+        // Use String UUID for Supabase compatibility
+
         final newSchedule = schedule.copyWith(
-          id: docRef.id,
-          doctorId: firestoreDoctorId,
+          id: scheduleId,
+          doctorId: supabaseDoctorId,
         );
         _schedules.add(newSchedule);
-        debugPrint(
-          'PROVIDER DEBUG: New schedule created with ID: ${docRef.id}',
-        );
+        debugPrint('PROVIDER DEBUG: New schedule created with ID: $scheduleId');
       } else {
         // Update existing schedule
-        await _firestore
-            .collection('schedules')
-            .doc(schedule.id)
-            .update(scheduleData);
+        final scheduleIdStr = schedule.id.toString();
+        await _supabaseService.updateSchedule(scheduleIdStr, scheduleData);
+
         final index = _schedules.indexWhere((s) => s.id == schedule.id);
         if (index != -1) {
-          _schedules[index] = schedule.copyWith(doctorId: firestoreDoctorId);
+          _schedules[index] = schedule.copyWith(doctorId: supabaseDoctorId);
         }
         debugPrint('PROVIDER DEBUG: Existing schedule updated: ${schedule.id}');
       }
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Error saving schedule to Firestore: $e');
+      debugPrint('Error saving schedule to Supabase: $e');
       return false;
     }
   }
 
-  // Delete a schedule from Firestore
-  Future<bool> deleteSchedule(String scheduleId) async {
+  // Delete a schedule from Supabase
+  Future<bool> deleteSchedule(dynamic scheduleId) async {
     try {
-      await _firestore.collection('schedules').doc(scheduleId).delete();
+      final scheduleIdStr = scheduleId.toString();
+      await _supabaseService.deleteSchedule(scheduleIdStr);
       _schedules.removeWhere((s) => s.id == scheduleId);
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Error deleting schedule from Firestore: $e');
+      debugPrint('Error deleting schedule from Supabase: $e');
       return false;
     }
   }

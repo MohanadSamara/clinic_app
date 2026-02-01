@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/user.dart';
 import '../../translations.dart';
 
@@ -25,8 +25,8 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
 
   Future<void> _loadDoctors() async {
     try {
-      final dbHelper = DBHelper.instance;
-      final doctorsData = await dbHelper.getAllUsers(role: 'doctor');
+      final supabaseService = SupabaseCompleteService.instance;
+      final doctorsData = await supabaseService.getAllUsers(role: 'doctor');
       final doctors = doctorsData.map((data) => User.fromMap(data)).toList();
 
       setState(() {
@@ -46,13 +46,14 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
     if (authProvider.user?.id == null) return;
 
     try {
+      final supabaseService = SupabaseCompleteService.instance;
       // Update the driver's linked_doctor_id
-      await DBHelper.instance.updateUser(authProvider.user!.id!, {
+      await supabaseService.updateUser(authProvider.user!.id!, {
         'linked_doctor_id': doctor.id,
       });
 
       // Update the doctor's linked_driver_id
-      await DBHelper.instance.updateUser(doctor.id!, {
+      await supabaseService.updateUser(doctor.id!, {
         'linked_driver_id': authProvider.user!.id,
       });
 

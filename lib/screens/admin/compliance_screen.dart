@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../providers/auth_provider.dart';
 
 class ComplianceScreen extends StatefulWidget {
@@ -23,7 +23,8 @@ class _ComplianceScreenState extends State<ComplianceScreen> {
   Future<void> _loadLogs() async {
     setState(() => _loading = true);
     try {
-      final logs = await DBHelper.instance.getAllComplianceLogs();
+      final supabaseService = SupabaseCompleteService.instance;
+      final logs = await supabaseService.getAllComplianceLogs();
       setState(() => _logs = logs);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -41,7 +42,8 @@ class _ComplianceScreenState extends State<ComplianceScreen> {
     );
     if (result != null) {
       try {
-        await DBHelper.instance.insertComplianceLog(result);
+        final supabaseService = SupabaseCompleteService.instance;
+        await supabaseService.insertComplianceLog(result);
         _loadLogs();
         ScaffoldMessenger.of(
           context,
@@ -61,7 +63,8 @@ class _ComplianceScreenState extends State<ComplianceScreen> {
     );
     if (result != null) {
       try {
-        await DBHelper.instance.updateComplianceLog(log['id'], result);
+        final supabaseService = SupabaseCompleteService.instance;
+        await supabaseService.updateComplianceLog(log['id'], result);
         _loadLogs();
         ScaffoldMessenger.of(
           context,
@@ -95,7 +98,8 @@ class _ComplianceScreenState extends State<ComplianceScreen> {
 
     if (confirm == true) {
       try {
-        await DBHelper.instance.deleteComplianceLog(log['id']);
+        final supabaseService = SupabaseCompleteService.instance;
+        await supabaseService.deleteComplianceLog(log['id']);
         _loadLogs();
         ScaffoldMessenger.of(
           context,
@@ -352,10 +356,3 @@ class _ComplianceLogDialogState extends State<ComplianceLogDialog> {
     }
   }
 }
-
-
-
-
-
-
-

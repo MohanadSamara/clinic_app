@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/doctor_verification.dart';
 import 'doctor_verification_screen.dart';
 import '../../../translations.dart';
@@ -37,7 +37,8 @@ class _DoctorVerificationStatusScreenState
 
     if (user != null && user.id != null) {
       try {
-        final docs = await DBHelper.instance.getDoctorVerificationDocuments(
+        final supabaseService = SupabaseCompleteService.instance;
+        final docs = await supabaseService.getDoctorVerificationDocuments(
           user.id!,
         );
         setState(() {
@@ -53,7 +54,7 @@ class _DoctorVerificationStatusScreenState
             listen: false,
           );
           if (authProvider.user?.verificationStatus != 'verified') {
-            await DBHelper.instance.updateUser(user.id!, {
+            await supabaseService.updateUser(user.id!, {
               'verification_status': 'verified',
             });
             // Update the user in provider

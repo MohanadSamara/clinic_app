@@ -63,7 +63,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                   }
 
                   final records = medicalProvider.getMedicalRecordsByPet(
-                    widget.pet.id ?? 0,
+                    widget.pet.id ?? '',
                   );
 
                   if (records.isEmpty) {

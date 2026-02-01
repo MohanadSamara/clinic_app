@@ -3,9 +3,9 @@
 // Handles all authentication operations with Firebase Auth
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import 'supabase_complete_service.dart';
 
 /// Authentication errors
 class AuthException implements Exception {
@@ -245,7 +245,7 @@ class AuthService {
         'name': name?.trim(),
         'phone': phone?.trim(),
         'area': area?.trim(),
-        'profileImage': profileImage?.trim(),
+        'profile_image': profileImage?.trim(),
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
@@ -330,24 +330,21 @@ class AuthService {
 
   Future<void> _saveUserToFirestore(UserModel user) async {
     try {
-      final firestore = FirebaseFirestore.instance;
-      await firestore.collection('users').doc(user.id).set(user.toMap());
+      await SupabaseCompleteService.instance.insertUser(user.toMap());
     } catch (e) {
-      debugPrint('Error saving user to Firestore: $e');
+      debugPrint('Error saving user to database: $e');
     }
   }
 
   Future<UserModel?> _getUserFromFirestore(String uid) async {
     try {
-      final firestore = FirebaseFirestore.instance;
-      final doc = await firestore.collection('users').doc(uid).get();
-
-      if (doc.exists) {
-        return UserModel.fromMap(doc.data()!, doc.id);
+      final user = await SupabaseCompleteService.instance.getUserById(uid);
+      if (user != null) {
+        return UserModel.fromMap(user, uid);
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting user from Firestore: $e');
+      debugPrint('Error getting user from database: $e');
       return null;
     }
   }
@@ -357,19 +354,17 @@ class AuthService {
     Map<String, dynamic> updates,
   ) async {
     try {
-      final firestore = FirebaseFirestore.instance;
-      await firestore.collection('users').doc(uid).update(updates);
+      await SupabaseCompleteService.instance.updateUser(uid, updates);
     } catch (e) {
-      debugPrint('Error updating user in Firestore: $e');
+      debugPrint('Error updating user in database: $e');
     }
   }
 
   Future<void> _deleteUserFromFirestore(String uid) async {
     try {
-      final firestore = FirebaseFirestore.instance;
-      await firestore.collection('users').doc(uid).delete();
+      await SupabaseCompleteService.instance.deleteUser(uid);
     } catch (e) {
-      debugPrint('Error deleting user from Firestore: $e');
+      debugPrint('Error deleting user from database: $e');
     }
   }
 

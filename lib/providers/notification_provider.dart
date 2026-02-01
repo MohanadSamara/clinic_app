@@ -1,18 +1,26 @@
 // lib/providers/notification_provider.dart
-// Notification Provider using Firestore for notification history
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
 // Local notifications still work as before
 // OTP Authentication remains UNCHANGED
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_notification.dart';
 import '../services/notification_service.dart';
+import '../services/supabase_complete_service.dart';
 
+/// NotificationProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: notifications
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _notificationService = NotificationService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   List<AppNotification> _notifications = [];
   List<AppNotification> _scheduledNotifications = [];
@@ -34,52 +42,29 @@ class NotificationProvider extends ChangeNotifier {
   Map<NotificationType, bool> get notificationPreferences =>
       _notificationPreferences;
 
-  // Set current user ID for Firestore queries
+  // Set current user ID for Supabase queries
   void setCurrentUserId(String userId) {
     _currentUserId = userId;
-    _loadNotificationsFromFirestore();
+    _loadNotificationsFromSupabase();
   }
 
-  // Load notification history from Firestore
-  Future<void> _loadNotificationsFromFirestore() async {
+  // Load notification history from Supabase
+  Future<void> _loadNotificationsFromSupabase() async {
     if (_currentUserId == null) return;
 
     try {
-      final snapshot = await _firestore
-          .collection('notifications')
-          .where('userId', isEqualTo: _currentUserId)
-          .orderBy('createdAt', descending: true)
-          .limit(50)
-          .get();
+      final notifications = await _supabaseService.getNotificationsByUser(
+        _currentUserId!,
+      );
 
-      _notifications = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
+      _notifications = notifications.map((data) {
+        data['id'] = data['id'] as String?;
         return AppNotification.fromMap(data);
       }).toList();
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading notifications from Firestore: $e');
+      debugPrint('Error loading notifications from Supabase: $e');
     }
-  }
-
-  // Stream notifications in real-time
-  Stream<List<AppNotification>> streamNotifications() {
-    if (_currentUserId == null) return Stream.value([]);
-
-    return _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: _currentUserId)
-        .orderBy('createdAt', descending: true)
-        .limit(50)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            data['id'] = doc.id;
-            return AppNotification.fromMap(data);
-          }).toList();
-        });
   }
 
   NotificationProvider() {
@@ -128,7 +113,7 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Schedule local notification AND save to Firestore for history
+  // Schedule local notification AND save to Supabase for history
   Future<void> scheduleNotification({
     required String title,
     required String body,
@@ -173,7 +158,7 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  // Create notification in Firestore (for cloud sync)
+  // Create notification in Supabase (for cloud sync)
   Future<void> createNotification({
     required String title,
     required String body,
@@ -184,31 +169,27 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentUserId == null) return;
 
     try {
-      final notificationId = DateTime.now().millisecondsSinceEpoch.toString();
-
-      await _firestore.collection('notifications').doc(notificationId).set({
-        'id': notificationId,
-        'userId': _currentUserId,
+      final notificationData = {
+        'user_id': _currentUserId,
         'title': title,
         'body': body,
         'type': type.toString().split('.').last,
-        'relatedId': relatedId,
+        'related_id': relatedId,
         'data': data,
-        'isRead': false,
-        'isScheduled': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+        'is_read': false,
+        'is_scheduled': false,
+      };
+
+      await _supabaseService.insertNotification(notificationData);
     } catch (e) {
-      debugPrint('Error creating notification in Firestore: $e');
+      debugPrint('Error creating notification in Supabase: $e');
     }
   }
 
   // Mark notification as read
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _firestore.collection('notifications').doc(notificationId).update({
-        'isRead': true,
-      });
+      await _supabaseService.markNotificationAsRead(notificationId);
 
       final index = _notifications.indexWhere((n) => n.id == notificationId);
       if (index != -1) {
@@ -225,13 +206,7 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentUserId == null) return 0;
 
     try {
-      final snapshot = await _firestore
-          .collection('notifications')
-          .where('userId', isEqualTo: _currentUserId)
-          .where('isRead', isEqualTo: false)
-          .count()
-          .get();
-      return snapshot.count ?? 0;
+      return await _supabaseService.getUnreadNotificationCount(_currentUserId!);
     } catch (e) {
       debugPrint('Error getting unread count: $e');
       return 0;
@@ -358,7 +333,7 @@ class NotificationProvider extends ChangeNotifier {
       payload: notificationId.toString(),
     );
 
-    // Also create in Firestore for cloud sync
+    // Also create in Supabase for cloud sync
     await createNotification(
       title: title,
       body: body,

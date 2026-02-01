@@ -18,7 +18,7 @@ import '../../models/appointment.dart';
 import '../../models/medical_record.dart';
 import '../../models/pet.dart';
 import '../../models/user.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 
 import '../../components/modern_cards.dart';
 import '../../screens/owner/doctor_selection_screen.dart';
@@ -210,8 +210,8 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
     final authProvider = context.read<AuthProvider>();
     try {
       if (authProvider.user?.linkedDriverId != null) {
-        final dbHelper = DBHelper.instance;
-        final driverData = await dbHelper.getUserById(
+        final supabaseService = SupabaseCompleteService.instance;
+        final driverData = await supabaseService.getUserById(
           authProvider.user!.linkedDriverId!,
         );
         if (driverData != null && mounted) {
@@ -355,7 +355,12 @@ class _DoctorHomeScreenState extends State<_DoctorHomeScreen>
                             (u) => u.id == user?.id,
                             orElse: () =>
                                 user ??
-                                User(id: -1, name: '', email: '', password: ''),
+                                User(
+                                  id: '-1',
+                                  name: '',
+                                  email: '',
+                                  password: '',
+                                ),
                           );
                       final isOnline =
                           currentUser.availabilityStatus == 'online';

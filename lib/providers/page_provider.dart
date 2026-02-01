@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/page.dart' as page_model;
 
 class PageProvider with ChangeNotifier {
@@ -18,7 +18,8 @@ class PageProvider with ChangeNotifier {
   Future<void> loadPages() async {
     _setLoading(true);
     try {
-      final pageMaps = await DBHelper.instance.getAllPages();
+      final supabaseService = SupabaseCompleteService.instance;
+      final pageMaps = await supabaseService.getAllPages();
       _pages = pageMaps.map((map) => page_model.Page.fromMap(map)).toList();
       _error = null;
     } catch (e) {
@@ -31,7 +32,8 @@ class PageProvider with ChangeNotifier {
   // Get page by slug
   Future<page_model.Page?> getPageBySlug(String slug) async {
     try {
-      final pageMap = await DBHelper.instance.getPageBySlug(slug);
+      final supabaseService = SupabaseCompleteService.instance;
+      final pageMap = await supabaseService.getPageBySlug(slug);
       if (pageMap != null) {
         return page_model.Page.fromMap(pageMap);
       }
@@ -46,7 +48,8 @@ class PageProvider with ChangeNotifier {
   Future<bool> createPage(page_model.Page page) async {
     _setLoading(true);
     try {
-      final id = await DBHelper.instance.insertPage(page.toMap());
+      final supabaseService = SupabaseCompleteService.instance;
+      final id = await supabaseService.insertPage(page.toMap());
       final newPage = page.copyWith(id: id);
       _pages.add(newPage);
       await logAuditAction('create_page', 'Created page: ${page.title}');
@@ -66,7 +69,8 @@ class PageProvider with ChangeNotifier {
 
     _setLoading(true);
     try {
-      await DBHelper.instance.updatePage(page.id!, page.toMap());
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.updatePage(page.id!, page.toMap());
       final index = _pages.indexWhere((p) => p.id == page.id);
       if (index != -1) {
         _pages[index] = page;
@@ -88,7 +92,8 @@ class PageProvider with ChangeNotifier {
 
     _setLoading(true);
     try {
-      await DBHelper.instance.deletePage(page.id!);
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.deletePage(page.id!);
       _pages.removeWhere((p) => p.id == page.id);
       await logAuditAction('delete_page', 'Deleted page: ${page.title}');
       notifyListeners();
@@ -115,7 +120,8 @@ class PageProvider with ChangeNotifier {
 
   Future<void> logAuditAction(String action, String details) async {
     try {
-      await DBHelper.instance.insertAuditLog({
+      final supabaseService = SupabaseCompleteService.instance;
+      await supabaseService.insertAuditLog({
         'action': action,
         'details': details,
         'timestamp': DateTime.now().toIso8601String(),

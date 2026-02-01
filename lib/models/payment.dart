@@ -1,8 +1,8 @@
 // lib/models/payment.dart
 class Payment {
-  final int? id;
-  final int appointmentId;
-  final int userId; // Owner who made the payment
+  final String? id;
+  final String appointmentId;
+  final String userId; // Owner who made the payment
   final double subtotal;
   final double tax;
   final double total;
@@ -54,9 +54,9 @@ class Payment {
   };
 
   factory Payment.fromMap(Map<String, dynamic> m) => Payment(
-    id: m['id'] is int ? m['id'] as int : null,
-    appointmentId: m['appointment_id'] is int ? m['appointment_id'] as int : 0,
-    userId: m['user_id'] is int ? m['user_id'] as int : 0,
+    id: m['id']?.toString(),
+    appointmentId: m['appointment_id']?.toString() ?? '',
+    userId: m['user_id']?.toString() ?? '',
     subtotal: (m['subtotal'] as num?)?.toDouble() ?? 0.0,
     tax: (m['tax'] as num?)?.toDouble() ?? 0.0,
     total: (m['total'] as num?)?.toDouble() ?? 0.0,
@@ -97,9 +97,9 @@ class Payment {
   }
 
   Payment copyWith({
-    int? id,
-    int? appointmentId,
-    int? userId,
+    String? id,
+    String? appointmentId,
+    String? userId,
     double? subtotal,
     double? tax,
     double? total,
@@ -132,10 +132,3 @@ class Payment {
     );
   }
 }
-
-
-
-
-
-
-

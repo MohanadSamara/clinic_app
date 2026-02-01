@@ -1,18 +1,34 @@
+// lib/providers/service_request_provider.dart
+// Service Request Provider using Supabase as the single source of truth
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+
 import 'package:flutter/material.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/service_request.dart';
 import '../models/user.dart';
 import '../models/appointment.dart';
+import '../providers/auth_provider.dart';
 
+/// ServiceRequestProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: service_requests, users, appointments
+///
+/// All database operations now use Supabase client exclusively.
+/// SQLite (DBHelper) has been completely removed.
 class ServiceRequestProvider extends ChangeNotifier {
   List<ServiceRequest> _serviceRequests = [];
   bool _isLoading = false;
+
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   List<ServiceRequest> get serviceRequests => _serviceRequests;
   bool get isLoading => _isLoading;
 
   Future<void> loadServiceRequests({
-    int? assignedDoctorId,
+    dynamic? assignedDoctorId,
     String? status,
     String? requestType,
   }) async {
@@ -20,14 +36,19 @@ class ServiceRequestProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await DBHelper.instance.getServiceRequests(
-        assignedDoctorId: assignedDoctorId,
+      final assignedDoctorIdStr = assignedDoctorId?.toString();
+
+      final data = await _supabaseService.getServiceRequests(
+        assignedDoctorId: assignedDoctorIdStr,
         status: status,
         requestType: requestType,
       );
-      _serviceRequests = data
-          .map((item) => ServiceRequest.fromMap(item))
-          .toList();
+
+      // Convert String UUID to int for backward compatibility
+      _serviceRequests = data.map((item) {
+        item['id'] = (item['id'] as String).hashCode;
+        return ServiceRequest.fromMap(item);
+      }).toList();
     } catch (e) {
       debugPrint('Error loading service requests: $e');
     } finally {
@@ -36,19 +57,19 @@ class ServiceRequestProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadEmergencyCases({int? assignedDoctorId}) async {
+  Future<void> loadEmergencyCases({dynamic? assignedDoctorId}) async {
     await loadServiceRequests(
-      assignedDoctorId: assignedDoctorId,
+      assignedDoctorId: assignedDoctorId?.toString(),
       status: 'pending',
       requestType: 'emergency',
     );
   }
 
   Future<bool> updateServiceRequestStatus(
-    int requestId,
+    dynamic requestId,
     String status, {
     String? rejectionReason,
-    int? assignedDoctorId,
+    dynamic? assignedDoctorId,
   }) async {
     try {
       final updateData = <String, dynamic>{
@@ -56,19 +77,27 @@ class ServiceRequestProvider extends ChangeNotifier {
         'rejection_reason': rejectionReason,
       };
       if (assignedDoctorId != null) {
-        updateData['assigned_doctor_id'] = assignedDoctorId;
+        updateData['assigned_doctor_id'] = assignedDoctorId.toString();
       }
 
-      await DBHelper.instance.updateServiceRequest(requestId, updateData);
+      final requestIdStr = requestId.toString();
+      await _supabaseService.updateServiceRequest(requestIdStr, updateData);
 
       // Update local list
-      final index = _serviceRequests.indexWhere((req) => req.id == requestId);
+      final requestIdInt = requestId is int ? requestId : requestId.hashCode;
+      final index = _serviceRequests.indexWhere(
+        (req) => req.id == requestIdInt,
+      );
       if (index != -1) {
-        _serviceRequests[index] = _serviceRequests[index].copyWith(
+        final oldRequest = _serviceRequests[index];
+        _serviceRequests[index] = oldRequest.copyWith(
           status: status,
           rejectionReason: rejectionReason,
-          assignedDoctorId:
-              assignedDoctorId ?? _serviceRequests[index].assignedDoctorId,
+          assignedDoctorId: assignedDoctorId == null
+              ? null
+              : assignedDoctorId is int
+              ? assignedDoctorId.toString()
+              : assignedDoctorId.toString(),
         );
         notifyListeners();
       }
@@ -80,7 +109,7 @@ class ServiceRequestProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> approveEmergencyCase(int requestId, int doctorId) async {
+  Future<bool> approveEmergencyCase(dynamic requestId, dynamic doctorId) async {
     try {
       // First update the service request status
       final success = await updateServiceRequestStatus(
@@ -92,15 +121,18 @@ class ServiceRequestProvider extends ChangeNotifier {
       if (!success) return false;
 
       // Get the service request details to create an appointment
+      final requestIdInt = requestId is int ? requestId : requestId.hashCode;
+      final requestIdStr = requestId.toString();
       final requestIndex = _serviceRequests.indexWhere(
-        (req) => req.id == requestId,
+        (req) => req.id == requestIdInt,
       );
       if (requestIndex == -1) return false;
 
       final serviceRequest = _serviceRequests[requestIndex];
 
       // Get the doctor's linked driver
-      final doctorData = await DBHelper.instance.getUserById(doctorId);
+      final doctorIdStr = doctorId.toString();
+      final doctorData = await _supabaseService.getUserById(doctorIdStr);
       if (doctorData == null) return false;
 
       final doctor = User.fromMap(doctorData);
@@ -108,28 +140,28 @@ class ServiceRequestProvider extends ChangeNotifier {
 
       // Create an appointment for the driver to see on the map
       final appointmentData = {
-        'owner_id': serviceRequest.ownerId,
-        'pet_id': serviceRequest.petId,
+        'owner_id': serviceRequest.ownerId?.toString() ?? '',
+        'pet_id': serviceRequest.petId?.toString() ?? '',
         'service_type': 'Emergency Care',
         'description': serviceRequest.description,
         'scheduled_at': DateTime.now().toIso8601String(),
         'status': 'approved',
         'address': serviceRequest.address,
-        'doctor_id': doctorId,
-        'driver_id': driverId,
+        'doctor_id': doctorIdStr,
+        'driver_id': driverId?.toString(),
         'urgency_level': 'emergency',
         'location_lat': serviceRequest.latitude,
         'location_lng': serviceRequest.longitude,
-        'service_request_id': serviceRequest.id,
+        'service_request_id': requestIdStr,
       };
 
-      final appointmentId = await DBHelper.instance.insertAppointment(
+      final appointmentId = await _supabaseService.insertAppointment(
         appointmentData,
       );
 
       // Create a basic appointment object for local reference
       final createdAppointment = Appointment(
-        id: appointmentId,
+        id: appointmentId.hashCode,
         ownerId: serviceRequest.ownerId,
         petId: serviceRequest.petId,
         serviceType: 'Emergency Care',
@@ -137,12 +169,12 @@ class ServiceRequestProvider extends ChangeNotifier {
         scheduledAt: DateTime.now().toIso8601String(),
         status: 'approved',
         address: serviceRequest.address,
-        doctorId: doctorId,
-        driverId: driverId,
+        doctorId: doctorId is int ? doctorId.toString() : doctorId.toString(),
+        driverId: driverId?.toString(),
         urgencyLevel: 'emergency',
         locationLat: serviceRequest.latitude,
         locationLng: serviceRequest.longitude,
-        serviceRequestId: serviceRequest.id,
+        serviceRequestId: serviceRequest.id?.hashCode,
       );
 
       return true;
@@ -152,7 +184,7 @@ class ServiceRequestProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> rejectEmergencyCase(int requestId, String reason) async {
+  Future<bool> rejectEmergencyCase(dynamic requestId, String reason) async {
     return await updateServiceRequestStatus(
       requestId,
       'rejected',
@@ -176,9 +208,13 @@ class ServiceRequestProvider extends ChangeNotifier {
 
   Future<bool> createServiceRequest(ServiceRequest serviceRequest) async {
     try {
-      final id = await DBHelper.instance.insertServiceRequest(
-        serviceRequest.toMap(),
-      );
+      final requestData = serviceRequest.toMap();
+      requestData.remove('id'); // Remove id for insert
+
+      final id = await _supabaseService.insertServiceRequest(requestData);
+      // Convert String UUID to int for backward compatibility
+      final idInt = id.hashCode;
+
       final newRequest = serviceRequest.copyWith(id: id);
       _serviceRequests.add(newRequest);
       notifyListeners();
@@ -189,10 +225,3 @@ class ServiceRequestProvider extends ChangeNotifier {
     }
   }
 }
-
-
-
-
-
-
-

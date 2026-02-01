@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/van.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 
 class AvailabilityProvider extends ChangeNotifier {
-  final DBHelper _dbHelper = DBHelper.instance;
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   List<User> _onlineUsers = [];
   List<Van> _availableVans = [];
@@ -52,10 +53,10 @@ class AvailabilityProvider extends ChangeNotifier {
     for (var doctor in availableDoctors) {
       var driver = availableDrivers.firstWhere(
         (d) => d.id == doctor.linkedDriverId,
-        orElse: () => User(id: -1, name: '', email: '', password: ''),
+        orElse: () => User(id: '-1', name: '', email: '', password: ''),
       );
 
-      if (driver.id != -1) {
+      if (driver.id != '-1') {
         pairs.add({'doctor': doctor, 'driver': driver});
       }
     }
@@ -66,14 +67,14 @@ class AvailabilityProvider extends ChangeNotifier {
   Future<void> loadAvailabilityData() async {
     try {
       // Load online users
-      final userData = await _dbHelper.getAllUsers();
+      final userData = await _supabaseService.getAllUsers();
       _onlineUsers = userData
           .map((data) => User.fromMap(data))
           .where((user) => user.availabilityStatus != 'offline')
           .toList();
 
       // Load available vans
-      final vanData = await _dbHelper.getAllVans();
+      final vanData = await _supabaseService.getAllVans();
       _availableVans = vanData
           .map((data) => Van.fromMap(data))
           .where((van) => van.status == 'available' || van.status == 'assigned')
@@ -85,9 +86,9 @@ class AvailabilityProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateUserAvailability(int userId, String status) async {
+  Future<void> updateUserAvailability(String userId, String status) async {
     try {
-      final userData = await _dbHelper.getUserById(userId);
+      final userData = await _supabaseService.getUserById(userId);
       if (userData != null) {
         final user = User.fromMap(userData);
         final updatedUser = user.copyWith(
@@ -95,7 +96,7 @@ class AvailabilityProvider extends ChangeNotifier {
           lastSeen: DateTime.now().toIso8601String(),
         );
 
-        await _dbHelper.updateUser(userId, updatedUser.toMap());
+        await _supabaseService.updateUser(userId, updatedUser.toMap());
 
         // Update local list
         final index = _onlineUsers.indexWhere((u) => u.id == userId);
@@ -114,14 +115,14 @@ class AvailabilityProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateVanAvailability(int vanId, String status) async {
+  Future<void> updateVanAvailability(String vanId, String status) async {
     try {
-      final vanData = await _dbHelper.getVanById(vanId);
+      final vanData = await _supabaseService.getVanById(vanId);
       if (vanData != null) {
         final van = Van.fromMap(vanData);
         final updatedVan = van.copyWith(status: status);
 
-        await _dbHelper.updateVan(vanId, updatedVan.toMap());
+        await _supabaseService.updateVan(vanId, updatedVan.toMap());
 
         // Update local list
         final index = _availableVans.indexWhere((v) => v.id == vanId);
@@ -160,10 +161,3 @@ class AvailabilityProvider extends ChangeNotifier {
     super.dispose();
   }
 }
-
-
-
-
-
-
-

@@ -1,4 +1,5 @@
 // lib/providers/auth_provider.dart
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -8,19 +9,27 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/user.dart';
 import '../firebase_options.dart';
 import '../utils/password_utils.dart';
 import '../services/email_service.dart';
 
+/// AuthProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: users, doctor_verification_documents, driver_verification_documents
+///
+/// All database operations now use Supabase client exclusively.
+/// SQLite and Firestore have been completely removed.
 class AuthProvider extends ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   bool _isInitialized = false;
-  bool _firestoreAvailable = false; // Track if Firestore is available
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   // Temporary data for social login role selection
   Map<String, dynamic>? _pendingSocialUser;
@@ -89,7 +98,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<int?> register({
+  Future<String?> register({
     required String name,
     required String email,
     required String password,
@@ -113,8 +122,8 @@ class AuthProvider extends ChangeNotifier {
         throw Exception('Password must be at least 6 characters');
       }
 
-      // Check if email exists
-      final existing = await DBHelper.instance.getUserByEmail(email);
+      // Check if email exists in Supabase
+      final existing = await _supabaseService.getUserByEmail(email);
       if (existing != null) {
         throw Exception('Email already exists');
       }
@@ -130,7 +139,8 @@ class AuthProvider extends ChangeNotifier {
         verificationStatus: role == 'doctor' ? 'pending' : 'verified',
       );
 
-      final id = await DBHelper.instance.insertUser(u.toMap());
+      final id = await _supabaseService.insertUser(u.toMap());
+      // Use the actual UUID string from Supabase, not hashCode
       _user = User.fromMap(u.toMap()..['id'] = id);
 
       // Save to secure storage
@@ -139,7 +149,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return id;
+      return id; // Return the UUID string
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -156,8 +166,8 @@ class AuthProvider extends ChangeNotifier {
       if (email.trim().isEmpty) throw Exception('Email is required');
       if (password.isEmpty) throw Exception('Password is required');
 
-      // Get user by email first
-      final userData = await DBHelper.instance.getUserByEmail(
+      // Get user by email from Supabase
+      final userData = await _supabaseService.getUserByEmail(
         email.trim().toLowerCase(),
       );
       if (userData == null) {
@@ -213,56 +223,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ========== FIRESTORE SYNC HELPER METHODS ==========
-
-  /// Sync user to Firestore directly (without using FirestoreService class)
-  Future<void> _syncUserToFirestore(User user) async {
-    try {
-      final emailKey = user.email.toLowerCase().replaceAll('.', '_');
-      await _firestore.collection('users').doc(emailKey).set({
-        'id': user.id,
-        'email': user.email.toLowerCase(),
-        'emailKey': emailKey,
-        'name': user.name,
-        'phone': user.phone,
-        'role': user.role,
-        'area': user.area,
-        'provider': user.provider,
-        'providerId': user.providerId,
-        'profileImage': user.profileImage,
-        'verificationStatus': user.verificationStatus,
-        'linkedDoctorId': user.linkedDoctorId,
-        'linkedDriverId': user.linkedDriverId,
-        'availabilityStatus': user.availabilityStatus,
-        'lastSeen': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      _firestoreAvailable = true;
-      debugPrint('✅ User synced to Firestore: ${user.email}');
-    } catch (e) {
-      debugPrint('❌ Firestore sync error: $e');
-      _firestoreAvailable = false;
-    }
-  }
-
-  /// Get user from Firestore directly
-  Future<User?> _getUserFromFirestore(String email) async {
-    try {
-      final emailKey = email.toLowerCase().replaceAll('.', '_');
-      final doc = await _firestore.collection('users').doc(emailKey).get();
-      if (doc.exists) {
-        return User.fromMap(doc.data() as Map<String, dynamic>);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('❌ Firestore get user error: $e');
-      return null;
-    }
-  }
-
-  /// Register with Firebase Auth and sync to Firestore (NEW - for web deployment)
-  Future<int?> registerWithFirebase({
+  /// Register with Firebase Auth and sync to Supabase (cloud database)
+  Future<String?> registerWithFirebase({
     required String name,
     required String email,
     required String password,
@@ -302,19 +264,17 @@ class AuthProvider extends ChangeNotifier {
       final u = User(
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: password, // Stored locally (consider hashing for security)
+        password: password,
         phone: phone?.trim(),
         role: role,
         area: area,
         verificationStatus: verificationStatus,
       );
 
-      // Save to local SQLite database
-      final id = await DBHelper.instance.insertUser(u.toMap());
+      // Save to Supabase database
+      final id = await _supabaseService.insertUser(u.toMap());
+      // Use the actual UUID string from Supabase, not hashCode
       _user = User.fromMap(u.toMap()..['id'] = id);
-
-      // Sync to Firestore (cloud database) - this enables admin to see users
-      await _syncUserToFirestore(_user!);
 
       // Save to secure storage
       await _saveUserToStorage(_user!);
@@ -322,7 +282,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return id;
+      return id; // Return the UUID string
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -331,7 +291,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Login with Firebase Auth and sync with local database
+  /// Login with Firebase Auth and sync with Supabase database
   Future<void> loginWithFirebase({
     required String email,
     required String password,
@@ -351,28 +311,18 @@ class AuthProvider extends ChangeNotifier {
             password: password,
           );
 
-      // Get user from local database (fallback to Firestore if not found locally)
+      // Get user from Supabase database
       User? user;
 
-      // First try local database
-      final localUserData = await DBHelper.instance.getUserByEmail(
+      // Try Supabase database first
+      final supabaseUserData = await _supabaseService.getUserByEmail(
         email.trim().toLowerCase(),
       );
 
-      if (localUserData != null) {
-        user = User.fromMap(localUserData);
+      if (supabaseUserData != null) {
+        user = User.fromMap(supabaseUserData);
       } else {
-        // If not in local DB, try Firestore
-        final firestoreUser = await _getUserFromFirestore(email.trim());
-        if (firestoreUser != null) {
-          user = firestoreUser;
-          // Sync to local database for future offline access
-          await DBHelper.instance.insertUser(user.toMap());
-        }
-      }
-
-      if (user == null) {
-        // Create user from Firebase Auth data
+        // Create user from Firebase Auth data if not in Supabase
         user = User(
           name: userCredential.user?.displayName ?? email.split('@')[0],
           email: email.trim().toLowerCase(),
@@ -381,14 +331,12 @@ class AuthProvider extends ChangeNotifier {
           verificationStatus: 'verified',
         );
 
-        final id = await DBHelper.instance.insertUser(user.toMap());
+        final id = await _supabaseService.insertUser(user.toMap());
+        // Use the actual UUID string from Supabase, not hashCode
         user = User.fromMap(user.toMap()..['id'] = id);
       }
 
       _user = user;
-
-      // Sync to Firestore to ensure user exists in cloud
-      await _syncUserToFirestore(_user!);
 
       // Save to secure storage
       await _saveUserToStorage(_user!);
@@ -402,15 +350,6 @@ class AuthProvider extends ChangeNotifier {
       rethrow;
     }
   }
-
-  /// Sync user to Firestore (call this after any user update)
-  Future<void> syncUserToCloud() async {
-    if (_user == null) return;
-    await _syncUserToFirestore(_user!);
-  }
-
-  /// Check if Firestore is available
-  bool get firestoreAvailable => _firestoreAvailable;
 
   // Social Authentication Methods
   Future<void> signInWithGoogle({String? role}) async {
@@ -528,8 +467,8 @@ class AuthProvider extends ChangeNotifier {
     String? role,
   }) async {
     try {
-      // Check if user already exists in local DB
-      final existingUser = await DBHelper.instance.getUserByEmail(
+      // Check if user already exists in Supabase
+      final existingUser = await _supabaseService.getUserByEmail(
         firebaseUser.email!,
       );
 
@@ -537,10 +476,10 @@ class AuthProvider extends ChangeNotifier {
         // Existing user: update with social auth info if needed
         User localUser = User.fromMap(existingUser);
         if (localUser.provider == null) {
-          // Update user to include social auth
-          await DBHelper.instance.updateUser(localUser.id!, {
+          // Update user to include social auth in Supabase
+          await _supabaseService.updateUser(localUser.id.toString(), {
             'provider': provider,
-            'providerId': providerId,
+            'provider_id': providerId,
           });
           localUser = localUser.copyWith(
             provider: provider,
@@ -566,7 +505,8 @@ class AuthProvider extends ChangeNotifier {
             verificationStatus: role == 'doctor' ? 'pending' : 'verified',
           );
 
-          final id = await DBHelper.instance.insertUser(localUser.toMap());
+          final id = await _supabaseService.insertUser(localUser.toMap());
+          // Use the actual UUID string from Supabase, not hashCode
           _user = User.fromMap(localUser.toMap()..['id'] = id);
           await _saveUserToStorage(_user!);
           _isLoading = false;
@@ -578,7 +518,7 @@ class AuthProvider extends ChangeNotifier {
                 firebaseUser.displayName ?? firebaseUser.email!.split('@')[0],
             'email': firebaseUser.email!,
             'provider': provider,
-            'provider': providerId,
+            'provider_id': providerId,
           };
           _isLoading = false;
           // Do not notify listeners for pending state to avoid UI rebuild issues
@@ -616,10 +556,10 @@ class AuthProvider extends ChangeNotifier {
       if (kIsWeb && profileImageBytes != null) {
         // For web, store image bytes
         await _saveWebProfileImage(_user!.id!.toString(), profileImageBytes);
-        updates['profileImage'] = 'web_profile_image_${_user!.id}';
+        updates['profile_image'] = 'web_profile_image_${_user!.id}';
       } else if (!kIsWeb && profileImagePath != null) {
         // For mobile/desktop, store file path
-        updates['profileImage'] = profileImagePath.trim().isEmpty
+        updates['profile_image'] = profileImagePath.trim().isEmpty
             ? null
             : profileImagePath.trim();
       } else if (profileImageBytes == null && profileImagePath == null) {
@@ -627,7 +567,7 @@ class AuthProvider extends ChangeNotifier {
         if (kIsWeb) {
           await _deleteWebProfileImage(_user!.id!.toString());
         }
-        updates['profileImage'] = null;
+        updates['profile_image'] = null;
       }
 
       // Handle password change
@@ -662,13 +602,13 @@ class AuthProvider extends ChangeNotifier {
       }
 
       if (updates.isNotEmpty) {
-        await DBHelper.instance.updateUser(_user!.id!, updates);
+        await _supabaseService.updateUser(_user!.id.toString(), updates);
         final updatedUser = _user!.copyWith(
           name: updates['name'] ?? _user!.name,
           phone: updates['phone'] ?? _user!.phone,
           area: updates['area'] ?? _user!.area,
           password: updates['password'] ?? _user!.password,
-          profileImage: updates['profileImage'] ?? _user!.profileImage,
+          profileImage: updates['profile_image'] ?? _user!.profileImage,
         );
         _user = updatedUser;
         await _saveUserToStorage(_user!);
@@ -740,17 +680,17 @@ class AuthProvider extends ChangeNotifier {
     }
 
     try {
-      // Check if user already exists
-      final existingUser = await DBHelper.instance.getUserByEmail(email);
+      // Check if user already exists in Supabase
+      final existingUser = await _supabaseService.getUserByEmail(email);
 
       if (existingUser != null) {
         // Update existing user with new role and social auth info
         final updates = <String, dynamic>{'role': role};
         if (existingUser['provider'] == null) {
           updates['provider'] = provider;
-          updates['providerId'] = providerId;
+          updates['provider_id'] = providerId;
         }
-        await DBHelper.instance.updateUser(existingUser['id'], updates);
+        await _supabaseService.updateUser(existingUser['id'], updates);
         _user = User.fromMap(
           existingUser,
         ).copyWith(role: role, provider: provider, providerId: providerId);
@@ -767,7 +707,8 @@ class AuthProvider extends ChangeNotifier {
           verificationStatus: role == 'doctor' ? 'pending' : 'verified',
         );
 
-        final id = await DBHelper.instance.insertUser(localUser.toMap());
+        final id = await _supabaseService.insertUser(localUser.toMap());
+        // Use the actual UUID string from Supabase, not hashCode
         _user = User.fromMap(localUser.toMap()..['id'] = id);
       }
 
@@ -915,7 +856,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Complete registration (called after OTP verification and document upload)
   /// This is the unified method for completing registration for all user types
-  Future<int?> completeRegistration() async {
+  Future<String?> completeRegistration() async {
     if (_pendingRegistration == null) {
       throw Exception('No pending registration');
     }
@@ -928,8 +869,8 @@ class AuthProvider extends ChangeNotifier {
       final email = data['email'] as String;
       final role = data['role'] as String;
 
-      // Check if email already exists (only verified users should block registration)
-      final existing = await DBHelper.instance.getUserByEmail(email);
+      // Check if email already exists in Supabase (only verified users should block registration)
+      final existing = await _supabaseService.getUserByEmail(email);
       if (existing != null) {
         final existingUser = User.fromMap(existing);
         if (existingUser.verificationStatus == 'verified') {
@@ -957,7 +898,8 @@ class AuthProvider extends ChangeNotifier {
         verificationStatus: verificationStatus,
       );
 
-      final id = await DBHelper.instance.insertUser(u.toMap());
+      final id = await _supabaseService.insertUser(u.toMap());
+      // Use the actual UUID string from Supabase, not hashCode
       _user = User.fromMap(u.toMap()..['id'] = id);
 
       // Save documents based on role
@@ -972,16 +914,14 @@ class AuthProvider extends ChangeNotifier {
                 'document_type': doc['document_type'],
                 'file_name': doc['fileName'],
                 'file_path': doc['file_path'],
-                'file_data': doc['file_data'],
                 'upload_date': DateTime.now().toIso8601String(),
-                'status':
-                    'approved', // Documents are automatically approved when uploaded
+                'status': 'approved',
                 'document_number': doc['documentNumber'] ?? '',
                 'expiry_date': doc['expiry_date'],
                 'issuing_authority': doc['issuingAuthority'] ?? '',
                 'verification_code': doc['verificationCode'] ?? '',
               };
-              await DBHelper.instance.insertDoctorVerificationDocument(
+              await _supabaseService.insertDoctorVerificationDocument(
                 documentData,
               );
             }
@@ -996,17 +936,15 @@ class AuthProvider extends ChangeNotifier {
                 'document_number': doc['documentNumber'] ?? '',
                 'file_name': doc['fileName'],
                 'file_path': doc['file_path'],
-                'file_data': doc['file_data'],
                 'upload_date': DateTime.now().toIso8601String(),
                 'expiry_date': doc['expiry_date'],
                 'issue_date': doc['issue_date'],
                 'issuing_authority': doc['issuingAuthority'] ?? '',
-                'status':
-                    'approved', // Documents are automatically approved when uploaded
+                'status': 'approved',
                 'verification_code': doc['verificationCode'] ?? '',
                 'vehicle_class': doc['vehicleClass'] ?? '',
               };
-              await DBHelper.instance.insertDriverVerificationDocument(
+              await _supabaseService.insertDriverVerificationDocument(
                 documentData,
               );
             }
@@ -1023,7 +961,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return id;
+      return id; // Return the UUID string
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -1032,7 +970,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Legacy completion methods for backward compatibility
-  Future<int?> completeDoctorRegistration() async {
+  Future<String?> completeDoctorRegistration() async {
     if (_pendingRegistration == null ||
         _pendingRegistration!['role'] != 'doctor') {
       throw Exception('No pending doctor registration');
@@ -1040,7 +978,7 @@ class AuthProvider extends ChangeNotifier {
     return await completeRegistration();
   }
 
-  Future<int?> completeDriverRegistration() async {
+  Future<String?> completeDriverRegistration() async {
     if (_pendingRegistration == null ||
         _pendingRegistration!['role'] != 'driver') {
       throw Exception('No pending driver registration');
@@ -1139,7 +1077,7 @@ class AuthProvider extends ChangeNotifier {
     if (_user == null) return;
 
     try {
-      await DBHelper.instance.updateUser(_user!.id!, {
+      await _supabaseService.updateUser(_user!.id.toString(), {
         'verification_status': status,
       });
       _user = _user!.copyWith(verificationStatus: status);
@@ -1189,7 +1127,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Register with email verification (modified register method)
-  Future<int?> registerWithEmailVerification({
+  Future<String?> registerWithEmailVerification({
     required String name,
     required String email,
     required String password,
@@ -1213,20 +1151,19 @@ class AuthProvider extends ChangeNotifier {
         throw Exception('Password must be at least 6 characters');
       }
 
-      // Check if email exists (only for unverified users)
-      final existing = await DBHelper.instance.getUserByEmail(email);
+      // Check if email exists in Supabase (only for unverified users)
+      final existing = await _supabaseService.getUserByEmail(email);
       if (existing != null) {
         // Allow registration if the existing user is unverified
         final existingUser = User.fromMap(existing);
         if (existingUser.verificationStatus != 'unverified') {
           // If user exists and is verified, check if it's the same user trying to register again
-          // This can happen during the OTP verification flow
           if (existingUser.email == email &&
               existingUser.verificationStatus == 'verified') {
             // Allow the same user to proceed with OTP verification
             _user = existingUser;
             await _saveUserToStorage(_user!);
-            return existingUser.id;
+            return existingUser.id; // Return the UUID string
           }
           throw Exception('Email already exists');
         }
@@ -1245,12 +1182,11 @@ class AuthProvider extends ChangeNotifier {
       );
 
       // Check if we already have a user from the existing check
-      final id =
-          existing != null &&
-              User.fromMap(existing).verificationStatus == 'unverified'
-          ? existing['id'] as int
-          : await DBHelper.instance.insertUser(u.toMap());
+      final id = existing != null
+          ? existing['id']
+          : await _supabaseService.insertUser(u.toMap());
 
+      // Use the actual UUID string from Supabase, not hashCode
       _user = User.fromMap(u.toMap()..['id'] = id);
 
       // Save to secure storage
@@ -1259,7 +1195,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return id;
+      return id; // Return the UUID string
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -1301,16 +1237,16 @@ class AuthProvider extends ChangeNotifier {
 
         // Update documents status to approved
         if (_user != null && _user!.role == 'doctor') {
-          await DBHelper.instance.updateDoctorDocumentsStatus(
-            _user!.id!,
+          await _supabaseService.updateDoctorDocumentsStatus(
+            _user!.id.toString(),
             'approved',
           );
         }
 
         // Update driver documents status to approved
         if (_user != null && _user!.role == 'driver') {
-          await DBHelper.instance.updateDriverDocumentsStatus(
-            _user!.id!,
+          await _supabaseService.updateDriverDocumentsStatus(
+            _user!.id.toString(),
             'approved',
           );
         }

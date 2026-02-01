@@ -1,12 +1,18 @@
 // lib/providers/medical_provider.dart
-// Medical Provider using Firestore as the single source of truth
-// All data synced globally across devices
-// OTP Authentication remains UNCHANGED
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+// All data synced globally across devices via Supabase
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/medical_record.dart';
 
+/// MedicalProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: medical_records
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class MedicalProvider extends ChangeNotifier {
   List<MedicalRecord> _medicalRecords = [];
   bool _isLoading = false;
@@ -16,30 +22,24 @@ class MedicalProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Firestore instance
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Supabase service instance for database operations (singleton)
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   // ========== LOAD DATA ==========
 
-  Future<void> loadMedicalRecords({int? doctorId}) async {
+  Future<void> loadMedicalRecords({String? doctorId}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      Query<Map<String, dynamic>> query = _firestore.collection(
-        'medical_records',
+      final records = await _supabaseService.getMedicalRecords(
+        doctorId: doctorId,
       );
 
-      if (doctorId != null) {
-        query = query.where('doctorId', isEqualTo: doctorId.toString());
-      }
-
-      final snapshot = await query.orderBy('date', descending: true).get();
-
-      _medicalRecords = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = int.tryParse(doc.id) ?? doc.id.hashCode;
+      _medicalRecords = records.map((data) {
+        data['id'] = data['id'] ?? data['id'];
         return MedicalRecord.fromMap(data);
       }).toList();
     } catch (e) {
@@ -51,32 +51,28 @@ class MedicalProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadMedicalRecordsByPet(int petId) async {
+  Future<void> loadMedicalRecordsByPet(String petId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final snapshot = await _firestore
-          .collection('medical_records')
-          .where('petId', isEqualTo: petId.toString())
-          .orderBy('date', descending: true)
-          .get();
+      final records = await _supabaseService.getMedicalRecords(petId: petId);
 
-      final seenIds = <int>{};
-      _medicalRecords = snapshot.docs
-          .map((doc) {
-            final data = doc.data();
-            final id = int.tryParse(doc.id) ?? doc.id.hashCode;
-            data['id'] = id;
+      final seenIds = <String>{};
+      _medicalRecords = records
+          .map((data) {
+            final id = data['id'] as String?;
+            if (id == null) return null;
             final record = MedicalRecord.fromMap(data);
-            if (!seenIds.contains(record.id)) {
-              seenIds.add(record.id!);
+            if (!seenIds.contains(id)) {
+              seenIds.add(id);
               return record;
             }
-            return record;
+            return null;
           })
-          .where((record) => record.id != null)
+          .where((record) => record != null && record.id != null)
+          .cast<MedicalRecord>()
           .toList();
     } catch (e) {
       debugPrint('Error loading medical records by pet: $e');
@@ -95,26 +91,12 @@ class MedicalProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Add to Firestore
-      final docRef = await _firestore.collection('medical_records').add({
-        'petId': record.petId.toString(),
-        'doctorId': record.doctorId.toString(),
-        'diagnosis': record.diagnosis,
-        'treatment': record.treatment,
-        'prescription': record.prescription,
-        'notes': record.notes,
-        'date': record.date,
-        'attachments': record.attachments,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Update with document ID
-      await docRef.update({'id': docRef.id});
+      // Add to Supabase
+      final recordData = record.toMap();
+      final id = await _supabaseService.insertMedicalRecord(recordData);
 
       // Create local record object
-      final newRecord = record.copyWith(
-        id: int.tryParse(docRef.id) ?? docRef.id.hashCode,
-      );
+      final newRecord = record.copyWith(id: id);
 
       _medicalRecords.add(newRecord);
       notifyListeners();
@@ -136,28 +118,14 @@ class MedicalProvider extends ChangeNotifier {
     if (record.id == null) return false;
 
     try {
-      // Find and update in Firestore
-      final snapshot = await _firestore.collection('medical_records').get();
+      // Find the record in local state to get the UUID
+      final localRecord = _medicalRecords.firstWhere((r) => r.id == record.id);
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == record.id || doc.id.hashCode == record.id) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('medical_records').doc(docId).update({
-          'diagnosis': record.diagnosis,
-          'treatment': record.treatment,
-          'prescription': record.prescription,
-          'notes': record.notes,
-          'date': record.date,
-          'attachments': record.attachments,
-        });
-      }
+      // Update in Supabase
+      await _supabaseService.updateMedicalRecord(
+        localRecord.id.toString(),
+        record.toMap(),
+      );
 
       final index = _medicalRecords.indexWhere((r) => r.id == record.id);
       if (index != -1) {
@@ -174,23 +142,13 @@ class MedicalProvider extends ChangeNotifier {
 
   // ========== DELETE RECORD ==========
 
-  Future<bool> deleteMedicalRecord(int id) async {
+  Future<bool> deleteMedicalRecord(String id) async {
     try {
-      // Find and delete from Firestore
-      final snapshot = await _firestore.collection('medical_records').get();
+      // Find the record in local state
+      final localRecord = _medicalRecords.firstWhere((r) => r.id == id);
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == id || doc.id.hashCode == id) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('medical_records').doc(docId).delete();
-      }
+      // Delete from Supabase
+      await _supabaseService.deleteMedicalRecord(localRecord.id.toString());
 
       _medicalRecords.removeWhere((record) => record.id == id);
       notifyListeners();
@@ -204,13 +162,11 @@ class MedicalProvider extends ChangeNotifier {
 
   // ========== HELPERS ==========
 
-  List<MedicalRecord> getMedicalRecordsByPet(int petId) {
-    return _medicalRecords
-        .where((record) => record.petId.toString() == petId.toString())
-        .toList();
+  List<MedicalRecord> getMedicalRecordsByPet(String petId) {
+    return _medicalRecords.where((record) => record.petId == petId).toList();
   }
 
-  MedicalRecord? getMedicalRecordById(int id) {
+  MedicalRecord? getMedicalRecordById(String id) {
     try {
       return _medicalRecords.firstWhere((r) => r.id == id);
     } catch (e) {

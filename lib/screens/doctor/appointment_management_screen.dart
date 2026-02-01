@@ -35,7 +35,7 @@ class _AppointmentManagementScreenState
       if (authProvider.user?.id != null) {
         // Load appointments assigned to this doctor
         context.read<AppointmentProvider>().loadAppointments(
-          doctorId: authProvider.user!.id!,
+          doctorId: authProvider.user!.id,
         );
       }
     });
@@ -186,7 +186,7 @@ class _AppointmentManagementScreenState
         .updateAppointmentStatus(
           appointment.id!,
           'accepted',
-          doctorId: authProvider.user!.id!,
+          doctorId: int.tryParse(authProvider.user?.id ?? ''),
         );
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -265,7 +265,7 @@ class _AppointmentManagementScreenState
           final authProvider = context.read<AuthProvider>();
           if (authProvider.user?.id != null) {
             context.read<AppointmentProvider>().loadAppointments(
-              doctorId: authProvider.user!.id!,
+              doctorId: authProvider.user!.id,
             );
           }
         } else {
@@ -333,7 +333,9 @@ class _AppointmentManagementScreenState
 
         final record = MedicalRecord(
           petId: appointment.petId,
-          doctorId: authProvider.user!.id!,
+          doctorId:
+              authProvider.user?.id ??
+              '', // Changed from int.tryParse to direct String
           diagnosis: treatmentDetails['diagnosis'] ?? '',
           treatment: treatmentDetails['treatment'] ?? '',
           prescription: treatmentDetails['prescription']?.isEmpty ?? true

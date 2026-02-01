@@ -1,4 +1,7 @@
 // lib/providers/document_provider.dart
+// Document Provider using Supabase as the single source of truth
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -11,7 +14,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/document.dart';
 import '../models/notification.dart' as app_notification;
 import '../providers/auth_provider.dart';
@@ -24,8 +27,19 @@ class EncryptData {
   EncryptData(this.data, this.keyString);
 }
 
+/// DocumentProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: documents, audit_logs, notifications, pets
+///
+/// All database operations now use Supabase client exclusively.
+/// SQLite (DBHelper) has been completely removed.
 class DocumentProvider extends ChangeNotifier {
   final AuthProvider _authProvider;
+
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   // Web storage using SharedPreferences (persists across page refreshes)
   static Future<void> _saveWebFile(String key, List<int> data) async {
@@ -99,9 +113,9 @@ class DocumentProvider extends ChangeNotifier {
   ];
 
   Future<void> loadDocuments({
-    int? petId,
-    int? userId,
-    int? medicalRecordId,
+    dynamic petId,
+    dynamic userId,
+    dynamic medicalRecordId,
   }) async {
     _isLoading = true;
     // Use Future.microtask to avoid calling notifyListeners during build
@@ -109,22 +123,44 @@ class DocumentProvider extends ChangeNotifier {
 
     try {
       List<Map<String, dynamic>> data;
-      if (medicalRecordId != null) {
-        data = await DBHelper.instance.getDocumentsByMedicalRecord(
-          medicalRecordId,
+
+      final userIdStr = userId?.toString();
+      final petIdStr = petId?.toString();
+      final medicalRecordIdStr = medicalRecordId?.toString();
+
+      if (medicalRecordIdStr != null) {
+        data = await _supabaseService.getDocumentsByMedicalRecord(
+          medicalRecordIdStr,
         );
-      } else if (userId != null) {
+      } else if (userIdStr != null) {
         // Load documents for all pets owned by this user
-        data = await DBHelper.instance.getDocumentsByOwner(userId);
+        data = await _supabaseService.getDocumentsByOwner(userIdStr);
+      } else if (petIdStr != null) {
+        // Load documents for a specific pet
+        final petData = await _supabaseService.getPetById(petIdStr);
+        if (petData != null) {
+          final documentsData = await _supabaseService.getDocumentsByPet(
+            petIdStr,
+          );
+          data = documentsData;
+        } else {
+          data = [];
+        }
       } else {
-        data = await DBHelper.instance.getDocumentsByPet(petId ?? 0);
+        data = [];
       }
-      _documents = data.map((item) => Document.fromMap(item)).toList();
+
+      // Convert String UUID to int for backward compatibility
+      _documents = data.map((item) {
+        item['id'] = (item['id'] as String).hashCode;
+        return Document.fromMap(item);
+      }).toList();
 
       // Filter by access permissions if needed
       if (userId != null && medicalRecordId == null) {
+        final userIdInt = userId is int ? userId : userId.hashCode;
         _documents = _documents
-            .where((doc) => _canAccessDocument(doc, userId))
+            .where((doc) => _canAccessDocument(doc, userIdInt))
             .toList();
       }
     } catch (e) {
@@ -137,13 +173,13 @@ class DocumentProvider extends ChangeNotifier {
   }
 
   Future<Document?> uploadDocument({
-    required int petId,
+    required dynamic petId,
     required String fileName,
     File? file,
     List<int>? fileBytes,
     String? description,
     String accessLevel = 'private',
-    int? medicalRecordId,
+    dynamic? medicalRecordId,
   }) async {
     if (!_authProvider.isLoggedIn) return null;
 
@@ -196,7 +232,6 @@ class DocumentProvider extends ChangeNotifier {
       String downloadUrl;
       if (kIsWeb) {
         // For web, store in memory/local storage (simplified approach)
-        // In a real app, you might want to use a more robust web storage solution
         downloadUrl =
             'web_storage_${DateTime.now().millisecondsSinceEpoch}_$fileName';
         await _saveWebFile(downloadUrl, encryptedData);
@@ -216,17 +251,45 @@ class DocumentProvider extends ChangeNotifier {
         downloadUrl = encryptedFilePath;
       }
 
+      // Get user ID
+      final userId = _authProvider.user?.id;
+      final userIdStr = _authProvider.user?.id.toString();
+
       // Create document record
+      final documentData = {
+        'pet_id': petId.toString(),
+        'medical_record_id': medicalRecordId?.toString(),
+        'file_name': fileName,
+        'file_type': _getFileType(extension),
+        'file_path': downloadUrl,
+        'description': description,
+        'upload_date': DateTime.now().toIso8601String(),
+        'version': 1,
+        'uploaded_by': userIdStr,
+        'access_level': accessLevel,
+        'encryption_key': encryptionKey,
+        'file_size': fileSize,
+        'mime_type': _getMimeType(extension),
+        'checksum': checksum,
+      };
+
+      final documentId = await _supabaseService.insertDocument(documentData);
+      // Convert String UUID to int for backward compatibility
+      final documentIdInt = documentId.hashCode;
+
       final document = Document(
-        petId: petId,
-        medicalRecordId: medicalRecordId,
+        id: documentIdInt,
+        petId: petId is int ? petId : petId.hashCode,
+        medicalRecordId: medicalRecordId is int
+            ? medicalRecordId
+            : medicalRecordId?.hashCode,
         fileName: fileName,
         fileType: _getFileType(extension),
         filePath: downloadUrl,
         description: description,
         uploadDate: DateTime.now(),
         version: 1,
-        uploadedBy: _authProvider.user!.id!,
+        uploadedBy: userId?.hashCode ?? 0,
         accessLevel: accessLevel,
         encryptionKey: encryptionKey,
         fileSize: fileSize,
@@ -234,20 +297,17 @@ class DocumentProvider extends ChangeNotifier {
         checksum: checksum,
       );
 
-      final id = await DBHelper.instance.insertDocument(document.toMap());
-      final newDocument = document.copyWith(id: id);
-
       // Add audit log
-      await _addAuditLog(newDocument.id!, 'upload', 'File uploaded');
+      await _addAuditLog(documentIdInt, 'upload', 'File uploaded');
 
       // Send notification to pet owner
-      await _notifyOwnerOfUpload(petId, fileName);
+      await _notifyOwnerOfUpload(petId.toString(), fileName);
 
-      _documents.add(newDocument);
+      _documents.add(document);
       // Use Future.microtask to avoid calling notifyListeners during build
       Future.microtask(() => notifyListeners());
 
-      return newDocument;
+      return document;
     } catch (e) {
       debugPrint('Error uploading document: $e');
       return null;
@@ -263,7 +323,7 @@ class DocumentProvider extends ChangeNotifier {
 
     try {
       // Check access permissions
-      if (!_canAccessDocument(document, _authProvider.user!.id!)) {
+      if (!_canAccessDocument(document, _authProvider.user!.id.hashCode)) {
         throw Exception('Access denied');
       }
 
@@ -326,7 +386,9 @@ class DocumentProvider extends ChangeNotifier {
       }
 
       // Add audit log
-      await _addAuditLog(document.id!, 'download', 'File downloaded');
+      if (document.id != null) {
+        await _addAuditLog(document.id!, 'download', 'File downloaded');
+      }
 
       return true;
     } catch (e) {
@@ -335,14 +397,18 @@ class DocumentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteDocument(int documentId) async {
+  Future<bool> deleteDocument(dynamic documentId) async {
     if (!_authProvider.isLoggedIn) return false;
 
     try {
-      final document = _documents.firstWhere((doc) => doc.id == documentId);
+      final documentIdInt = documentId is int
+          ? documentId
+          : documentId.hashCode;
+      final document = _documents.firstWhere((doc) => doc.id == documentIdInt);
 
       // Check permissions (only uploader or admin can delete)
-      if (document.uploadedBy != _authProvider.user!.id! &&
+      final currentUserIdInt = _authProvider.user!.id.hashCode;
+      if (document.uploadedBy != currentUserIdInt &&
           !_authProvider.hasRole('admin')) {
         throw Exception('Permission denied');
       }
@@ -358,13 +424,14 @@ class DocumentProvider extends ChangeNotifier {
         }
       }
 
-      // Delete from database
-      await DBHelper.instance.deleteDocument(documentId);
+      // Delete from Supabase database
+      final documentIdStr = documentId.toString();
+      await _supabaseService.deleteDocument(documentIdStr);
 
       // Add audit log
-      await _addAuditLog(documentId, 'delete', 'File deleted');
+      await _addAuditLog(documentIdInt, 'delete', 'File deleted');
 
-      _documents.removeWhere((doc) => doc.id == documentId);
+      _documents.removeWhere((doc) => doc.id == documentIdInt);
       // Use Future.microtask to avoid calling notifyListeners during build
       Future.microtask(() => notifyListeners());
 
@@ -375,10 +442,14 @@ class DocumentProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<AuditLog>> getAuditLogs(int documentId) async {
+  Future<List<AuditLog>> getAuditLogs(dynamic documentId) async {
     try {
-      final data = await DBHelper.instance.getAuditLogsByDocument(documentId);
-      return data.map((item) => AuditLog.fromMap(item)).toList();
+      final documentIdStr = documentId.toString();
+      final data = await _supabaseService.getAuditLogsByDocument(documentIdStr);
+      return data.map((item) {
+        item['id'] = (item['id'] as String).hashCode;
+        return AuditLog.fromMap(item);
+      }).toList();
     } catch (e) {
       debugPrint('Error loading audit logs: $e');
       return [];
@@ -399,11 +470,9 @@ class DocumentProvider extends ChangeNotifier {
     return _authProvider.hasRole('admin') || _authProvider.hasRole('doctor');
   }
 
-  bool _isPetOwner(int petId, int userId) {
+  bool _isPetOwner(dynamic petId, int userId) {
     // For now, assume owners can access their pets' documents
     // In practice, this should check the database
-    // But since owner screens only load their own pets' documents,
-    // this is sufficient for access control
     return true;
   }
 
@@ -524,40 +593,41 @@ class DocumentProvider extends ChangeNotifier {
   ) async {
     if (!_authProvider.isLoggedIn) return;
 
-    final auditLog = AuditLog(
-      documentId: documentId,
-      userId: _authProvider.user!.id!,
-      action: action,
-      timestamp: DateTime.now(),
-      details: details,
-    );
+    final userIdStr = _authProvider.user?.id.toString();
 
-    await DBHelper.instance.insertAuditLog(auditLog.toMap());
+    await _supabaseService.insertAuditLog({
+      'document_id': documentId.toString(),
+      'user_id': userIdStr,
+      'action': action,
+      'details': details,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   }
 
-  Future<void> _notifyOwnerOfUpload(int petId, String fileName) async {
+  Future<void> _notifyOwnerOfUpload(String petIdStr, String fileName) async {
     try {
       // Get pet details to find owner
-      final pet = await DBHelper.instance.getPetById(petId);
+      final pet = await _supabaseService.getPetById(petIdStr);
       if (pet != null) {
         final ownerId = pet['owner_id'];
         if (ownerId != null) {
           // Create notification for the pet owner
-          final notification = app_notification.Notification(
-            userId: ownerId,
-            title: 'New Medical Document',
-            message:
+          final notificationData = {
+            'user_id': ownerId.toString(),
+            'title': 'New Medical Document',
+            'message':
                 'A new document "$fileName" has been uploaded for your pet.',
-            type: 'update',
-            createdAt: DateTime.now().toIso8601String(),
-            data: {
+            'type': 'update',
+            'created_at': DateTime.now().toIso8601String(),
+            'is_read': false,
+            'data': jsonEncode({
               'document_type': 'medical',
-              'pet_id': petId,
+              'pet_id': petIdStr,
               'file_name': fileName,
-            },
-          );
+            }),
+          };
 
-          await DBHelper.instance.insertNotification(notification.toMap());
+          await _supabaseService.insertNotification(notificationData);
           debugPrint(
             'Notification sent to owner $ownerId for document "$fileName"',
           );

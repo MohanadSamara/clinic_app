@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import 'driver_verification_screen.dart';
 import '../../../translations.dart';
 
@@ -36,7 +36,8 @@ class _DriverVerificationStatusScreenState
 
     if (user != null && user.id != null) {
       try {
-        final docs = await DBHelper.instance.getDriverVerificationDocuments(
+        final supabaseService = SupabaseCompleteService.instance;
+        final docs = await supabaseService.getDriverVerificationDocuments(
           user.id!,
         );
         setState(() {
@@ -52,7 +53,7 @@ class _DriverVerificationStatusScreenState
             listen: false,
           );
           if (authProvider.user?.verificationStatus != 'verified') {
-            await DBHelper.instance.updateUser(user.id!, {
+            await supabaseService.updateUser(user.id!, {
               'verification_status': 'verified',
             });
             // Update the user in provider

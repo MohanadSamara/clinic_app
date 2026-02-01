@@ -9,7 +9,7 @@ import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../providers/availability_provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/appointment.dart';
 import '../../models/service.dart';
 import '../../models/pet.dart';
@@ -43,7 +43,7 @@ class _BookingScreenState extends State<BookingScreen> {
   Pet? _selectedPet;
   List<Pet> _userPets = [];
   User? _selectedDoctor;
-  int? _selectedDoctorId;
+  String? _selectedDoctorId;
   List<User> _doctors = [];
   TimeOfDay? _selectedTime;
   final TextEditingController _descriptionController = TextEditingController();
@@ -92,9 +92,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Future<void> _loadDoctors() async {
     try {
-      // Get all doctors from the database
-      final dbHelper = DBHelper.instance;
-      final allUsers = await dbHelper.getAllUsers(role: 'doctor');
+      // Get all doctors from Supabase
+      final supabaseService = SupabaseCompleteService.instance;
+      final allUsers = await supabaseService.getAllUsers(role: 'doctor');
       final doctors = <User>[];
 
       for (final userData in allUsers) {
@@ -1313,7 +1313,7 @@ class _BookingScreenState extends State<BookingScreen> {
     final appointment = Appointment(
       ownerId: authProvider.user!.id!,
       petId: _selectedPet!.id!, // Use selected pet ID
-      doctorId: _selectedDoctor!.id!, // Required doctor ID
+      doctorId: _selectedDoctor!.id, // No int.tryParse needed anymore
       driverId: null, // No auto-assignment - driver must be assigned manually
       serviceType: _selectedService!.name,
       description: _descriptionController.text,

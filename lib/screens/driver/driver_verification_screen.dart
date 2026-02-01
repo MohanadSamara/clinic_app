@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../../translations.dart';
 import '../role_based_home.dart';
 
@@ -121,15 +121,18 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
 
     if (widget.isPreLogin && widget.email != null) {
       // Load documents by email for pre-login flow
-      final docs = await DBHelper.instance
-          .getDriverVerificationDocumentsByEmail(widget.email!);
+      final supabaseService = SupabaseCompleteService.instance;
+      final docs = await supabaseService.getDriverVerificationDocumentsByEmail(
+        widget.email!,
+      );
       setState(() {
         _existingDocuments = docs;
         _calculateStatus();
         _isLoading = false;
       });
     } else if (user != null && user.id != null) {
-      final docs = await DBHelper.instance.getDriverVerificationDocuments(
+      final supabaseService = SupabaseCompleteService.instance;
+      final docs = await supabaseService.getDriverVerificationDocuments(
         user.id!,
       );
       setState(() {
@@ -354,9 +357,8 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             'vehicle_class': doc['vehicleClass'] ?? '',
           };
 
-          await DBHelper.instance.insertDriverVerificationDocument(
-            documentData,
-          );
+          await SupabaseCompleteService.instance
+              .insertDriverVerificationDocument(documentData);
         }
       }
 

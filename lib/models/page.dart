@@ -1,5 +1,5 @@
 class Page {
-  final int? id;
+  final String? id;
   final String slug;
   final String title;
   final String content;
@@ -19,7 +19,7 @@ class Page {
 
   factory Page.fromMap(Map<String, dynamic> map) {
     return Page(
-      id: map['id'] as int?,
+      id: map['id'] as String?,
       slug: map['slug'] as String,
       title: map['title'] as String,
       content: map['content'] as String,
@@ -46,7 +46,7 @@ class Page {
   }
 
   Page copyWith({
-    int? id,
+    String? id,
     String? slug,
     String? title,
     String? content,

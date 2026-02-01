@@ -1,45 +1,35 @@
 // lib/providers/payment_provider.dart
-// Payment Provider using Firestore as the single source of truth
+// Payment Provider using Supabase as the single source of truth
 // All data synced globally across devices
-// OTP Authentication remains UNCHANGED
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/payment.dart';
 import '../models/appointment.dart';
 import 'appointment_provider.dart';
 
+/// PaymentProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: payments, appointments
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class PaymentProvider extends ChangeNotifier {
   List<Payment> _payments = [];
   bool _isProcessing = false;
   bool _isLoading = false;
   String? _error;
 
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
+
   List<Payment> get payments => _payments;
   bool get isProcessing => _isProcessing;
   bool get isLoading => _isLoading;
   String? get error => _error;
-
-  // Firestore instance
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // Helper to convert any ID to String
-  String _toStringId(dynamic id) {
-    if (id == null) return '';
-    if (id is String) return id;
-    if (id is int) return id.toString();
-    return id.toString();
-  }
-
-  // Helper to convert any ID to int
-  int _toIntId(dynamic id) {
-    if (id == null) return 0;
-    if (id is int) return id;
-    if (id is String) {
-      return int.tryParse(id) ?? id.hashCode;
-    }
-    return id.hashCode;
-  }
 
   // ========== LOAD DATA ==========
 
@@ -49,16 +39,11 @@ class PaymentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final userIdStr = _toStringId(userId);
-      final snapshot = await _firestore
-          .collection('payments')
-          .where('userId', isEqualTo: userIdStr)
-          .orderBy('createdAt', descending: true)
-          .get();
+      final userIdStr = userId?.toString() ?? '';
 
-      _payments = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = _toIntId(doc.id);
+      final paymentsData = await _supabaseService.getPaymentsByUser(userIdStr);
+
+      _payments = paymentsData.map((data) {
         return Payment.fromMap(data);
       }).toList();
     } catch (e) {
@@ -89,47 +74,45 @@ class PaymentProvider extends ChangeNotifier {
       final tax = subtotal * 0.16;
       final total = subtotal + tax;
 
-      final appointmentIdInt = _toIntId(appointmentId);
-      final userIdInt = _toIntId(userId);
+      final appointmentIdStr = appointmentId?.toString() ?? '';
+      final userIdStr = userId?.toString() ?? '';
 
-      final payment = Payment(
-        appointmentId: appointmentIdInt,
-        userId: userIdInt,
-        subtotal: subtotal,
-        tax: tax,
-        total: total,
-        currency: currency,
-        method: 'pending',
-        transactionId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-        invoiceNumber: Payment.generateInvoiceNumber(),
-        serviceDescription: serviceDescription,
-        createdAt: DateTime.now().toIso8601String(),
-      );
-
-      // Add to Firestore
-      final docRef = await _firestore.collection('payments').add({
-        'appointmentId': _toStringId(appointmentId),
-        'userId': _toStringId(userId),
+      final paymentData = {
+        'appointment_id': appointmentIdStr,
+        'user_id': userIdStr,
         'subtotal': subtotal,
         'tax': tax,
         'total': total,
         'currency': currency,
         'method': 'pending',
-        'transactionId': payment.transactionId,
-        'invoiceNumber': payment.invoiceNumber,
-        'serviceDescription': serviceDescription,
+        'transaction_id': 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        'invoice_number': Payment.generateInvoiceNumber(),
+        'service_description': serviceDescription,
         'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+        'created_at': DateTime.now().toIso8601String(),
+      };
 
-      await docRef.update({'id': docRef.id});
+      final paymentId = await _supabaseService.insertPayment(paymentData);
 
-      final newPayment = payment.copyWith(id: _toIntId(docRef.id));
+      final payment = Payment(
+        id: paymentId,
+        appointmentId: appointmentIdStr,
+        userId: userIdStr,
+        subtotal: subtotal,
+        tax: tax,
+        total: total,
+        currency: currency,
+        method: 'pending',
+        transactionId: paymentData['transaction_id'] as String,
+        invoiceNumber: paymentData['invoice_number'] as String,
+        serviceDescription: serviceDescription,
+        createdAt: paymentData['created_at'] as String,
+      );
 
-      _payments.insert(0, newPayment);
+      _payments.insert(0, payment);
       notifyListeners();
 
-      return newPayment;
+      return payment;
     } catch (e) {
       debugPrint('Error creating payment: $e');
       _error = 'Error creating payment: $e';
@@ -166,20 +149,19 @@ class PaymentProvider extends ChangeNotifier {
       final transactionId = 'txn_${DateTime.now().millisecondsSinceEpoch}';
       final paymentIntentId = 'pi_${DateTime.now().millisecondsSinceEpoch}';
 
-      final paymentIdStr = _toStringId(paymentId);
+      final paymentIdStr = paymentId?.toString() ?? '';
 
-      // Update payment in Firestore
-      await _firestore.collection('payments').doc(paymentIdStr).update({
+      // Update payment in Supabase
+      await _supabaseService.updatePayment(paymentIdStr, {
         'method': 'card',
         'status': 'completed',
-        'transactionId': transactionId,
-        'paymentIntentId': paymentIntentId,
-        'completedAt': DateTime.now().toIso8601String(),
+        'transaction_id': transactionId,
+        'payment_intent_id': paymentIntentId,
+        'completed_at': DateTime.now().toIso8601String(),
       });
 
       // Update local payment
-      final paymentIdInt = _toIntId(paymentId);
-      final index = _payments.indexWhere((p) => p.id == paymentIdInt);
+      final index = _payments.indexWhere((p) => p.id == paymentIdStr);
       if (index != -1) {
         _payments[index] = _payments[index].copyWith(
           method: 'card',
@@ -192,10 +174,12 @@ class PaymentProvider extends ChangeNotifier {
 
       // Update appointment status to 'paid'
       final appointmentProvider = AppointmentProvider();
-      final appointmentId = _payments[index].appointmentId;
-      if (appointmentId != null && appointmentId > 0) {
+      final appointmentIdStr = _payments[index].appointmentId;
+      if (appointmentIdStr != null && appointmentIdStr.isNotEmpty) {
+        final appointmentIdInt =
+            int.tryParse(appointmentIdStr) ?? appointmentIdStr.hashCode;
         await appointmentProvider.updateAppointmentStatus(
-          appointmentId,
+          appointmentIdInt,
           'paid',
         );
       }
@@ -206,15 +190,14 @@ class PaymentProvider extends ChangeNotifier {
       debugPrint('Error processing online payment: $e');
       _error = 'Payment failed: $e';
 
-      final paymentIdStr = _toStringId(paymentId);
+      final paymentIdStr = paymentId?.toString() ?? '';
       // Update payment status to failed
-      await _firestore.collection('payments').doc(paymentIdStr).update({
+      await _supabaseService.updatePayment(paymentIdStr, {
         'status': 'failed',
-        'completedAt': DateTime.now().toIso8601String(),
+        'completed_at': DateTime.now().toIso8601String(),
       });
 
-      final paymentIdInt = _toIntId(paymentId);
-      final index = _payments.indexWhere((p) => p.id == paymentIdInt);
+      final index = _payments.indexWhere((p) => p.id == paymentIdStr);
       if (index != -1) {
         _payments[index] = _payments[index].copyWith(
           status: 'failed',
@@ -239,17 +222,16 @@ class PaymentProvider extends ChangeNotifier {
 
     try {
       final transactionId = 'cash_${DateTime.now().millisecondsSinceEpoch}';
-      final paymentIdStr = _toStringId(paymentId);
+      final paymentIdStr = paymentId?.toString() ?? '';
 
-      await _firestore.collection('payments').doc(paymentIdStr).update({
+      await _supabaseService.updatePayment(paymentIdStr, {
         'method': 'cash',
         'status': 'completed',
-        'transactionId': transactionId,
-        'completedAt': DateTime.now().toIso8601String(),
+        'transaction_id': transactionId,
+        'completed_at': DateTime.now().toIso8601String(),
       });
 
-      final paymentIdInt = _toIntId(paymentId);
-      final index = _payments.indexWhere((p) => p.id == paymentIdInt);
+      final index = _payments.indexWhere((p) => p.id == paymentIdStr);
       if (index != -1) {
         _payments[index] = _payments[index].copyWith(
           method: 'cash',
@@ -274,9 +256,9 @@ class PaymentProvider extends ChangeNotifier {
   // ========== GET PAYMENT BY ID ==========
 
   Payment? getPaymentById(dynamic paymentId) {
-    final paymentIdInt = _toIntId(paymentId);
+    final paymentIdStr = paymentId?.toString() ?? '';
     try {
-      return _payments.firstWhere((p) => p.id == paymentIdInt);
+      return _payments.firstWhere((p) => p.id == paymentIdStr);
     } catch (e) {
       return null;
     }
@@ -286,15 +268,13 @@ class PaymentProvider extends ChangeNotifier {
 
   Future<List<Payment>> getPaymentsByAppointment(dynamic appointmentId) async {
     try {
-      final appointmentIdStr = _toStringId(appointmentId);
-      final snapshot = await _firestore
-          .collection('payments')
-          .where('appointmentId', isEqualTo: appointmentIdStr)
-          .get();
+      final appointmentIdStr = appointmentId?.toString() ?? '';
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = _toIntId(doc.id);
+      final paymentsData = await _supabaseService.getPaymentsByAppointment(
+        appointmentIdStr,
+      );
+
+      return paymentsData.map((data) {
         return Payment.fromMap(data);
       }).toList();
     } catch (e) {
@@ -315,8 +295,8 @@ class PaymentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final paymentIdInt = _toIntId(paymentId);
-      final payment = getPaymentById(paymentIdInt);
+      final paymentIdStr = paymentId?.toString() ?? '';
+      final payment = getPaymentById(paymentIdStr);
       if (payment == null) {
         throw Exception('Payment not found');
       }
@@ -329,40 +309,43 @@ class PaymentProvider extends ChangeNotifier {
       final refundTxnId =
           'refund_${payment.transactionId}_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Create refund payment record in Firestore
-      await _firestore.collection('payments').add({
-        'appointmentId': payment.appointmentId.toString(),
-        'userId': payment.userId.toString(),
+      // Create refund payment record in Supabase
+      await _supabaseService.insertPayment({
+        'appointment_id': payment.appointmentId,
+        'user_id': payment.userId,
         'subtotal': -refundAmount,
         'tax': 0.0,
         'total': -refundAmount,
         'currency': payment.currency,
         'method': 'refund',
         'status': 'refunded',
-        'transactionId': refundTxnId,
-        'invoiceNumber': 'REF-${payment.invoiceNumber}',
-        'serviceDescription': 'Refund for ${payment.serviceDescription}',
-        'createdAt': FieldValue.serverTimestamp(),
-        'completedAt': DateTime.now().toIso8601String(),
+        'transaction_id': refundTxnId,
+        'invoice_number': 'REF-${payment.invoiceNumber}',
+        'service_description': 'Refund for ${payment.serviceDescription}',
+        'created_at': DateTime.now().toIso8601String(),
+        'completed_at': DateTime.now().toIso8601String(),
       });
 
       // Update original payment status if full refund
       if (amount == null || amount >= payment.total) {
-        final paymentIdStr = _toStringId(paymentId);
-        await _firestore.collection('payments').doc(paymentIdStr).update({
+        await _supabaseService.updatePayment(paymentIdStr, {
           'status': 'refunded',
         });
 
-        final index = _payments.indexWhere((p) => p.id == paymentIdInt);
+        final index = _payments.indexWhere((p) => p.id == paymentIdStr);
         if (index != -1) {
           _payments[index] = _payments[index].copyWith(status: 'refunded');
         }
 
         // Update appointment status to 'refunded'
         final appointmentProvider = AppointmentProvider();
-        if (payment.appointmentId != null && payment.appointmentId > 0) {
+        if (payment.appointmentId != null &&
+            payment.appointmentId!.isNotEmpty) {
+          final appointmentIdInt =
+              int.tryParse(payment.appointmentId!) ??
+              payment.appointmentId!.hashCode;
           await appointmentProvider.updateAppointmentStatus(
-            payment.appointmentId!,
+            appointmentIdInt,
             'refunded',
           );
         }

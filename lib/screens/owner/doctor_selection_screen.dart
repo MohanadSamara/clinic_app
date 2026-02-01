@@ -1,7 +1,7 @@
 // lib/screens/owner/doctor_selection_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/user.dart';
 import '../../models/service.dart';
 import '../../models/location_data.dart';
@@ -46,8 +46,8 @@ class _DoctorSelectionScreenState extends State<DoctorSelectionScreen> {
 
   Future<void> _loadDoctors() async {
     try {
-      final dbHelper = DBHelper.instance;
-      final allUsers = await dbHelper.getAllUsers(role: 'doctor');
+      final supabaseService = SupabaseCompleteService.instance;
+      final allUsers = await supabaseService.getAllUsers(role: 'doctor');
       final doctors = <User>[];
 
       for (final userData in allUsers) {

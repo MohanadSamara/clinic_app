@@ -1,11 +1,25 @@
 // lib/providers/service_provider.dart
+// Service Provider using Supabase as the single source of truth
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+
 import 'package:flutter/material.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/service.dart';
 
+/// ServiceProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: services
+///
+/// All database operations now use Supabase client exclusively.
+/// SQLite (DBHelper) has been completely removed.
 class ServiceProvider extends ChangeNotifier {
   List<Service> _services = [];
   bool _isLoading = false;
+
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   List<Service> get services => _services;
   bool get isLoading => _isLoading;
@@ -15,11 +29,16 @@ class ServiceProvider extends ChangeNotifier {
     // Removed notifyListeners() here to prevent calling during build
 
     try {
-      final data = await DBHelper.instance.getServices(
+      final data = await _supabaseService.getServices(
         category: category,
         activeOnly: activeOnly,
       );
-      _services = data.map((item) => Service.fromMap(item)).toList();
+
+      // Convert String UUID to int for backward compatibility
+      _services = data.map((item) {
+        item['id'] = (item['id'] as String).hashCode;
+        return Service.fromMap(item);
+      }).toList();
     } catch (e) {
       debugPrint('Error loading services: $e');
     } finally {
@@ -30,8 +49,14 @@ class ServiceProvider extends ChangeNotifier {
 
   Future<bool> addService(Service service) async {
     try {
-      final id = await DBHelper.instance.insertService(service.toMap());
-      final newService = service.copyWith(id: id);
+      final serviceData = service.toMap();
+      serviceData.remove('id'); // Remove id for insert
+
+      final id = await _supabaseService.insertService(serviceData);
+      // Convert String UUID to int for backward compatibility
+      final idInt = id.hashCode;
+
+      final newService = service.copyWith(id: idInt);
       _services.add(newService);
       notifyListeners();
       return true;
@@ -45,7 +70,9 @@ class ServiceProvider extends ChangeNotifier {
     if (service.id == null) return false;
 
     try {
-      await DBHelper.instance.updateService(service.id!, service.toMap());
+      final idStr = service.id.toString();
+      await _supabaseService.updateService(idStr, service.toMap());
+
       final index = _services.indexWhere((s) => s.id == service.id);
       if (index != -1) {
         _services[index] = service;
@@ -58,11 +85,13 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteService(int id) async {
+  Future<bool> deleteService(dynamic id) async {
     try {
-      // Note: Need to add deleteService method to DBHelper
-      // await DBHelper.instance.deleteService(id);
-      _services.removeWhere((s) => s.id == id);
+      final idStr = id.toString();
+      await _supabaseService.deleteService(idStr);
+
+      final idInt = id is int ? id : id.hashCode;
+      _services.removeWhere((s) => s.id == idInt);
       notifyListeners();
       return true;
     } catch (e) {
@@ -75,14 +104,12 @@ class ServiceProvider extends ChangeNotifier {
     return _services.where((service) => service.category == category).toList();
   }
 
-  Service? getServiceById(int id) {
-    return _services.firstWhere((service) => service.id == id);
+  Service? getServiceById(dynamic id) {
+    final idInt = id is int ? id : id.hashCode;
+    try {
+      return _services.firstWhere((service) => service.id == idInt);
+    } catch (e) {
+      return null;
+    }
   }
 }
-
-
-
-
-
-
-

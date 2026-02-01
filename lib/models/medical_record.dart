@@ -1,8 +1,8 @@
 // lib/models/medical_record.dart
 class MedicalRecord {
-  final int? id;
-  final int petId;
-  final int doctorId;
+  final String? id;
+  final String petId;
+  final String doctorId;
   final String diagnosis;
   final String treatment;
   final String? prescription;
@@ -37,9 +37,9 @@ class MedicalRecord {
   Map<String, dynamic> toJson() => toMap();
 
   factory MedicalRecord.fromMap(Map<String, dynamic> m) => MedicalRecord(
-    id: m['id'] is int ? m['id'] as int : null,
-    petId: m['pet_id'] is int ? m['pet_id'] as int : 0,
-    doctorId: m['doctor_id'] is int ? m['doctor_id'] as int : 0,
+    id: m['id']?.toString(),
+    petId: m['pet_id']?.toString() ?? '',
+    doctorId: m['doctor_id']?.toString() ?? '',
     diagnosis: m['diagnosis']?.toString() ?? '',
     treatment: m['treatment']?.toString() ?? '',
     prescription: m['prescription']?.toString(),
@@ -49,9 +49,9 @@ class MedicalRecord {
   );
 
   MedicalRecord copyWith({
-    int? id,
-    int? petId,
-    int? doctorId,
+    String? id,
+    String? petId,
+    String? doctorId,
     String? diagnosis,
     String? treatment,
     String? prescription,

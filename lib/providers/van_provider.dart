@@ -1,33 +1,31 @@
 // lib/providers/van_provider.dart
-// Van Provider using Firestore as the single source of truth
+// Van Provider using Supabase as the single source of truth
 // All data synced globally across devices
-// OTP Authentication remains UNCHANGED
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
 
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/van.dart';
 
+/// VanProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: vans
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class VanProvider with ChangeNotifier {
   List<Van> _vans = [];
   bool _isLoading = false;
   String? _error;
 
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
+
   List<Van> get vans => _vans;
   bool get isLoading => _isLoading;
   String? get error => _error;
-
-  // Firestore instance
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // Helper to convert any ID to int
-  int _toIntId(dynamic id) {
-    if (id == null) return 0;
-    if (id is int) return id;
-    if (id is String) {
-      return int.tryParse(id) ?? id.hashCode;
-    }
-    return id.hashCode;
-  }
 
   // ========== LOAD DATA ==========
 
@@ -37,14 +35,11 @@ class VanProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final snapshot = await _firestore
-          .collection('vans')
-          .orderBy('name')
-          .get();
+      final vansData = await _supabaseService.getAllVans();
 
-      _vans = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = _toIntId(doc.id);
+      _vans = vansData.map((data) {
+        // Convert String UUID to int for backward compatibility
+        data['id'] = (data['id'] as String).hashCode;
         return Van.fromMap(data);
       }).toList();
     } catch (e) {
@@ -64,23 +59,26 @@ class VanProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final docRef = await _firestore.collection('vans').add({
+      final vanData = {
         'name': van.name,
-        'licensePlate': van.licensePlate,
+        'license_plate': van.licensePlate,
         'model': van.model,
         'capacity': van.capacity,
         'status': van.status,
         'description': van.description,
         'area': van.area,
-        'assignedDriverId': van.assignedDriverId?.toString(),
-        'assignedDoctorId': van.assignedDoctorId?.toString(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+        'assigned_driver_id': van.assignedDriverId?.toString(),
+        'assigned_doctor_id': van.assignedDoctorId?.toString(),
+        'created_at': DateTime.now().toIso8601String(),
+      };
 
-      await docRef.update({'id': docRef.id});
+      final vanId = await _supabaseService.insertVan(vanData);
+
+      // Convert String UUID to int for backward compatibility
+      final vanIdInt = vanId.hashCode;
 
       final newVan = van.copyWith(
-        id: _toIntId(docRef.id),
+        id: vanIdInt,
         createdAt: DateTime.now().toIso8601String(),
       );
 
@@ -100,24 +98,22 @@ class VanProvider with ChangeNotifier {
 
   Future<void> updateVan(dynamic id, Van updatedVan) async {
     try {
-      final idInt = _toIntId(id);
+      final idInt = id is int ? id : id.hashCode;
       final index = _vans.indexWhere((van) => van.id == idInt);
       if (index == -1) return;
 
-      final docIdStr =
-          _vans[index].licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          idInt.toString();
+      final vanIdStr = id.toString();
 
-      await _firestore.collection('vans').doc(docIdStr).update({
+      await _supabaseService.updateVan(vanIdStr, {
         'name': updatedVan.name,
-        'licensePlate': updatedVan.licensePlate,
+        'license_plate': updatedVan.licensePlate,
         'model': updatedVan.model,
         'capacity': updatedVan.capacity,
         'status': updatedVan.status,
         'description': updatedVan.description,
         'area': updatedVan.area,
-        'assignedDriverId': updatedVan.assignedDriverId?.toString(),
-        'assignedDoctorId': updatedVan.assignedDoctorId?.toString(),
+        'assigned_driver_id': updatedVan.assignedDriverId?.toString(),
+        'assigned_doctor_id': updatedVan.assignedDoctorId?.toString(),
       });
 
       _vans[index] = updatedVan.copyWith(id: idInt);
@@ -133,16 +129,13 @@ class VanProvider with ChangeNotifier {
 
   Future<void> deleteVan(dynamic id) async {
     try {
-      final idInt = _toIntId(id);
+      final idInt = id is int ? id : id.hashCode;
       final index = _vans.indexWhere((van) => van.id == idInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          idInt.toString();
+      final vanIdStr = id.toString();
 
-      await _firestore.collection('vans').doc(docIdStr).delete();
+      await _supabaseService.deleteVan(vanIdStr);
 
       _vans.removeAt(index);
       notifyListeners();
@@ -156,7 +149,7 @@ class VanProvider with ChangeNotifier {
   // ========== GET VAN BY ID ==========
 
   Van? getVanById(dynamic id) {
-    final idInt = _toIntId(id);
+    final idInt = id is int ? id : id.hashCode;
     try {
       return _vans.firstWhere((van) => van.id == idInt);
     } catch (e) {
@@ -168,18 +161,15 @@ class VanProvider with ChangeNotifier {
 
   Future<Van?> getVanByDriverId(dynamic driverId) async {
     try {
-      final driverIdStr = _toIntId(driverId).toString();
-      final snapshot = await _firestore
-          .collection('vans')
-          .where('assignedDriverId', isEqualTo: driverIdStr)
-          .limit(1)
-          .get();
+      final driverIdStr = driverId?.toString() ?? '';
 
-      if (snapshot.docs.isEmpty) return null;
+      final vanData = await _supabaseService.getVanByDriverId(driverIdStr);
 
-      final data = snapshot.docs.first.data();
-      data['id'] = _toIntId(snapshot.docs.first.id);
-      return Van.fromMap(data);
+      if (vanData == null) return null;
+
+      // Convert String UUID to int for backward compatibility
+      vanData['id'] = (vanData['id'] as String).hashCode;
+      return Van.fromMap(vanData);
     } catch (e) {
       debugPrint('Error getting van by driver id: $e');
       return null;
@@ -190,18 +180,15 @@ class VanProvider with ChangeNotifier {
 
   Future<Van?> getVanByDoctorId(dynamic doctorId) async {
     try {
-      final doctorIdStr = _toIntId(doctorId).toString();
-      final snapshot = await _firestore
-          .collection('vans')
-          .where('assignedDoctorId', isEqualTo: doctorIdStr)
-          .limit(1)
-          .get();
+      final doctorIdStr = doctorId?.toString() ?? '';
 
-      if (snapshot.docs.isEmpty) return null;
+      final vanData = await _supabaseService.getVanByDoctorId(doctorIdStr);
 
-      final data = snapshot.docs.first.data();
-      data['id'] = _toIntId(snapshot.docs.first.id);
-      return Van.fromMap(data);
+      if (vanData == null) return null;
+
+      // Convert String UUID to int for backward compatibility
+      vanData['id'] = (vanData['id'] as String).hashCode;
+      return Van.fromMap(vanData);
     } catch (e) {
       debugPrint('Error getting van by doctor id: $e');
       return null;
@@ -212,22 +199,20 @@ class VanProvider with ChangeNotifier {
 
   Future<void> assignVanToDriver(dynamic vanId, dynamic driverId) async {
     try {
-      final vanIdInt = _toIntId(vanId);
+      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
       final index = _vans.indexWhere((van) => van.id == vanIdInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          vanIdInt.toString();
+      final vanIdStr = vanId.toString();
+      final driverIdStr = driverId?.toString() ?? '';
 
-      await _firestore.collection('vans').doc(docIdStr).update({
-        'assignedDriverId': _toIntId(driverId).toString(),
+      await _supabaseService.updateVan(vanIdStr, {
+        'assigned_driver_id': driverIdStr,
         'status': 'assigned',
       });
 
-      final updatedVan = van.copyWith(
-        assignedDriverId: _toIntId(driverId),
+      final updatedVan = _vans[index].copyWith(
+        assignedDriverId: driverId is int ? driverId : driverId.hashCode,
         status: 'assigned',
       );
 
@@ -242,22 +227,20 @@ class VanProvider with ChangeNotifier {
 
   Future<void> assignVanToDoctor(dynamic vanId, dynamic doctorId) async {
     try {
-      final vanIdInt = _toIntId(vanId);
+      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
       final index = _vans.indexWhere((van) => van.id == vanIdInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          vanIdInt.toString();
+      final vanIdStr = vanId.toString();
+      final doctorIdStr = doctorId?.toString() ?? '';
 
-      await _firestore.collection('vans').doc(docIdStr).update({
-        'assignedDoctorId': _toIntId(doctorId).toString(),
+      await _supabaseService.updateVan(vanIdStr, {
+        'assigned_doctor_id': doctorIdStr,
         'status': 'assigned',
       });
 
-      final updatedVan = van.copyWith(
-        assignedDoctorId: _toIntId(doctorId),
+      final updatedVan = _vans[index].copyWith(
+        assignedDoctorId: doctorId is int ? doctorId : doctorId.hashCode,
         status: 'assigned',
       );
 
@@ -276,24 +259,23 @@ class VanProvider with ChangeNotifier {
     dynamic driverId,
   ) async {
     try {
-      final vanIdInt = _toIntId(vanId);
+      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
       final index = _vans.indexWhere((van) => van.id == vanIdInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          vanIdInt.toString();
+      final vanIdStr = vanId.toString();
+      final doctorIdStr = doctorId?.toString() ?? '';
+      final driverIdStr = driverId?.toString() ?? '';
 
-      await _firestore.collection('vans').doc(docIdStr).update({
-        'assignedDoctorId': _toIntId(doctorId).toString(),
-        'assignedDriverId': _toIntId(driverId).toString(),
+      await _supabaseService.updateVan(vanIdStr, {
+        'assigned_doctor_id': doctorIdStr,
+        'assigned_driver_id': driverIdStr,
         'status': 'assigned',
       });
 
-      final updatedVan = van.copyWith(
-        assignedDoctorId: _toIntId(doctorId),
-        assignedDriverId: _toIntId(driverId),
+      final updatedVan = _vans[index].copyWith(
+        assignedDoctorId: doctorId is int ? doctorId : doctorId.hashCode,
+        assignedDriverId: driverId is int ? driverId : driverId.hashCode,
         status: 'assigned',
       );
 
@@ -310,22 +292,19 @@ class VanProvider with ChangeNotifier {
 
   Future<void> unassignVanFromDriver(dynamic vanId) async {
     try {
-      final vanIdInt = _toIntId(vanId);
+      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
       final index = _vans.indexWhere((van) => van.id == vanIdInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          vanIdInt.toString();
+      final vanIdStr = vanId.toString();
 
-      await _firestore.collection('vans').doc(docIdStr).update({
-        'assignedDriverId': null,
-        'assignedDoctorId': null,
+      await _supabaseService.updateVan(vanIdStr, {
+        'assigned_driver_id': null,
+        'assigned_doctor_id': null,
         'status': 'available',
       });
 
-      final updatedVan = van.copyWith(
+      final updatedVan = _vans[index].copyWith(
         assignedDriverId: null,
         assignedDoctorId: null,
         status: 'available',
@@ -342,22 +321,19 @@ class VanProvider with ChangeNotifier {
 
   Future<void> unassignVanFromDoctor(dynamic vanId) async {
     try {
-      final vanIdInt = _toIntId(vanId);
+      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
       final index = _vans.indexWhere((van) => van.id == vanIdInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          vanIdInt.toString();
+      final vanIdStr = vanId.toString();
 
-      await _firestore.collection('vans').doc(docIdStr).update({
-        'assignedDoctorId': null,
-        'assignedDriverId': null,
+      await _supabaseService.updateVan(vanIdStr, {
+        'assigned_doctor_id': null,
+        'assigned_driver_id': null,
         'status': 'available',
       });
 
-      final updatedVan = van.copyWith(
+      final updatedVan = _vans[index].copyWith(
         assignedDoctorId: null,
         assignedDriverId: null,
         status: 'available',
@@ -374,22 +350,19 @@ class VanProvider with ChangeNotifier {
 
   Future<void> unassignVanFromDoctorAndDriver(dynamic vanId) async {
     try {
-      final vanIdInt = _toIntId(vanId);
+      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
       final index = _vans.indexWhere((van) => van.id == vanIdInt);
       if (index == -1) return;
 
-      final van = _vans[index];
-      final docIdStr =
-          van.licensePlate?.replaceAll(' ', '_').toLowerCase() ??
-          vanIdInt.toString();
+      final vanIdStr = vanId.toString();
 
-      await _firestore.collection('vans').doc(docIdStr).update({
-        'assignedDoctorId': null,
-        'assignedDriverId': null,
+      await _supabaseService.updateVan(vanIdStr, {
+        'assigned_doctor_id': null,
+        'assigned_driver_id': null,
         'status': 'available',
       });
 
-      final updatedVan = van.copyWith(
+      final updatedVan = _vans[index].copyWith(
         assignedDoctorId: null,
         assignedDriverId: null,
         status: 'available',

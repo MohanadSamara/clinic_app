@@ -1,17 +1,17 @@
 // lib/models/appointment.dart
 class Appointment {
   final int? id;
-  final int ownerId;
-  final int petId;
+  final String ownerId;
+  final String petId;
   final String serviceType;
   final String? description;
   final String scheduledAt;
   final String status;
   final String? address;
   final double? price;
-  final int? doctorId;
+  final String? doctorId;
   final String? doctorName;
-  final int? driverId;
+  final String? driverId;
   final String? driverName;
   final String urgencyLevel; // 'routine', 'urgent', 'emergency'
   final double? locationLat;
@@ -66,17 +66,17 @@ class Appointment {
 
   factory Appointment.fromMap(Map<String, dynamic> m) => Appointment(
     id: m['id'] is int ? m['id'] as int : null,
-    ownerId: m['owner_id'] is int ? m['owner_id'] as int : 0,
-    petId: m['pet_id'] is int ? m['pet_id'] as int : 0,
+    ownerId: m['owner_id']?.toString() ?? '',
+    petId: m['pet_id']?.toString() ?? '',
     serviceType: m['service_type']?.toString() ?? '',
     description: m['description']?.toString(),
     scheduledAt: m['scheduled_at']?.toString() ?? '',
     status: m['status']?.toString() ?? 'pending',
     address: m['address']?.toString(),
     price: m['price'] is num ? (m['price'] as num).toDouble() : null,
-    doctorId: m['doctor_id'] is int ? m['doctor_id'] as int : null,
+    doctorId: m['doctor_id']?.toString(),
     doctorName: m['doctor_name']?.toString(),
-    driverId: m['driver_id'] is int ? m['driver_id'] as int : null,
+    driverId: m['driver_id']?.toString(),
     driverName: m['driver_name']?.toString(),
     urgencyLevel: m['urgency_level']?.toString() ?? 'routine',
     locationLat: m['location_lat'] is num
@@ -94,17 +94,17 @@ class Appointment {
 
   Appointment copyWith({
     int? id,
-    int? ownerId,
-    int? petId,
+    String? ownerId,
+    String? petId,
     String? serviceType,
     String? description,
     String? scheduledAt,
     String? status,
     String? address,
     double? price,
-    int? doctorId,
+    String? doctorId,
     String? doctorName,
-    int? driverId,
+    String? driverId,
     String? driverName,
     String? urgencyLevel,
     double? locationLat,

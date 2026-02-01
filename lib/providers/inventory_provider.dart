@@ -1,11 +1,25 @@
 // lib/providers/inventory_provider.dart
+// Inventory Provider using Supabase as the single source of truth
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+
 import 'package:flutter/material.dart';
-import '../db/db_helper.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/inventory_item.dart';
 
+/// InventoryProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: inventory
+///
+/// All database operations now use Supabase client exclusively.
+/// SQLite (DBHelper) has been completely removed.
 class InventoryProvider extends ChangeNotifier {
   List<InventoryItem> _inventoryItems = [];
   bool _isLoading = false;
+
+  // Supabase service instance for database operations
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   List<InventoryItem> get inventoryItems => _inventoryItems;
   bool get isLoading => _isLoading;
@@ -17,10 +31,13 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await DBHelper.instance.getAllInventoryItems();
-      _inventoryItems = data
-          .map((item) => InventoryItem.fromMap(item))
-          .toList();
+      final data = await _supabaseService.getAllInventoryItems();
+
+      // Convert String UUID to int for backward compatibility
+      _inventoryItems = data.map((item) {
+        item['id'] = (item['id'] as String).hashCode;
+        return InventoryItem.fromMap(item);
+      }).toList();
     } catch (e) {
       debugPrint('Error loading inventory items: $e');
     } finally {
@@ -31,8 +48,14 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<bool> addInventoryItem(InventoryItem item) async {
     try {
-      final id = await DBHelper.instance.insertInventoryItem(item.toMap());
-      final newItem = item.copyWith(id: id);
+      final itemData = item.toMap();
+      itemData.remove('id'); // Remove id for insert
+
+      final id = await _supabaseService.insertInventoryItem(itemData);
+      // Convert String UUID to int for backward compatibility
+      final idInt = id.hashCode;
+
+      final newItem = item.copyWith(id: idInt);
       _inventoryItems.add(newItem);
       notifyListeners();
       return true;
@@ -46,7 +69,9 @@ class InventoryProvider extends ChangeNotifier {
     if (item.id == null) return false;
 
     try {
-      await DBHelper.instance.updateInventoryItem(item.id!, item.toMap());
+      final idStr = item.id.toString();
+      await _supabaseService.updateInventoryItem(idStr, item.toMap());
+
       final index = _inventoryItems.indexWhere((i) => i.id == item.id);
       if (index != -1) {
         _inventoryItems[index] = item;
@@ -59,10 +84,13 @@ class InventoryProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateStockQuantity(int id, int newQuantity) async {
+  Future<bool> updateStockQuantity(dynamic id, int newQuantity) async {
     try {
-      await DBHelper.instance.updateInventoryQuantity(id, newQuantity);
-      final index = _inventoryItems.indexWhere((item) => item.id == id);
+      final idStr = id.toString();
+      await _supabaseService.updateInventoryQuantity(idStr, newQuantity);
+
+      final idInt = id is int ? id : id.hashCode;
+      final index = _inventoryItems.indexWhere((item) => item.id == idInt);
       if (index != -1) {
         _inventoryItems[index] = _inventoryItems[index].copyWith(
           quantity: newQuantity,
@@ -76,10 +104,13 @@ class InventoryProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteInventoryItem(int id) async {
+  Future<bool> deleteInventoryItem(dynamic id) async {
     try {
-      await DBHelper.instance.deleteInventoryItem(id);
-      _inventoryItems.removeWhere((item) => item.id == id);
+      final idStr = id.toString();
+      await _supabaseService.deleteInventoryItem(idStr);
+
+      final idInt = id is int ? id : id.hashCode;
+      _inventoryItems.removeWhere((item) => item.id == idInt);
       notifyListeners();
       return true;
     } catch (e) {
@@ -92,8 +123,13 @@ class InventoryProvider extends ChangeNotifier {
     return _inventoryItems.where((item) => item.category == category).toList();
   }
 
-  InventoryItem? getItemById(int id) {
-    return _inventoryItems.firstWhere((item) => item.id == id);
+  InventoryItem? getItemById(dynamic id) {
+    final idInt = id is int ? id : id.hashCode;
+    try {
+      return _inventoryItems.firstWhere((item) => item.id == idInt);
+    } catch (e) {
+      return null;
+    }
   }
 
   double getTotalInventoryValue() {
@@ -103,10 +139,3 @@ class InventoryProvider extends ChangeNotifier {
     );
   }
 }
-
-
-
-
-
-
-

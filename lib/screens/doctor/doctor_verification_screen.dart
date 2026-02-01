@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/document_provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../../translations.dart';
 
 class DoctorVerificationScreen extends StatefulWidget {
@@ -87,7 +87,8 @@ class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.user;
     if (user != null && user.id != null) {
-      final docs = await DBHelper.instance.getDoctorVerificationDocuments(
+      final supabaseService = SupabaseCompleteService.instance;
+      final docs = await supabaseService.getDoctorVerificationDocuments(
         user.id!,
       );
       setState(() {
@@ -190,6 +191,8 @@ class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
         throw Exception('User not found');
       }
 
+      final supabaseService = SupabaseCompleteService.instance;
+
       // Upload each document
       for (final doc in _documents) {
         if (doc['file'] != null || doc['fileBytes'] != null) {
@@ -215,9 +218,7 @@ class _DoctorVerificationScreenState extends State<DoctorVerificationScreen> {
             'verification_code': doc['verificationCode'] ?? '',
           };
 
-          await DBHelper.instance.insertDoctorVerificationDocument(
-            documentData,
-          );
+          await supabaseService.insertDoctorVerificationDocument(documentData);
         }
       }
 

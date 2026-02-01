@@ -16,10 +16,10 @@ import '../../providers/locale_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/availability_provider.dart';
 import '../../services/location_service.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/appointment.dart';
 import '../../models/driver_status.dart';
 import '../../models/user.dart';
-import '../../db/db_helper.dart';
 import '../../components/modern_cards.dart';
 import 'doctor_selection_screen.dart';
 import 'van_selection_screen.dart';
@@ -199,7 +199,7 @@ class _DriverDashboardState extends State<DriverDashboard>
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     try {
-      final dbHelper = DBHelper.instance;
+      final supabaseService = SupabaseCompleteService.instance;
       List<Map<String, dynamic>> assignedAppointmentsData = [];
 
       // Check if driver is linked to a doctor
@@ -208,7 +208,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         assignedAppointmentsData = [];
       } else {
         // Driver is linked to a doctor - get appointments for that doctor
-        assignedAppointmentsData = await dbHelper.getAppointments(
+        assignedAppointmentsData = await supabaseService.getAppointments(
           doctorId: authProvider.user!.linkedDoctorId!,
           hasLocation: true,
         );
@@ -252,8 +252,10 @@ class _DriverDashboardState extends State<DriverDashboard>
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     try {
-      final dbHelper = DBHelper.instance;
-      final statusData = await dbHelper.getDriverStatus(authProvider.user!.id!);
+      final supabaseService = SupabaseCompleteService.instance;
+      final statusData = await supabaseService.getDriverStatus(
+        authProvider.user!.id!,
+      );
       if (statusData != null && mounted) {
         setState(() {
           _currentStatus = DriverStatus.fromMap(statusData);
@@ -272,8 +274,8 @@ class _DriverDashboardState extends State<DriverDashboard>
     final authProvider = context.read<AuthProvider>();
     try {
       if (authProvider.user?.linkedDoctorId != null) {
-        final dbHelper = DBHelper.instance;
-        final doctorData = await dbHelper.getUserById(
+        final supabaseService = SupabaseCompleteService.instance;
+        final doctorData = await supabaseService.getUserById(
           authProvider.user!.linkedDoctorId!,
         );
         if (doctorData != null && mounted) {
@@ -292,7 +294,7 @@ class _DriverDashboardState extends State<DriverDashboard>
     final authProvider = context.read<AuthProvider>();
     try {
       final position = await _locationService.getCurrentLocation();
-      final dbHelper = DBHelper.instance;
+      final supabaseService = SupabaseCompleteService.instance;
       final driverStatus = DriverStatus(
         driverId: authProvider.user!.id!,
         latitude: position.latitude,
@@ -300,7 +302,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         status: 'available',
         lastUpdated: DateTime.now().toIso8601String(),
       );
-      await dbHelper.insertDriverStatus(driverStatus.toMap());
+      await supabaseService.insertDriverStatus(driverStatus.toMap());
       await _loadDriverStatus(); // Reload to get the inserted status
     } catch (e) {
       debugPrint('Error initializing driver status: $e');
@@ -374,8 +376,8 @@ class _DriverDashboardState extends State<DriverDashboard>
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user?.id == null) return;
 
-    String newStatus = 'available';
-    int? appointmentId;
+    String? newStatus = 'available';
+    String? appointmentId;
 
     // Find the next appointment
     final nextAppointment = _assignedAppointments.isNotEmpty
@@ -395,10 +397,10 @@ class _DriverDashboardState extends State<DriverDashboard>
       if (distance < 1.0) {
         // Within 1 km
         newStatus = 'arrived';
-        appointmentId = nextAppointment.id;
+        appointmentId = nextAppointment.id?.toString();
       } else if (_locationService.isTracking) {
         newStatus = 'on_route';
-        appointmentId = nextAppointment.id;
+        appointmentId = nextAppointment.id?.toString();
       }
     }
 
@@ -406,7 +408,7 @@ class _DriverDashboardState extends State<DriverDashboard>
     if (newStatus != _currentStatus!.status) {
       try {
         _lastStatusUpdate = now;
-        final dbHelper = DBHelper.instance;
+        final supabaseService = SupabaseCompleteService.instance;
         final driverStatus = DriverStatus(
           driverId: authProvider.user!.id!,
           latitude: _driverLat!,
@@ -416,7 +418,7 @@ class _DriverDashboardState extends State<DriverDashboard>
           lastUpdated: now.toIso8601String(),
         );
 
-        await dbHelper.insertDriverStatus(driverStatus.toMap());
+        await supabaseService.insertDriverStatus(driverStatus.toMap());
         await _loadDriverStatus();
       } catch (e) {
         debugPrint('Error updating status automatically: $e');
@@ -572,11 +574,14 @@ class _DriverDashboardState extends State<DriverDashboard>
     return '${distance.toStringAsFixed(1)} km away';
   }
 
-  Future<void> _updateDriverStatus(String status, {int? appointmentId}) async {
+  Future<void> _updateDriverStatus(
+    String status, {
+    String? appointmentId,
+  }) async {
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     try {
-      final dbHelper = DBHelper.instance;
+      final supabaseService = SupabaseCompleteService.instance;
 
       // Get current location
       final position = await _locationService.getCurrentLocation();
@@ -590,7 +595,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         lastUpdated: DateTime.now().toIso8601String(),
       );
 
-      await dbHelper.insertDriverStatus(driverStatus.toMap());
+      await supabaseService.insertDriverStatus(driverStatus.toMap());
       await _loadDriverStatus();
 
       if (mounted) {
@@ -635,7 +640,7 @@ class _DriverDashboardState extends State<DriverDashboard>
               final currentUser = availabilityProvider.onlineUsers.firstWhere(
                 (u) => u.id == user?.id,
                 orElse: () =>
-                    user ?? User(id: -1, name: '', email: '', password: ''),
+                    user ?? User(id: '-1', name: '', email: '', password: ''),
               );
               final isOnline = currentUser.availabilityStatus == 'online';
 

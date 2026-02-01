@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/service.dart';
@@ -258,7 +258,8 @@ class _ServiceManagementScreenState extends State<ServiceManagementScreen> {
   Future<void> _deleteService(Service service) async {
     // Check if service is being used in appointments
     try {
-      final appointments = await DBHelper.instance.getAppointments();
+      final supabaseService = SupabaseCompleteService.instance;
+      final appointments = await supabaseService.getAppointments();
       final serviceInUse = appointments.any(
         (apt) => apt['service_type'] == service.name,
       );
@@ -418,10 +419,3 @@ class _ServiceManagementScreenState extends State<ServiceManagementScreen> {
     );
   }
 }
-
-
-
-
-
-
-

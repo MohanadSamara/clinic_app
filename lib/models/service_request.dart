@@ -1,7 +1,7 @@
 class ServiceRequest {
-  final int? id;
-  final int ownerId;
-  final int petId;
+  final String? id;
+  final String ownerId;
+  final String petId;
   final String requestType; // 'emergency', 'checkup'
   final String description;
   final String
@@ -11,7 +11,7 @@ class ServiceRequest {
   final String? address;
   final DateTime requestDate;
   final DateTime? scheduledDate;
-  final int? assignedDoctorId;
+  final String? assignedDoctorId;
   final String? rejectionReason;
 
   ServiceRequest({
@@ -53,8 +53,8 @@ class ServiceRequest {
   factory ServiceRequest.fromMap(Map<String, dynamic> map) {
     return ServiceRequest(
       id: map['id'],
-      ownerId: map['owner_id'],
-      petId: map['pet_id'],
+      ownerId: map['owner_id']?.toString() ?? '',
+      petId: map['pet_id']?.toString() ?? '',
       requestType: map['request_type'],
       description: map['description'],
       status: map['status'] ?? 'pending',
@@ -65,15 +65,15 @@ class ServiceRequest {
       scheduledDate: map['scheduled_date'] != null
           ? DateTime.parse(map['scheduled_date'])
           : null,
-      assignedDoctorId: map['assigned_doctor_id'],
+      assignedDoctorId: map['assigned_doctor_id']?.toString(),
       rejectionReason: map['rejection_reason'],
     );
   }
 
   ServiceRequest copyWith({
-    int? id,
-    int? ownerId,
-    int? petId,
+    String? id,
+    String? ownerId,
+    String? petId,
     String? requestType,
     String? description,
     String? status,
@@ -82,7 +82,7 @@ class ServiceRequest {
     String? address,
     DateTime? requestDate,
     DateTime? scheduledDate,
-    int? assignedDoctorId,
+    String? assignedDoctorId,
     String? rejectionReason,
   }) {
     return ServiceRequest(

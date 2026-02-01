@@ -1,17 +1,23 @@
 // lib/providers/appointment_provider.dart
-// Appointment Provider using Firestore as the single source of truth
-// All data synced globally across devices
-// OTP Authentication remains UNCHANGED
+// Migrated to Supabase database (PostgreSQL) - 2026-01-31
+// All data synced globally across devices via Supabase
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/supabase_complete_service.dart';
 import '../models/appointment.dart';
 import '../models/service.dart';
 import '../models/payment.dart';
 import '../models/pet.dart';
 import '../services/calendar_service.dart';
 
+/// AppointmentProvider - Supabase Database Integration
+///
+/// Database: Supabase (PostgreSQL)
+/// Tables used: appointments, services, payments
+///
+/// All database operations now use Supabase client exclusively.
+/// Firestore has been completely removed.
 class AppointmentProvider extends ChangeNotifier {
   List<Appointment> _appointments = [];
   List<Service> _services = [];
@@ -23,8 +29,9 @@ class AppointmentProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Firestore instance
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Supabase service instance for database operations (singleton)
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
 
   // ========== LOAD DATA ==========
 
@@ -33,10 +40,9 @@ class AppointmentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final snapshot = await _firestore.collection('services').get();
-      _services = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = int.tryParse(doc.id) ?? doc.id.hashCode;
+      final services = await _supabaseService.getServices();
+      _services = services.map((data) {
+        data['id'] = data['id'] ?? data['id'].hashCode;
         return Service.fromMap(data);
       }).toList();
     } catch (e) {
@@ -49,8 +55,8 @@ class AppointmentProvider extends ChangeNotifier {
   }
 
   Future<void> loadAppointments({
-    int? ownerId,
-    int? doctorId,
+    String? ownerId,
+    String? doctorId,
     bool forceRefresh = false,
   }) async {
     _isLoading = true;
@@ -58,22 +64,13 @@ class AppointmentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      Query<Map<String, dynamic>> query = _firestore
-          .collection('appointments')
-          .orderBy('scheduledAt', descending: true);
+      final appointments = await _supabaseService.getAppointments(
+        ownerId: ownerId?.toString(),
+        doctorId: doctorId?.toString(),
+      );
 
-      if (ownerId != null) {
-        query = query.where('ownerId', isEqualTo: ownerId.toString());
-      }
-      if (doctorId != null) {
-        query = query.where('doctorId', isEqualTo: doctorId.toString());
-      }
-
-      final snapshot = await query.get();
-
-      _appointments = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = int.tryParse(doc.id) ?? doc.id.hashCode;
+      _appointments = appointments.map((data) {
+        data['id'] = data['id'] ?? data['id'].hashCode;
         return Appointment.fromMap(data);
       }).toList();
     } catch (e) {
@@ -93,34 +90,12 @@ class AppointmentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Add to Firestore
-      final docRef = await _firestore.collection('appointments').add({
-        'ownerId': appointment.ownerId.toString(),
-        'petId': appointment.petId.toString(),
-        'serviceType': appointment.serviceType,
-        'description': appointment.description,
-        'scheduledAt': appointment.scheduledAt,
-        'status': 'pending',
-        'address': appointment.address,
-        'price': appointment.price,
-        'doctorId': appointment.doctorId?.toString(),
-        'driverId': appointment.driverId?.toString(),
-        'urgencyLevel': appointment.urgencyLevel,
-        'locationLat': appointment.locationLat,
-        'locationLng': appointment.locationLng,
-        'paymentMethod': appointment.paymentMethod,
-        'serviceRequestId': appointment.serviceRequestId?.toString(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Update with document ID
-      await docRef.update({'id': docRef.id});
+      // Add to Supabase
+      final appointmentData = appointment.toMap();
+      final id = await _supabaseService.insertAppointment(appointmentData);
 
       // Create local appointment object
-      final newAppointment = appointment.copyWith(
-        id: int.tryParse(docRef.id.hashCode.toString()) ?? docRef.id.hashCode,
-      );
+      final newAppointment = appointment.copyWith(id: id.hashCode);
 
       _appointments.insert(0, newAppointment);
       notifyListeners();
@@ -131,7 +106,9 @@ class AppointmentProvider extends ChangeNotifier {
           newAppointment,
         );
         if (calendarEventId != null) {
-          await docRef.update({'calendarEventId': calendarEventId});
+          await _supabaseService.updateAppointment(id, {
+            'calendar_event_id': calendarEventId,
+          });
         }
       } catch (e) {
         debugPrint('Error adding to calendar: $e');
@@ -156,40 +133,30 @@ class AppointmentProvider extends ChangeNotifier {
     int? doctorId,
   }) async {
     try {
-      // Find the document in Firestore
-      final snapshot = await _firestore.collection('appointments').get();
+      // Find the appointment in local state to get the UUID
+      final appointment = _appointments.firstWhere((a) => a.id == id);
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == id || doc.id.hashCode == id) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('appointments').doc(docId).update({
-          'status': status,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
+      // Update in Supabase
+      await _supabaseService.updateAppointmentStatus(
+        appointment.id.toString(),
+        status,
+      );
 
       // Update local state
       final index = _appointments.indexWhere((a) => a.id == id);
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
           status: status,
-          doctorId: doctorId ?? _appointments[index].doctorId,
+          doctorId: doctorId?.toString() ?? _appointments[index].doctorId,
         );
         notifyListeners();
       }
 
       // Create payment when doctor accepts
       if (status == 'accepted') {
-        final appointment = getAppointmentById(id);
-        if (appointment != null) {
-          await _createPaymentForAppointment(appointment);
+        final apt = getAppointmentById(id);
+        if (apt != null) {
+          await _createPaymentForAppointment(apt);
         }
       }
 
@@ -206,30 +173,11 @@ class AppointmentProvider extends ChangeNotifier {
     if (appointment.id == null) return false;
 
     try {
-      // Find and update in Firestore
-      final snapshot = await _firestore.collection('appointments').get();
-
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == appointment.id ||
-            doc.id.hashCode == appointment.id) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('appointments').doc(docId).update({
-          'serviceType': appointment.serviceType,
-          'description': appointment.description,
-          'scheduledAt': appointment.scheduledAt,
-          'status': appointment.status,
-          'address': appointment.address,
-          'price': appointment.price,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
+      // Update in Supabase
+      await _supabaseService.updateAppointment(
+        appointment.id.toString(),
+        appointment.toMap(),
+      );
 
       final index = _appointments.indexWhere((a) => a.id == appointment.id);
       if (index != -1) {
@@ -250,31 +198,21 @@ class AppointmentProvider extends ChangeNotifier {
     int doctorId,
   ) async {
     try {
-      // Find and update in Firestore
-      final snapshot = await _firestore.collection('appointments').get();
+      // Find the appointment in local state to get the UUID
+      final appointment = _appointments.firstWhere(
+        (a) => a.id == appointmentId,
+      );
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == appointmentId ||
-            doc.id.hashCode == appointmentId) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('appointments').doc(docId).update({
-          'doctorId': doctorId.toString(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
+      // Update in Supabase
+      await _supabaseService.updateAppointment(appointment.id.toString(), {
+        'doctor_id': doctorId.toString(),
+      });
 
       // Update local state
       final index = _appointments.indexWhere((a) => a.id == appointmentId);
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
-          doctorId: doctorId,
+          doctorId: doctorId.toString(),
         );
         notifyListeners();
       }
@@ -293,31 +231,21 @@ class AppointmentProvider extends ChangeNotifier {
     int driverId,
   ) async {
     try {
-      // Find and update in Firestore
-      final snapshot = await _firestore.collection('appointments').get();
+      // Find the appointment in local state to get the UUID
+      final appointment = _appointments.firstWhere(
+        (a) => a.id == appointmentId,
+      );
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == appointmentId ||
-            doc.id.hashCode == appointmentId) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('appointments').doc(docId).update({
-          'driverId': driverId.toString(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
+      // Update in Supabase
+      await _supabaseService.updateAppointment(appointment.id.toString(), {
+        'driver_id': driverId.toString(),
+      });
 
       // Update local state
       final index = _appointments.indexWhere((a) => a.id == appointmentId);
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
-          driverId: driverId,
+          driverId: driverId.toString(),
         );
         notifyListeners();
       }
@@ -355,22 +283,10 @@ class AppointmentProvider extends ChangeNotifier {
 
   Future<void> addService(Service service) async {
     try {
-      final docRef = await _firestore.collection('services').add({
-        'name': service.name,
-        'description': service.description,
-        'price': service.price,
-        'category': service.category,
-        'isActive': service.isActive,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      final serviceData = service.toMap();
+      final id = await _supabaseService.insertService(serviceData);
 
-      await docRef.update({
-        'id': int.tryParse(docRef.id) ?? docRef.id.hashCode,
-      });
-
-      final newService = service.copyWith(
-        id: int.tryParse(docRef.id) ?? docRef.id.hashCode,
-      );
+      final newService = service.copyWith(id: id.hashCode);
       _services.add(newService);
       notifyListeners();
     } catch (e) {
@@ -383,28 +299,14 @@ class AppointmentProvider extends ChangeNotifier {
     if (service.id == null) return;
 
     try {
-      // Find and update in Firestore
-      final snapshot = await _firestore.collection('services').get();
+      // Find the service in local state to get the UUID
+      final localService = _services.firstWhere((s) => s.id == service.id);
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == service.id ||
-            doc.id.hashCode == service.id) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('services').doc(docId).update({
-          'name': service.name,
-          'description': service.description,
-          'price': service.price,
-          'category': service.category,
-          'isActive': service.isActive,
-        });
-      }
+      // Update in Supabase
+      await _supabaseService.updateService(
+        localService.id.toString(),
+        service.toMap(),
+      );
 
       final index = _services.indexWhere((s) => s.id == service.id);
       if (index != -1) {
@@ -419,21 +321,11 @@ class AppointmentProvider extends ChangeNotifier {
 
   Future<void> deleteService(int id) async {
     try {
-      // Find and delete from Firestore
-      final snapshot = await _firestore.collection('services').get();
+      // Find the service in local state to get the UUID
+      final localService = _services.firstWhere((s) => s.id == id);
 
-      String? docId;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (int.tryParse(doc.id) == id || doc.id.hashCode == id) {
-          docId = doc.id;
-          break;
-        }
-      }
-
-      if (docId != null) {
-        await _firestore.collection('services').doc(docId).delete();
-      }
+      // Delete from Supabase
+      await _supabaseService.deleteService(localService.id.toString());
 
       _services.removeWhere((s) => s.id == id);
       notifyListeners();
@@ -454,19 +346,20 @@ class AppointmentProvider extends ChangeNotifier {
       final invoiceNumber =
           'INV-${appointment.id}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
 
-      await _firestore.collection('payments').add({
-        'appointmentId': appointment.id.toString(),
-        'userId': appointment.ownerId.toString(),
+      final paymentData = {
+        'appointment_id': appointment.id.toString(),
+        'user_id': appointment.ownerId.toString(),
         'subtotal': subtotal,
         'tax': tax,
         'total': total,
         'currency': 'JOD',
         'method': appointment.paymentMethod ?? 'cash',
         'status': 'pending',
-        'serviceDescription': appointment.serviceType ?? 'Veterinary Service',
-        'invoiceNumber': invoiceNumber,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+        'service_description': appointment.serviceType ?? 'Veterinary Service',
+        'invoice_number': invoiceNumber,
+      };
+
+      await _supabaseService.insertPayment(paymentData);
 
       debugPrint('Payment record created for appointment ${appointment.id}');
     } catch (e) {

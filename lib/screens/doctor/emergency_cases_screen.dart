@@ -6,7 +6,7 @@ import '../../providers/notification_provider.dart';
 import '../../models/service_request.dart';
 import '../../models/user.dart';
 import '../../models/app_notification.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 
 import '../../components/modern_cards.dart';
 
@@ -129,7 +129,8 @@ class _EmergencyCasesScreenState extends State<EmergencyCasesScreen> {
       if (authProvider.user?.linkedDriverId == null) return;
 
       // Get driver info
-      final driverData = await DBHelper.instance.getUserById(
+      final supabaseService = SupabaseCompleteService.instance;
+      final driverData = await supabaseService.getUserById(
         authProvider.user!.linkedDriverId!,
       );
       if (driverData == null) return;
@@ -391,10 +392,3 @@ class _EmergencyCaseCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-

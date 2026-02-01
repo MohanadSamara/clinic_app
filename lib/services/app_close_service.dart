@@ -1,7 +1,6 @@
 // lib/services/app_close_service.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pet_provider.dart';
 import '../providers/appointment_provider.dart';
@@ -55,22 +54,7 @@ class AppCloseService {
         'savedAt': DateTime.now().toIso8601String(),
       };
 
-      // Save to Firebase Firestore
-      if (authProvider.user?.id != null) {
-        final userId = authProvider.user!.id!.toString();
-        final firestore = FirebaseFirestore.instance;
-
-        // Save backup data to user's document
-        await firestore.collection('user_backups').doc(userId).set({
-          'userId': userId,
-          'backupData': appData,
-          'lastBackup': FieldValue.serverTimestamp(),
-        });
-
-        debugPrint('App data saved to Firebase for user: $userId');
-      } else {
-        debugPrint('No authenticated user, cannot save to Firebase');
-      }
+      debugPrint('App data prepared for local storage for user');
 
       // Log out the user before closing the app
       authProvider.logout();

@@ -103,8 +103,8 @@ void main() async {
     final authProvider = AuthProvider();
     await authProvider.initialize();
 
-    // Load pending doctor registration if exists
-    await authProvider.loadPendingDoctorRegistration();
+    // Load pending registration if exists (unified method for all roles)
+    await authProvider.loadPendingRegistration();
 
     // Initialize sample vans for testing
     await _initializeSampleVans();

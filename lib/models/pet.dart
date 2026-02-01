@@ -5,8 +5,8 @@
 import 'dart:convert';
 
 class Pet {
-  final int? id;
-  final int ownerId;
+  final String? id;
+  final String ownerId;
   final String name;
   final String species;
   final String? breed;
@@ -43,15 +43,15 @@ class Pet {
     'vaccination_status': vaccinationStatus != null
         ? jsonEncode(vaccinationStatus)
         : null,
-    'photo_path': photoPath,
+    'photo_url': photoPath,
     'serial_number': serialNumber,
   };
 
   Map<String, dynamic> toJson() => toMap();
 
   factory Pet.fromMap(Map<String, dynamic> m) => Pet(
-    id: m['id'],
-    ownerId: m['owner_id'] is int ? m['owner_id'] as int : 0,
+    id: m['id']?.toString(),
+    ownerId: m['owner_id']?.toString() ?? '',
     name: m['name'] ?? '',
     species: m['species'] ?? '',
     breed: m['breed'],
@@ -61,7 +61,7 @@ class Pet {
     vaccinationStatus: m['vaccination_status'] != null
         ? jsonDecode(m['vaccination_status'].toString())
         : null,
-    photoPath: m['photo_path'],
+    photoPath: m['photo_url'],
     serialNumber: m['serial_number'] ?? '',
   );
 
@@ -90,8 +90,8 @@ class Pet {
   }
 
   Pet copyWith({
-    int? id,
-    int? ownerId,
+    String? id,
+    String? ownerId,
     String? name,
     String? species,
     String? breed,
@@ -125,7 +125,7 @@ class Pet {
   }
 
   factory Pet.create({
-    required int ownerId,
+    required String ownerId,
     required String name,
     required String species,
     String? breed,

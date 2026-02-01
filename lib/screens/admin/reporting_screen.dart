@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../providers/auth_provider.dart';
 
 class ReportingScreen extends StatefulWidget {
@@ -53,15 +53,14 @@ class _ReportingScreenState extends State<ReportingScreen> {
           end = _selectedDate.add(const Duration(days: 1));
       }
 
-      final kpis = await DBHelper.instance.getAppointmentKpis(
+      final kpis = await SupabaseCompleteService.instance.getAppointmentKpis(
         start: start,
         end: end,
       );
-      final revenue = await DBHelper.instance.getRevenueByDateRange(start, end);
-      final dailyCounts = await DBHelper.instance.getDailyAppointmentCounts(
-        start: start,
-        end: end,
-      );
+      final revenue = await SupabaseCompleteService.instance
+          .getRevenueByDateRange(start, end);
+      final dailyCounts = await SupabaseCompleteService.instance
+          .getDailyAppointmentCounts(start: start, end: end);
 
       setState(() {
         _kpis = kpis;
@@ -412,10 +411,3 @@ class _ReportingScreenState extends State<ReportingScreen> {
     );
   }
 }
-
-
-
-
-
-
-

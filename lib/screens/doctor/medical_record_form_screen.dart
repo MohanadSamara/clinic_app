@@ -178,7 +178,7 @@ class _MedicalRecordFormScreenState extends State<MedicalRecordFormScreen> {
         throw Exception('Doctor not authenticated');
       }
 
-      int petId;
+      String petId;
       if (widget.record != null) {
         // Editing existing record
         petId = widget.record!.petId;

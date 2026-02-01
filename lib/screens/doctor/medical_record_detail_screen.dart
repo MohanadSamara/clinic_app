@@ -9,7 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/medical_record.dart';
 import '../../models/document.dart';
 import '../../models/pet.dart';
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../components/modern_cards.dart';
 
 class MedicalRecordDetailScreen extends StatefulWidget {
@@ -40,7 +40,10 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
     try {
       // Load pet information if not provided
       if (_pet == null) {
-        final petData = await DBHelper.instance.getPetById(widget.record.petId);
+        final supabaseService = SupabaseCompleteService.instance;
+        final petData = await supabaseService.getPetById(
+          widget.record.petId.toString(),
+        );
         if (petData != null) {
           setState(() {
             _pet = Pet.fromMap(petData);
@@ -522,10 +525,3 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
     }
   }
 }
-
-
-
-
-
-
-

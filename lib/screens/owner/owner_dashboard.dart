@@ -6,7 +6,6 @@ import 'dart:io';
 import 'dart:ui' show SystemNavigator;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/universal_html.dart' as html;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';

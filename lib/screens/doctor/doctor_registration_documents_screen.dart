@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
-import '../../db/db_helper.dart';
 import '../../../translations.dart';
 import '../role_based_home.dart';
 

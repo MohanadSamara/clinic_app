@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../db/db_helper.dart';
+import '../../services/supabase_complete_service.dart';
 import '../../models/driver_status.dart';
 import '../../models/appointment.dart';
 import '../../theme/app_theme.dart';
@@ -21,7 +21,7 @@ class DriverTrackingScreen extends StatefulWidget {
 class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   List<DriverStatus> _driverStatuses = [];
   List<Appointment> _appointments = [];
-  Map<int, String> _driverNames = {};
+  Map<String, String> _driverNames = {};
   bool _isLoading = true;
   final MapController _mapController = MapController();
   Timer? _refreshTimer;
@@ -51,20 +51,20 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   Future<void> _loadDriverStatuses() async {
     if (!mounted) return;
     try {
-      final dbHelper = DBHelper.instance;
-      final driverStatusesData = await dbHelper.getAllDriverStatuses();
-      final appointmentsData = await dbHelper.getAppointments(
+      final supabaseService = SupabaseCompleteService.instance;
+      final driverStatusesData = await supabaseService.getAllDriverStatuses();
+      final appointmentsData = await supabaseService.getAppointments(
         hasLocation: true,
       );
 
       // Load driver names for all driver IDs
       final driverIds = driverStatusesData
-          .map((data) => data['driver_id'] as int)
+          .map((data) => data['driver_id'] as String)
           .toSet()
           .toList();
-      final driverNames = <int, String>{};
+      final driverNames = <String, String>{};
       for (final driverId in driverIds) {
-        driverNames[driverId] = await dbHelper.getUserNameById(driverId);
+        driverNames[driverId] = await supabaseService.getUserNameById(driverId);
       }
 
       if (mounted) {

@@ -1,7 +1,7 @@
 // lib/models/user.dart
 
 class User {
-  final int? id;
+  final String? id;
   final String name;
   final String email;
   final String password; // Will be hashed in production
@@ -11,8 +11,8 @@ class User {
   final String? providerId; // ID from social provider
   final String? profileImage; // Path to profile image
   final String? area; // Preferred area for doctors and drivers
-  final int? linkedDoctorId; // For drivers: which doctor they work with
-  final int? linkedDriverId; // For doctors: which driver works with them
+  final String? linkedDoctorId; // For drivers: which doctor they work with
+  final String? linkedDriverId; // For doctors: which driver works with them
   final String availabilityStatus; // 'online', 'offline', 'busy', 'away'
   final String? lastSeen; // ISO timestamp
   final String
@@ -44,8 +44,8 @@ class User {
     'phone': phone,
     'role': role,
     'provider': provider,
-    'providerId': providerId,
-    'profileImage': profileImage,
+    'provider_id': providerId,
+    'profile_image': profileImage,
     'area': area,
     'linked_doctor_id': linkedDoctorId,
     'linked_driver_id': linkedDriverId,
@@ -57,22 +57,18 @@ class User {
   Map<String, dynamic> toJson() => toMap();
 
   factory User.fromMap(Map<String, dynamic> m) => User(
-    id: m['id'] is int ? m['id'] as int : null,
+    id: m['id']?.toString(),
     name: _validateName(m['name']?.toString()),
     email: m['email']?.toString() ?? 'No email',
     password: m['password']?.toString() ?? '',
     phone: m['phone']?.toString(),
     role: m['role']?.toString() ?? 'owner',
     provider: m['provider']?.toString(),
-    providerId: m['providerId']?.toString(),
-    profileImage: m['profileImage']?.toString(),
+    providerId: m['provider_id']?.toString(),
+    profileImage: m['profile_image']?.toString(),
     area: m['area']?.toString(),
-    linkedDoctorId: m['linked_doctor_id'] is int
-        ? m['linked_doctor_id'] as int
-        : null,
-    linkedDriverId: m['linked_driver_id'] is int
-        ? m['linked_driver_id'] as int
-        : null,
+    linkedDoctorId: m['linked_doctor_id']?.toString(),
+    linkedDriverId: m['linked_driver_id']?.toString(),
     availabilityStatus: m['availability_status']?.toString() ?? 'offline',
     lastSeen: m['last_seen']?.toString(),
     verificationStatus: m['verification_status']?.toString() ?? 'verified',
@@ -86,7 +82,7 @@ class User {
   }
 
   User copyWith({
-    int? id,
+    String? id,
     String? name,
     String? email,
     String? password,
@@ -96,8 +92,8 @@ class User {
     String? providerId,
     String? profileImage,
     String? area,
-    int? linkedDoctorId,
-    int? linkedDriverId,
+    String? linkedDoctorId,
+    String? linkedDriverId,
     String? availabilityStatus,
     String? lastSeen,
     String? verificationStatus,

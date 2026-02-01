@@ -1,10 +1,10 @@
 class DriverStatus {
-  final int? id;
-  final int driverId;
+  final String? id;
+  final String driverId;
   final double latitude;
   final double longitude;
   final String status; // 'available', 'busy', 'on_route', 'arrived', 'offline'
-  final int? currentAppointmentId;
+  final String? currentAppointmentId;
   final String lastUpdated;
 
   DriverStatus({
@@ -42,12 +42,12 @@ class DriverStatus {
   }
 
   DriverStatus copyWith({
-    int? id,
-    int? driverId,
+    String? id,
+    String? driverId,
     double? latitude,
     double? longitude,
     String? status,
-    int? currentAppointmentId,
+    String? currentAppointmentId,
     String? lastUpdated,
   }) {
     return DriverStatus(
@@ -61,10 +61,3 @@ class DriverStatus {
     );
   }
 }
-
-
-
-
-
-
-

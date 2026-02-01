@@ -29,7 +29,7 @@ class _TreatmentRecordingScreenState extends State<TreatmentRecordingScreen> {
       final authProvider = context.read<AuthProvider>();
       if (authProvider.user?.id != null) {
         context.read<MedicalProvider>().loadMedicalRecords(
-          doctorId: authProvider.user!.id!,
+          doctorId: authProvider.user!.id!.toString(),
         );
       }
     });
@@ -207,8 +207,8 @@ class _TreatmentRecordingScreenState extends State<TreatmentRecordingScreen> {
     if (authProvider.user?.id == null) return;
 
     final record = MedicalRecord(
-      petId: _selectedPetId!,
-      doctorId: authProvider.user!.id!,
+      petId: _selectedPetId!.toString(),
+      doctorId: authProvider.user!.id!.toString(),
       diagnosis: _diagnosisController.text,
       treatment: _treatmentController.text,
       prescription: _prescriptionController.text.isEmpty
@@ -404,10 +404,3 @@ class _DetailedTreatmentRecordCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
