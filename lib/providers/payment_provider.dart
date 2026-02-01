@@ -33,15 +33,13 @@ class PaymentProvider extends ChangeNotifier {
 
   // ========== LOAD DATA ==========
 
-  Future<void> loadPayments(dynamic userId) async {
+  Future<void> loadPayments(String userId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final userIdStr = userId?.toString() ?? '';
-
-      final paymentsData = await _supabaseService.getPaymentsByUser(userIdStr);
+      final paymentsData = await _supabaseService.getPaymentsByUser(userId);
 
       _payments = paymentsData.map((data) {
         return Payment.fromMap(data);
@@ -59,8 +57,8 @@ class PaymentProvider extends ChangeNotifier {
   // ========== CREATE PAYMENT ==========
 
   Future<Payment?> createPayment({
-    required dynamic appointmentId,
-    required dynamic userId,
+    required String appointmentId,
+    required String userId,
     required double subtotal,
     required String serviceDescription,
     String currency = 'JOD',
@@ -74,12 +72,9 @@ class PaymentProvider extends ChangeNotifier {
       final tax = subtotal * 0.16;
       final total = subtotal + tax;
 
-      final appointmentIdStr = appointmentId?.toString() ?? '';
-      final userIdStr = userId?.toString() ?? '';
-
       final paymentData = {
-        'appointment_id': appointmentIdStr,
-        'user_id': userIdStr,
+        'appointment_id': appointmentId,
+        'user_id': userId,
         'subtotal': subtotal,
         'tax': tax,
         'total': total,
@@ -96,8 +91,8 @@ class PaymentProvider extends ChangeNotifier {
 
       final payment = Payment(
         id: paymentId,
-        appointmentId: appointmentIdStr,
-        userId: userIdStr,
+        appointmentId: appointmentId,
+        userId: userId,
         subtotal: subtotal,
         tax: tax,
         total: total,
@@ -126,7 +121,7 @@ class PaymentProvider extends ChangeNotifier {
   // ========== PROCESS ONLINE PAYMENT ==========
 
   Future<bool> processOnlinePayment({
-    required dynamic paymentId,
+    required String paymentId,
     required String cardNumber,
     required String expiryDate,
     required String cvv,
@@ -149,10 +144,8 @@ class PaymentProvider extends ChangeNotifier {
       final transactionId = 'txn_${DateTime.now().millisecondsSinceEpoch}';
       final paymentIntentId = 'pi_${DateTime.now().millisecondsSinceEpoch}';
 
-      final paymentIdStr = paymentId?.toString() ?? '';
-
       // Update payment in Supabase
-      await _supabaseService.updatePayment(paymentIdStr, {
+      await _supabaseService.updatePayment(paymentId, {
         'method': 'card',
         'status': 'completed',
         'transaction_id': transactionId,
@@ -161,7 +154,7 @@ class PaymentProvider extends ChangeNotifier {
       });
 
       // Update local payment
-      final index = _payments.indexWhere((p) => p.id == paymentIdStr);
+      final index = _payments.indexWhere((p) => p.id == paymentId);
       if (index != -1) {
         _payments[index] = _payments[index].copyWith(
           method: 'card',
@@ -170,18 +163,16 @@ class PaymentProvider extends ChangeNotifier {
           paymentIntentId: paymentIntentId,
           completedAt: DateTime.now().toIso8601String(),
         );
-      }
-
-      // Update appointment status to 'paid'
-      final appointmentProvider = AppointmentProvider();
-      final appointmentIdStr = _payments[index].appointmentId;
-      if (appointmentIdStr != null && appointmentIdStr.isNotEmpty) {
-        final appointmentIdInt =
-            int.tryParse(appointmentIdStr) ?? appointmentIdStr.hashCode;
-        await appointmentProvider.updateAppointmentStatus(
-          appointmentIdInt,
-          'paid',
-        );
+        
+        // Update appointment status to 'paid'
+        final appointmentProvider = AppointmentProvider();
+        final appointmentId = _payments[index].appointmentId;
+        if (appointmentId.isNotEmpty) {
+          await appointmentProvider.updateAppointmentStatus(
+            appointmentId,
+            'paid',
+          );
+        }
       }
 
       notifyListeners();
@@ -190,14 +181,13 @@ class PaymentProvider extends ChangeNotifier {
       debugPrint('Error processing online payment: $e');
       _error = 'Payment failed: $e';
 
-      final paymentIdStr = paymentId?.toString() ?? '';
       // Update payment status to failed
-      await _supabaseService.updatePayment(paymentIdStr, {
+      await _supabaseService.updatePayment(paymentId, {
         'status': 'failed',
         'completed_at': DateTime.now().toIso8601String(),
       });
 
-      final index = _payments.indexWhere((p) => p.id == paymentIdStr);
+      final index = _payments.indexWhere((p) => p.id == paymentId);
       if (index != -1) {
         _payments[index] = _payments[index].copyWith(
           status: 'failed',
@@ -215,23 +205,22 @@ class PaymentProvider extends ChangeNotifier {
 
   // ========== PROCESS CASH PAYMENT ==========
 
-  Future<bool> processCashPayment(dynamic paymentId) async {
+  Future<bool> processCashPayment(String paymentId) async {
     _isProcessing = true;
     _error = null;
     notifyListeners();
 
     try {
       final transactionId = 'cash_${DateTime.now().millisecondsSinceEpoch}';
-      final paymentIdStr = paymentId?.toString() ?? '';
 
-      await _supabaseService.updatePayment(paymentIdStr, {
+      await _supabaseService.updatePayment(paymentId, {
         'method': 'cash',
         'status': 'completed',
         'transaction_id': transactionId,
         'completed_at': DateTime.now().toIso8601String(),
       });
 
-      final index = _payments.indexWhere((p) => p.id == paymentIdStr);
+      final index = _payments.indexWhere((p) => p.id == paymentId);
       if (index != -1) {
         _payments[index] = _payments[index].copyWith(
           method: 'cash',
@@ -255,10 +244,9 @@ class PaymentProvider extends ChangeNotifier {
 
   // ========== GET PAYMENT BY ID ==========
 
-  Payment? getPaymentById(dynamic paymentId) {
-    final paymentIdStr = paymentId?.toString() ?? '';
+  Payment? getPaymentById(String paymentId) {
     try {
-      return _payments.firstWhere((p) => p.id == paymentIdStr);
+      return _payments.firstWhere((p) => p.id == paymentId);
     } catch (e) {
       return null;
     }
@@ -266,12 +254,10 @@ class PaymentProvider extends ChangeNotifier {
 
   // ========== GET PAYMENTS BY APPOINTMENT ==========
 
-  Future<List<Payment>> getPaymentsByAppointment(dynamic appointmentId) async {
+  Future<List<Payment>> getPaymentsByAppointment(String appointmentId) async {
     try {
-      final appointmentIdStr = appointmentId?.toString() ?? '';
-
       final paymentsData = await _supabaseService.getPaymentsByAppointment(
-        appointmentIdStr,
+        appointmentId,
       );
 
       return paymentsData.map((data) {
@@ -286,7 +272,7 @@ class PaymentProvider extends ChangeNotifier {
   // ========== PROCESS REFUND ==========
 
   Future<bool> processRefund({
-    required dynamic paymentId,
+    required String paymentId,
     double? amount,
     String? reason,
   }) async {
@@ -295,8 +281,7 @@ class PaymentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final paymentIdStr = paymentId?.toString() ?? '';
-      final payment = getPaymentById(paymentIdStr);
+      final payment = getPaymentById(paymentId);
       if (payment == null) {
         throw Exception('Payment not found');
       }
@@ -328,26 +313,23 @@ class PaymentProvider extends ChangeNotifier {
 
       // Update original payment status if full refund
       if (amount == null || amount >= payment.total) {
-        await _supabaseService.updatePayment(paymentIdStr, {
+        await _supabaseService.updatePayment(paymentId, {
           'status': 'refunded',
         });
 
-        final index = _payments.indexWhere((p) => p.id == paymentIdStr);
+        final index = _payments.indexWhere((p) => p.id == paymentId);
         if (index != -1) {
           _payments[index] = _payments[index].copyWith(status: 'refunded');
-        }
-
-        // Update appointment status to 'refunded'
-        final appointmentProvider = AppointmentProvider();
-        if (payment.appointmentId != null &&
-            payment.appointmentId!.isNotEmpty) {
-          final appointmentIdInt =
-              int.tryParse(payment.appointmentId!) ??
-              payment.appointmentId!.hashCode;
-          await appointmentProvider.updateAppointmentStatus(
-            appointmentIdInt,
-            'refunded',
-          );
+          
+          // Update appointment status to 'refunded'
+          final appointmentProvider = AppointmentProvider();
+          final appointmentId = _payments[index].appointmentId;
+          if (appointmentId.isNotEmpty) {
+            await appointmentProvider.updateAppointmentStatus(
+              appointmentId,
+              'refunded',
+            );
+          }
         }
       }
 

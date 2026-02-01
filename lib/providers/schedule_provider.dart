@@ -1,6 +1,5 @@
 // lib/providers/schedule_provider.dart
 // Schedule Provider using Supabase for global sync
-// Supports both int (local DB) and String (UUID) doctor IDs
 // Migrated to Supabase database (PostgreSQL) - 2026-01-31
 
 import 'dart:async';
@@ -23,20 +22,18 @@ class ScheduleProvider extends ChangeNotifier {
   List<DoctorSchedule> _schedules = [];
   Map<String, dynamic> _systemSettings = {};
   bool _isLoading = false;
-  String? _currentDoctorId; // String for Supabase UUID queries
+  String? _currentDoctorId;
 
   List<DoctorSchedule> get schedules => _schedules;
   bool get isLoading => _isLoading;
 
   // Set current doctor and load their schedules
-  // Accepts both int (local) and String (UUID) IDs
-  void setCurrentDoctorId(dynamic doctorId) {
-    // Convert to String for Supabase
+  void setCurrentDoctorId(String? doctorId) {
     if (doctorId == null) {
       _currentDoctorId = null;
       return;
     }
-    _currentDoctorId = doctorId.toString();
+    _currentDoctorId = doctorId;
     loadSchedules(_currentDoctorId!);
   }
 
@@ -46,27 +43,11 @@ class ScheduleProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // DEBUG: Log database read operation
-      debugPrint('===========================================');
-      debugPrint('DATABASE READ: Loading schedules from Supabase');
-      debugPrint('DATABASE READ: Doctor ID: $doctorId');
-      debugPrint('DATABASE READ: Table: schedules');
-
       final schedulesData = await _supabaseService.getSchedulesByDoctor(
         doctorId,
       );
 
-      debugPrint('DATABASE READ: Found ${schedulesData.length} records');
-
-      _schedules = schedulesData.map((data) {
-        // Keep String UUID for Supabase compatibility
-        debugPrint('DATABASE READ: Schedule ID: ${data['id']}');
-        debugPrint('DATABASE READ: Schedule Data: $data');
-        return DoctorSchedule.fromMap(data);
-      }).toList();
-
-      debugPrint('DATABASE READ: All schedules loaded successfully');
-      debugPrint('===========================================');
+      _schedules = schedulesData.map((data) => DoctorSchedule.fromMap(data)).toList();
     } catch (e) {
       debugPrint('Error loading schedules from Supabase: $e');
       _schedules = [];
@@ -103,32 +84,8 @@ class ScheduleProvider extends ChangeNotifier {
     final scheduleStart = schedule.startTime;
     final scheduleEnd = schedule.endTime;
 
-    debugPrint('Validating schedule: $scheduleStart - $scheduleEnd');
-    debugPrint('System hours: $systemStart - $systemEnd');
-
     if (schedule.isHoliday) {
-      debugPrint('Validation passed: Holiday day (no work)');
       return true;
-    }
-
-    if (schedule.isFreeDay) {
-      final startMinutes = _parseTime(scheduleStart);
-      final endMinutes = _parseTime(scheduleEnd);
-      final systemStartMinutes = _parseTime(systemStart);
-      final systemEndMinutes = _parseTime(systemEnd);
-
-      if (startMinutes >= systemStartMinutes &&
-          endMinutes <= systemEndMinutes) {
-        debugPrint(
-          'Validation passed: Free day times are within system bounds',
-        );
-        return true;
-      } else {
-        debugPrint(
-          'Validation failed: Free day times must be within system working hours',
-        );
-        return false;
-      }
     }
 
     final startMinutes = _parseTime(scheduleStart);
@@ -136,23 +93,12 @@ class ScheduleProvider extends ChangeNotifier {
     final systemStartMinutes = _parseTime(systemStart);
     final systemEndMinutes = _parseTime(systemEnd);
 
-    if (startMinutes >= systemStartMinutes && endMinutes <= systemEndMinutes) {
-      debugPrint('Validation passed: Schedule is within system working hours');
-      return true;
-    } else {
-      debugPrint(
-        'Validation failed: Schedule must be within system working hours ($systemStart - $systemEnd)',
-      );
-      return false;
-    }
+    return startMinutes >= systemStartMinutes && endMinutes <= systemEndMinutes;
   }
 
   // Add or update a schedule in Supabase
   Future<bool> saveSchedule(DoctorSchedule schedule) async {
     if (!isScheduleValid(schedule)) {
-      debugPrint(
-        'Schedule validation failed: times outside system working hours',
-      );
       return false;
     }
 
@@ -160,56 +106,26 @@ class ScheduleProvider extends ChangeNotifier {
       final holidayCount = _schedules.where((s) => s.isHoliday).length;
       if (holidayCount >= 2 &&
           !_schedules.any((s) => s.id == schedule.id && s.isHoliday)) {
-        debugPrint('Validation failed: Maximum 2 holiday days allowed');
         return false;
       }
     }
 
     try {
-      // Ensure doctorId is a String for Supabase
-      final supabaseDoctorId = schedule.doctorId.toString();
-
-      final scheduleData = schedule.toMap()..remove('id');
-      scheduleData['doctor_id'] = supabaseDoctorId;
-      scheduleData.remove('doctorId');
-
-      // DEBUG: Log data being sent to Supabase
-      debugPrint('===========================================');
-      debugPrint('PROVIDER DEBUG: Saving schedule to Supabase');
-      debugPrint('PROVIDER DEBUG: Schedule ID: ${schedule.id ?? "NEW"}');
-      debugPrint('PROVIDER DEBUG: Doctor ID: $supabaseDoctorId');
-      debugPrint('PROVIDER DEBUG: Day: ${schedule.dayOfWeek}');
-      debugPrint('PROVIDER DEBUG: Start Time: ${schedule.startTime}');
-      debugPrint('PROVIDER DEBUG: End Time: ${schedule.endTime}');
-      debugPrint('PROVIDER DEBUG: Is Holiday: ${schedule.isHoliday}');
-      debugPrint('PROVIDER DEBUG: Is Free Day: ${schedule.isFreeDay}');
-      debugPrint('PROVIDER DEBUG: Data: $scheduleData');
-      debugPrint(
-        'PROVIDER DEBUG: Timestamp: ${DateTime.now().toIso8601String()}',
-      );
-      debugPrint('===========================================');
+      final scheduleData = schedule.toMap();
+      scheduleData.remove('id');
 
       if (schedule.id == null || schedule.id!.isEmpty) {
         // Create new schedule
         final scheduleId = await _supabaseService.insertSchedule(scheduleData);
-        // Use String UUID for Supabase compatibility
-
-        final newSchedule = schedule.copyWith(
-          id: scheduleId,
-          doctorId: supabaseDoctorId,
-        );
+        final newSchedule = schedule.copyWith(id: scheduleId);
         _schedules.add(newSchedule);
-        debugPrint('PROVIDER DEBUG: New schedule created with ID: $scheduleId');
       } else {
         // Update existing schedule
-        final scheduleIdStr = schedule.id.toString();
-        await _supabaseService.updateSchedule(scheduleIdStr, scheduleData);
-
+        await _supabaseService.updateSchedule(schedule.id!, scheduleData);
         final index = _schedules.indexWhere((s) => s.id == schedule.id);
         if (index != -1) {
-          _schedules[index] = schedule.copyWith(doctorId: supabaseDoctorId);
+          _schedules[index] = schedule;
         }
-        debugPrint('PROVIDER DEBUG: Existing schedule updated: ${schedule.id}');
       }
       notifyListeners();
       return true;
@@ -220,10 +136,9 @@ class ScheduleProvider extends ChangeNotifier {
   }
 
   // Delete a schedule from Supabase
-  Future<bool> deleteSchedule(dynamic scheduleId) async {
+  Future<bool> deleteSchedule(String scheduleId) async {
     try {
-      final scheduleIdStr = scheduleId.toString();
-      await _supabaseService.deleteSchedule(scheduleIdStr);
+      await _supabaseService.deleteSchedule(scheduleId);
       _schedules.removeWhere((s) => s.id == scheduleId);
       notifyListeners();
       return true;
@@ -234,25 +149,27 @@ class ScheduleProvider extends ChangeNotifier {
   }
 
   // Get schedule for a specific day
-  DoctorSchedule? getScheduleForDay(dynamic doctorId, String dayOfWeek) {
-    final docId = doctorId?.toString() ?? '';
-    return _schedules.firstWhere(
-      (schedule) =>
-          schedule.doctorId == docId && schedule.dayOfWeek == dayOfWeek,
-      orElse: () => DoctorSchedule(
-        doctorId: docId,
+  DoctorSchedule? getScheduleForDay(String doctorId, String dayOfWeek) {
+    try {
+      return _schedules.firstWhere(
+        (schedule) =>
+            schedule.doctorId == doctorId && schedule.dayOfWeek == dayOfWeek,
+      );
+    } catch (e) {
+      return DoctorSchedule(
+        doctorId: doctorId,
         dayOfWeek: dayOfWeek,
         startTime: '08:00',
         endTime: '18:00',
         isActive: false,
         isHoliday: false,
         isFreeDay: false,
-      ),
-    );
+      );
+    }
   }
 
   // Check if doctor is available at a specific time
-  bool isDoctorAvailable(dynamic doctorId, String dayOfWeek, String time) {
+  bool isDoctorAvailable(String doctorId, String dayOfWeek, String time) {
     final schedule = getScheduleForDay(doctorId, dayOfWeek);
     if (schedule == null || !schedule.isActive) return false;
 

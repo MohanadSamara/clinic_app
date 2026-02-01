@@ -32,12 +32,7 @@ class InventoryProvider extends ChangeNotifier {
 
     try {
       final data = await _supabaseService.getAllInventoryItems();
-
-      // Convert String UUID to int for backward compatibility
-      _inventoryItems = data.map((item) {
-        item['id'] = (item['id'] as String).hashCode;
-        return InventoryItem.fromMap(item);
-      }).toList();
+      _inventoryItems = data.map((item) => InventoryItem.fromMap(item)).toList();
     } catch (e) {
       debugPrint('Error loading inventory items: $e');
     } finally {
@@ -52,10 +47,7 @@ class InventoryProvider extends ChangeNotifier {
       itemData.remove('id'); // Remove id for insert
 
       final id = await _supabaseService.insertInventoryItem(itemData);
-      // Convert String UUID to int for backward compatibility
-      final idInt = id.hashCode;
-
-      final newItem = item.copyWith(id: idInt);
+      final newItem = item.copyWith(id: id);
       _inventoryItems.add(newItem);
       notifyListeners();
       return true;
@@ -69,8 +61,7 @@ class InventoryProvider extends ChangeNotifier {
     if (item.id == null) return false;
 
     try {
-      final idStr = item.id.toString();
-      await _supabaseService.updateInventoryItem(idStr, item.toMap());
+      await _supabaseService.updateInventoryItem(item.id!, item.toMap());
 
       final index = _inventoryItems.indexWhere((i) => i.id == item.id);
       if (index != -1) {
@@ -84,13 +75,11 @@ class InventoryProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateStockQuantity(dynamic id, int newQuantity) async {
+  Future<bool> updateStockQuantity(String id, int newQuantity) async {
     try {
-      final idStr = id.toString();
-      await _supabaseService.updateInventoryQuantity(idStr, newQuantity);
+      await _supabaseService.updateInventoryQuantity(id, newQuantity);
 
-      final idInt = id is int ? id : id.hashCode;
-      final index = _inventoryItems.indexWhere((item) => item.id == idInt);
+      final index = _inventoryItems.indexWhere((item) => item.id == id);
       if (index != -1) {
         _inventoryItems[index] = _inventoryItems[index].copyWith(
           quantity: newQuantity,
@@ -104,13 +93,11 @@ class InventoryProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteInventoryItem(dynamic id) async {
+  Future<bool> deleteInventoryItem(String id) async {
     try {
-      final idStr = id.toString();
-      await _supabaseService.deleteInventoryItem(idStr);
+      await _supabaseService.deleteInventoryItem(id);
 
-      final idInt = id is int ? id : id.hashCode;
-      _inventoryItems.removeWhere((item) => item.id == idInt);
+      _inventoryItems.removeWhere((item) => item.id == id);
       notifyListeners();
       return true;
     } catch (e) {
@@ -123,10 +110,9 @@ class InventoryProvider extends ChangeNotifier {
     return _inventoryItems.where((item) => item.category == category).toList();
   }
 
-  InventoryItem? getItemById(dynamic id) {
-    final idInt = id is int ? id : id.hashCode;
+  InventoryItem? getItemById(String id) {
     try {
-      return _inventoryItems.firstWhere((item) => item.id == idInt);
+      return _inventoryItems.firstWhere((item) => item.id == id);
     } catch (e) {
       return null;
     }

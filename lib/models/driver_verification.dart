@@ -4,8 +4,8 @@ import 'dart:convert';
 
 /// Represents a driving license document for driver verification
 class DriverVerificationDocument {
-  final int? id;
-  final int driverId;
+  final String? id;
+  final String driverId;
   final String documentType; // 'driving_license', 'id_card', 'other'
   final String fileName;
   final String? filePath;
@@ -13,7 +13,7 @@ class DriverVerificationDocument {
   final DateTime uploadDate;
   final String status; // 'pending', 'approved', 'rejected'
   final DateTime? reviewDate;
-  final int? reviewerId;
+  final String? reviewerId;
   final String? reviewNotes;
   final String? documentNumber; // License number
   final DateTime? expiryDate;
@@ -44,7 +44,7 @@ class DriverVerificationDocument {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'driver_id': driverId,
       'document_type': documentType,
       'file_name': fileName,
@@ -68,37 +68,37 @@ class DriverVerificationDocument {
 
   factory DriverVerificationDocument.fromMap(Map<String, dynamic> map) {
     return DriverVerificationDocument(
-      id: map['id'],
-      driverId: map['driver_id'],
-      documentType: map['document_type'],
-      fileName: map['file_name'],
-      filePath: map['file_path'],
+      id: map['id']?.toString(),
+      driverId: map['driver_id']?.toString() ?? '',
+      documentType: map['document_type']?.toString() ?? '',
+      fileName: map['file_name']?.toString() ?? '',
+      filePath: map['file_path']?.toString(),
       fileData: map['file_data'] != null
           ? base64Decode(map['file_data'] as String)
           : null,
-      uploadDate: DateTime.parse(map['upload_date']),
+      uploadDate: DateTime.parse(map['upload_date'] ?? DateTime.now().toIso8601String()),
       status: map['status'] ?? 'pending',
       reviewDate: map['review_date'] != null
           ? DateTime.parse(map['review_date'])
           : null,
-      reviewerId: map['reviewer_id'],
-      reviewNotes: map['review_notes'],
-      documentNumber: map['document_number'],
+      reviewerId: map['reviewer_id']?.toString(),
+      reviewNotes: map['review_notes']?.toString(),
+      documentNumber: map['document_number']?.toString(),
       expiryDate: map['expiry_date'] != null
           ? DateTime.parse(map['expiry_date'])
           : null,
       issueDate: map['issue_date'] != null
           ? DateTime.parse(map['issue_date'])
           : null,
-      issuingAuthority: map['issuing_authority'],
-      vehicleClass: map['vehicle_class'],
-      verificationCode: map['verification_code'],
+      issuingAuthority: map['issuing_authority']?.toString(),
+      vehicleClass: map['vehicle_class']?.toString(),
+      verificationCode: map['verification_code']?.toString(),
     );
   }
 
   DriverVerificationDocument copyWith({
-    int? id,
-    int? driverId,
+    String? id,
+    String? driverId,
     String? documentType,
     String? fileName,
     String? filePath,
@@ -106,7 +106,7 @@ class DriverVerificationDocument {
     DateTime? uploadDate,
     String? status,
     DateTime? reviewDate,
-    int? reviewerId,
+    String? reviewerId,
     String? reviewNotes,
     String? documentNumber,
     DateTime? expiryDate,
@@ -148,13 +148,22 @@ class DriverVerificationDocument {
     final thirtyDaysFromNow = DateTime.now().add(const Duration(days: 30));
     return expiryDate!.isBefore(thirtyDaysFromNow) && !isExpired;
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! DriverVerificationDocument) return false;
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id?.hashCode ?? 0;
 }
 
 /// Overall verification status for a driver
 class DriverVerificationStatus {
-  final int driverId;
-  final String
-  overallStatus; // 'pending', 'approved', 'rejected', 'partial', 'expired'
+  final String driverId;
+  final String overallStatus; // 'pending', 'approved', 'rejected', 'partial', 'expired'
   final DateTime? lastUpdated;
   final int totalDocuments;
   final int approvedDocuments;
@@ -193,15 +202,15 @@ class DriverVerificationStatus {
       'expired_documents': expiredDocuments,
       'rejection_reason': rejectionReason,
       'next_review_date': nextReviewDate?.toIso8601String(),
-      'has_valid_driving_license': hasValidDrivingLicense ? 1 : 0,
+      'has_valid_driving_license': hasValidDrivingLicense,
       'license_expiry_date': licenseExpiryDate?.toIso8601String(),
     };
   }
 
   factory DriverVerificationStatus.fromMap(Map<String, dynamic> map) {
     return DriverVerificationStatus(
-      driverId: map['driver_id'],
-      overallStatus: map['overall_status'] ?? 'pending',
+      driverId: map['driver_id']?.toString() ?? '',
+      overallStatus: map['overall_status']?.toString() ?? 'pending',
       lastUpdated: map['last_updated'] != null
           ? DateTime.parse(map['last_updated'])
           : null,
@@ -210,11 +219,11 @@ class DriverVerificationStatus {
       pendingDocuments: map['pending_documents'] ?? 0,
       rejectedDocuments: map['rejected_documents'] ?? 0,
       expiredDocuments: map['expired_documents'] ?? 0,
-      rejectionReason: map['rejection_reason'],
+      rejectionReason: map['rejection_reason']?.toString(),
       nextReviewDate: map['next_review_date'] != null
           ? DateTime.parse(map['next_review_date'])
           : null,
-      hasValidDrivingLicense: map['has_valid_driving_license'] == 1,
+      hasValidDrivingLicense: map['has_valid_driving_license'] == true || map['has_valid_driving_license'] == 1,
       licenseExpiryDate: map['license_expiry_date'] != null
           ? DateTime.parse(map['license_expiry_date'])
           : null,
@@ -222,7 +231,7 @@ class DriverVerificationStatus {
   }
 
   DriverVerificationStatus copyWith({
-    int? driverId,
+    String? driverId,
     String? overallStatus,
     DateTime? lastUpdated,
     int? totalDocuments,
@@ -285,7 +294,7 @@ class DriverDocumentRequirement {
       'type': type,
       'title': title,
       'description': description,
-      'required': required ? 1 : 0,
+      'required': required,
       'help_text': helpText,
       'allowed_extensions': jsonEncode(allowedExtensions),
       'max_file_size': maxFileSize,
@@ -297,15 +306,21 @@ class DriverDocumentRequirement {
 
   factory DriverDocumentRequirement.fromMap(Map<String, dynamic> map) {
     return DriverDocumentRequirement(
-      type: map['type'],
-      title: map['title'],
-      description: map['description'],
-      required: map['required'] == 1,
-      helpText: map['help_text'],
-      allowedExtensions: jsonDecode(map['allowed_extensions'] ?? '[]'),
+      type: map['type']?.toString() ?? '',
+      title: map['title']?.toString() ?? '',
+      description: map['description']?.toString() ?? '',
+      required: map['required'] == true || map['required'] == 1,
+      helpText: map['help_text']?.toString(),
+      allowedExtensions: map['allowed_extensions'] != null
+          ? (map['allowed_extensions'] is String
+              ? jsonDecode(map['allowed_extensions']).cast<String>()
+              : (map['allowed_extensions'] as List).cast<String>())
+          : [],
       maxFileSize: map['max_file_size'],
       vehicleClasses: map['vehicle_classes'] != null
-          ? jsonDecode(map['vehicle_classes'] as String).cast<String>()
+          ? (map['vehicle_classes'] is String
+              ? jsonDecode(map['vehicle_classes'] as String).cast<String>()
+              : (map['vehicle_classes'] as List).cast<String>())
           : null,
     );
   }
@@ -313,11 +328,10 @@ class DriverDocumentRequirement {
 
 /// Audit log for driver verification documents
 class DriverVerificationAuditLog {
-  final int? id;
-  final int documentId;
-  final int userId;
-  final String
-  action; // 'upload', 'download', 'view', 'delete', 'update', 'verify', 'reject'
+  final String? id;
+  final String documentId;
+  final String userId;
+  final String action; // 'upload', 'download', 'view', 'delete', 'update', 'verify', 'reject'
   final DateTime timestamp;
   final String? details;
   final String? ipAddress;
@@ -334,7 +348,7 @@ class DriverVerificationAuditLog {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'document_id': documentId,
       'user_id': userId,
       'action': action,
@@ -346,13 +360,13 @@ class DriverVerificationAuditLog {
 
   factory DriverVerificationAuditLog.fromMap(Map<String, dynamic> map) {
     return DriverVerificationAuditLog(
-      id: map['id'],
-      documentId: map['document_id'],
-      userId: map['user_id'],
-      action: map['action'],
-      timestamp: DateTime.parse(map['timestamp']),
-      details: map['details'],
-      ipAddress: map['ip_address'],
+      id: map['id']?.toString(),
+      documentId: map['document_id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
+      action: map['action']?.toString() ?? '',
+      timestamp: DateTime.parse(map['timestamp'] ?? DateTime.now().toIso8601String()),
+      details: map['details']?.toString(),
+      ipAddress: map['ip_address']?.toString(),
     );
   }
 }

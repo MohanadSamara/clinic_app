@@ -1,6 +1,6 @@
 // lib/models/inventory_item.dart
 class InventoryItem {
-  final int? id;
+  final String? id;
   final String name;
   final String description;
   final int quantity;
@@ -34,18 +34,18 @@ class InventoryItem {
   };
 
   factory InventoryItem.fromMap(Map<String, dynamic> m) => InventoryItem(
-    id: m['id'],
+    id: m['id']?.toString(),
     name: m['name'] ?? '',
     description: m['description'] ?? '',
     quantity: m['quantity'] ?? 0,
     minThreshold: m['min_threshold'] ?? 0,
     unit: m['unit'] ?? '',
-    cost: (m['cost'] as num).toDouble(),
+    cost: (m['cost'] as num?)?.toDouble() ?? 0.0,
     category: m['category'] ?? '',
   );
 
   InventoryItem copyWith({
-    int? id,
+    String? id,
     String? name,
     String? description,
     int? quantity,
@@ -65,11 +65,14 @@ class InventoryItem {
       category: category ?? this.category,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! InventoryItem) return false;
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id?.hashCode ?? 0;
 }
-
-
-
-
-
-
-

@@ -1,6 +1,6 @@
 // lib/models/service.dart
 class Service {
-  final int? id;
+  final String? id;
   final String name;
   final String description;
   final double price;
@@ -24,24 +24,24 @@ class Service {
     'description': description,
     'price': price,
     'category': category,
-    'is_active': isActive ? 1 : 0,
+    'is_active': isActive,
     if (promotionalPrice != null) 'promotional_price': promotionalPrice,
   };
 
   factory Service.fromMap(Map<String, dynamic> m) => Service(
-    id: m['id'] is int ? m['id'] as int : null,
+    id: m['id']?.toString(),
     name: m['name']?.toString() ?? '',
     description: m['description']?.toString() ?? '',
     price: m['price'] is num ? (m['price'] as num).toDouble() : 0.0,
     category: m['category']?.toString() ?? '',
-    isActive: m['is_active'] == 1,
+    isActive: m['is_active'] == true || m['is_active'] == 1,
     promotionalPrice: m['promotional_price'] is num
         ? (m['promotional_price'] as num).toDouble()
         : null,
   );
 
   Service copyWith({
-    int? id,
+    String? id,
     String? name,
     String? description,
     double? price,
@@ -59,11 +59,14 @@ class Service {
       promotionalPrice: promotionalPrice ?? this.promotionalPrice,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Service) return false;
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id?.hashCode ?? 0;
 }
-
-
-
-
-
-
-

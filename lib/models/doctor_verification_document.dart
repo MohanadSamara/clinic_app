@@ -1,10 +1,9 @@
 import 'dart:convert';
 
 class DoctorVerificationDocument {
-  final int? id;
-  final int doctorId; // Links to user table
-  final String
-  documentType; // 'license', 'certificate', 'diploma', 'id_card', 'other'
+  final String? id;
+  final String doctorId; // Links to user table
+  final String documentType; // 'license', 'certificate', 'diploma', 'id_card', 'other'
   final String fileName;
   final String fileType; // 'image', 'pdf', 'document'
   final String filePath;
@@ -14,7 +13,7 @@ class DoctorVerificationDocument {
   final String verificationStatus; // 'pending', 'approved', 'rejected'
   final String? rejectionReason;
   final DateTime? verifiedAt;
-  final int? verifiedBy; // Admin user ID
+  final String? verifiedBy; // Admin user ID
   final int fileSize;
   final String? mimeType;
   final String? checksum;
@@ -42,7 +41,7 @@ class DoctorVerificationDocument {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'doctor_id': doctorId,
       'document_type': documentType,
       'file_name': fileName,
@@ -68,24 +67,24 @@ class DoctorVerificationDocument {
 
   factory DoctorVerificationDocument.fromMap(Map<String, dynamic> map) {
     return DoctorVerificationDocument(
-      id: map['id'],
-      doctorId: map['doctor_id'],
-      documentType: map['document_type'],
-      fileName: map['file_name'],
-      fileType: map['file_type'],
-      filePath: map['file_path'],
-      description: map['description'],
-      uploadDate: DateTime.parse(map['upload_date']),
+      id: map['id']?.toString(),
+      doctorId: map['doctor_id']?.toString() ?? '',
+      documentType: map['document_type']?.toString() ?? '',
+      fileName: map['file_name']?.toString() ?? '',
+      fileType: map['file_type']?.toString() ?? '',
+      filePath: map['file_path']?.toString() ?? '',
+      description: map['description']?.toString(),
+      uploadDate: DateTime.parse(map['upload_date'] ?? DateTime.now().toIso8601String()),
       version: map['version'] ?? 1,
       verificationStatus: map['verification_status'] ?? 'pending',
-      rejectionReason: map['rejection_reason'],
+      rejectionReason: map['rejection_reason']?.toString(),
       verifiedAt: map['verified_at'] != null
           ? DateTime.parse(map['verified_at'])
           : null,
-      verifiedBy: map['verified_by'],
+      verifiedBy: map['verified_by']?.toString(),
       fileSize: map['file_size'] ?? 0,
-      mimeType: map['mime_type'],
-      checksum: map['checksum'],
+      mimeType: map['mime_type']?.toString(),
+      checksum: map['checksum']?.toString(),
       auditLogs: map['audit_logs'] != null
           ? (jsonDecode(map['audit_logs'] as String) as List)
                 .map((log) => AuditLog.fromMap(log as Map<String, dynamic>))
@@ -95,8 +94,8 @@ class DoctorVerificationDocument {
   }
 
   DoctorVerificationDocument copyWith({
-    int? id,
-    int? doctorId,
+    String? id,
+    String? doctorId,
     String? documentType,
     String? fileName,
     String? fileType,
@@ -107,7 +106,7 @@ class DoctorVerificationDocument {
     String? verificationStatus,
     String? rejectionReason,
     DateTime? verifiedAt,
-    int? verifiedBy,
+    String? verifiedBy,
     int? fileSize,
     String? mimeType,
     String? checksum,
@@ -133,14 +132,23 @@ class DoctorVerificationDocument {
       auditLogs: auditLogs ?? this.auditLogs,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! DoctorVerificationDocument) return false;
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id?.hashCode ?? 0;
 }
 
 class AuditLog {
-  final int? id;
-  final int documentId;
-  final int userId;
-  final String
-  action; // 'upload', 'download', 'view', 'delete', 'update', 'verify', 'reject'
+  final String? id;
+  final String documentId;
+  final String userId;
+  final String action; // 'upload', 'download', 'view', 'delete', 'update', 'verify', 'reject'
   final DateTime timestamp;
   final String? details;
   final String? ipAddress;
@@ -157,7 +165,7 @@ class AuditLog {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'document_id': documentId,
       'user_id': userId,
       'action': action,
@@ -169,13 +177,13 @@ class AuditLog {
 
   factory AuditLog.fromMap(Map<String, dynamic> map) {
     return AuditLog(
-      id: map['id'],
-      documentId: map['document_id'],
-      userId: map['user_id'],
-      action: map['action'],
-      timestamp: DateTime.parse(map['timestamp']),
-      details: map['details'],
-      ipAddress: map['ip_address'],
+      id: map['id']?.toString(),
+      documentId: map['document_id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
+      action: map['action']?.toString() ?? '',
+      timestamp: DateTime.parse(map['timestamp'] ?? DateTime.now().toIso8601String()),
+      details: map['details']?.toString(),
+      ipAddress: map['ip_address']?.toString(),
     );
   }
 }

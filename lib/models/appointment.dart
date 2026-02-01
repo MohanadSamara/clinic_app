@@ -1,6 +1,6 @@
 // lib/models/appointment.dart
 class Appointment {
-  final int? id;
+  final String? id;
   final String ownerId;
   final String petId;
   final String serviceType;
@@ -18,7 +18,7 @@ class Appointment {
   final double? locationLng;
   final String? calendarEventId;
   final String? paymentMethod; // 'online', 'cash'
-  final int? serviceRequestId;
+  final String? serviceRequestId;
 
   Appointment({
     this.id,
@@ -65,7 +65,7 @@ class Appointment {
   Map<String, dynamic> toJson() => toMap();
 
   factory Appointment.fromMap(Map<String, dynamic> m) => Appointment(
-    id: m['id'] is int ? m['id'] as int : null,
+    id: m['id']?.toString(),
     ownerId: m['owner_id']?.toString() ?? '',
     petId: m['pet_id']?.toString() ?? '',
     serviceType: m['service_type']?.toString() ?? '',
@@ -87,13 +87,11 @@ class Appointment {
         : null,
     calendarEventId: m['calendar_event_id']?.toString(),
     paymentMethod: m['payment_method']?.toString(),
-    serviceRequestId: m['service_request_id'] is int
-        ? m['service_request_id'] as int
-        : null,
+    serviceRequestId: m['service_request_id']?.toString(),
   );
 
   Appointment copyWith({
-    int? id,
+    String? id,
     String? ownerId,
     String? petId,
     String? serviceType,
@@ -111,7 +109,7 @@ class Appointment {
     double? locationLng,
     String? calendarEventId,
     String? paymentMethod,
-    int? serviceRequestId,
+    String? serviceRequestId,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -135,4 +133,14 @@ class Appointment {
       serviceRequestId: serviceRequestId ?? this.serviceRequestId,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Appointment) return false;
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id?.hashCode ?? 0;
 }

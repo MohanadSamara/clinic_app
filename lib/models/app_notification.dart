@@ -22,7 +22,7 @@ class AppNotification {
   final bool isRead;
   final DateTime createdAt;
   final Map<String, dynamic>? data;
-  final String? userId; // For Firestore queries
+  final String? userId;
 
   AppNotification({
     required this.id,
@@ -42,40 +42,44 @@ class AppNotification {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'userId': userId,
+      'user_id': userId,
       'title': title,
       'body': body,
       'type': type.name,
-      'scheduledTime': scheduledTime.toIso8601String(),
-      'relatedId': relatedId,
-      'isScheduled': isScheduled ? 1 : 0,
-      'isDelivered': isDelivered ? 1 : 0,
-      'isRead': isRead ? 1 : 0,
-      'createdAt': createdAt.toIso8601String(),
+      'scheduled_at': scheduledTime.toIso8601String(),
+      'related_id': relatedId,
+      'is_scheduled': isScheduled,
+      'is_delivered': isDelivered,
+      'is_read': isRead,
+      'created_at': createdAt.toIso8601String(),
       'data': data,
     };
   }
 
   factory AppNotification.fromMap(Map<String, dynamic> map) {
     return AppNotification(
-      id: map['id'] ?? '',
-      userId: map['userId'],
-      title: map['title'] ?? '',
-      body: map['body'] ?? '',
+      id: map['id']?.toString() ?? '',
+      userId: map['user_id']?.toString(),
+      title: map['title']?.toString() ?? '',
+      body: map['body']?.toString() ?? '',
       type: NotificationType.values.firstWhere(
         (e) => e.name == map['type'],
         orElse: () => NotificationType.general,
       ),
-      scheduledTime: map['scheduledTime'] != null
-          ? DateTime.parse(map['scheduledTime'])
-          : DateTime.now(),
-      relatedId: map['relatedId'],
-      isScheduled: map['isScheduled'] == 1 || map['isScheduled'] == true,
-      isDelivered: map['isDelivered'] == 1 || map['isDelivered'] == true,
-      isRead: map['isRead'] == 1 || map['isRead'] == true,
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
-          : DateTime.now(),
+      scheduledTime: map['scheduled_at'] != null
+          ? DateTime.parse(map['scheduled_at'])
+          : (map['scheduledTime'] != null 
+              ? DateTime.parse(map['scheduledTime'])
+              : DateTime.now()),
+      relatedId: map['related_id']?.toString() ?? map['relatedId']?.toString(),
+      isScheduled: map['is_scheduled'] == true || map['is_scheduled'] == 1 || map['isScheduled'] == true || map['isScheduled'] == 1,
+      isDelivered: map['is_delivered'] == true || map['is_delivered'] == 1 || map['isDelivered'] == true || map['isDelivered'] == 1,
+      isRead: map['is_read'] == true || map['is_read'] == 1 || map['isRead'] == true || map['isRead'] == 1,
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : (map['createdAt'] != null 
+              ? DateTime.parse(map['createdAt'])
+              : DateTime.now()),
       data: map['data'],
     );
   }

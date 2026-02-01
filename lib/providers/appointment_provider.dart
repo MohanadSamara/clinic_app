@@ -40,11 +40,8 @@ class AppointmentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final services = await _supabaseService.getServices();
-      _services = services.map((data) {
-        data['id'] = data['id'] ?? data['id'].hashCode;
-        return Service.fromMap(data);
-      }).toList();
+      final servicesData = await _supabaseService.getServices();
+      _services = servicesData.map((data) => Service.fromMap(data)).toList();
     } catch (e) {
       debugPrint('Error loading services: $e');
       _error = 'Error loading services: $e';
@@ -64,15 +61,12 @@ class AppointmentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final appointments = await _supabaseService.getAppointments(
-        ownerId: ownerId?.toString(),
-        doctorId: doctorId?.toString(),
+      final appointmentsData = await _supabaseService.getAppointments(
+        ownerId: ownerId,
+        doctorId: doctorId,
       );
 
-      _appointments = appointments.map((data) {
-        data['id'] = data['id'] ?? data['id'].hashCode;
-        return Appointment.fromMap(data);
-      }).toList();
+      _appointments = appointmentsData.map((data) => Appointment.fromMap(data)).toList();
     } catch (e) {
       debugPrint('Error loading appointments: $e');
       _error = 'Error loading appointments: $e';
@@ -94,8 +88,8 @@ class AppointmentProvider extends ChangeNotifier {
       final appointmentData = appointment.toMap();
       final id = await _supabaseService.insertAppointment(appointmentData);
 
-      // Create local appointment object
-      final newAppointment = appointment.copyWith(id: id.hashCode);
+      // Create local appointment object with the real ID
+      final newAppointment = appointment.copyWith(id: id);
 
       _appointments.insert(0, newAppointment);
       notifyListeners();
@@ -109,6 +103,13 @@ class AppointmentProvider extends ChangeNotifier {
           await _supabaseService.updateAppointment(id, {
             'calendar_event_id': calendarEventId,
           });
+          
+          // Update local state with calendar event ID
+          final index = _appointments.indexWhere((a) => a.id == id);
+          if (index != -1) {
+            _appointments[index] = _appointments[index].copyWith(calendarEventId: calendarEventId);
+            notifyListeners();
+          }
         }
       } catch (e) {
         debugPrint('Error adding to calendar: $e');
@@ -128,17 +129,14 @@ class AppointmentProvider extends ChangeNotifier {
   // ========== UPDATE STATUS ==========
 
   Future<bool> updateAppointmentStatus(
-    int id,
+    String id,
     String status, {
-    int? doctorId,
+    String? doctorId,
   }) async {
     try {
-      // Find the appointment in local state to get the UUID
-      final appointment = _appointments.firstWhere((a) => a.id == id);
-
       // Update in Supabase
       await _supabaseService.updateAppointmentStatus(
-        appointment.id.toString(),
+        id,
         status,
       );
 
@@ -147,16 +145,13 @@ class AppointmentProvider extends ChangeNotifier {
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
           status: status,
-          doctorId: doctorId?.toString() ?? _appointments[index].doctorId,
+          doctorId: doctorId ?? _appointments[index].doctorId,
         );
         notifyListeners();
-      }
-
-      // Create payment when doctor accepts
-      if (status == 'accepted') {
-        final apt = getAppointmentById(id);
-        if (apt != null) {
-          await _createPaymentForAppointment(apt);
+        
+        // Create payment when doctor accepts
+        if (status == 'accepted') {
+          await _createPaymentForAppointment(_appointments[index]);
         }
       }
 
@@ -175,7 +170,7 @@ class AppointmentProvider extends ChangeNotifier {
     try {
       // Update in Supabase
       await _supabaseService.updateAppointment(
-        appointment.id.toString(),
+        appointment.id!,
         appointment.toMap(),
       );
 
@@ -194,25 +189,20 @@ class AppointmentProvider extends ChangeNotifier {
   // ========== ASSIGN DOCTOR ==========
 
   Future<bool> assignDoctorToAppointment(
-    int appointmentId,
-    int doctorId,
+    String appointmentId,
+    String doctorId,
   ) async {
     try {
-      // Find the appointment in local state to get the UUID
-      final appointment = _appointments.firstWhere(
-        (a) => a.id == appointmentId,
-      );
-
       // Update in Supabase
-      await _supabaseService.updateAppointment(appointment.id.toString(), {
-        'doctor_id': doctorId.toString(),
+      await _supabaseService.updateAppointment(appointmentId, {
+        'doctor_id': doctorId,
       });
 
       // Update local state
       final index = _appointments.indexWhere((a) => a.id == appointmentId);
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
-          doctorId: doctorId.toString(),
+          doctorId: doctorId,
         );
         notifyListeners();
       }
@@ -227,25 +217,20 @@ class AppointmentProvider extends ChangeNotifier {
   // ========== ASSIGN DRIVER ==========
 
   Future<bool> assignDriverToAppointment(
-    int appointmentId,
-    int driverId,
+    String appointmentId,
+    String driverId,
   ) async {
     try {
-      // Find the appointment in local state to get the UUID
-      final appointment = _appointments.firstWhere(
-        (a) => a.id == appointmentId,
-      );
-
       // Update in Supabase
-      await _supabaseService.updateAppointment(appointment.id.toString(), {
-        'driver_id': driverId.toString(),
+      await _supabaseService.updateAppointment(appointmentId, {
+        'driver_id': driverId,
       });
 
       // Update local state
       final index = _appointments.indexWhere((a) => a.id == appointmentId);
       if (index != -1) {
         _appointments[index] = _appointments[index].copyWith(
-          driverId: driverId.toString(),
+          driverId: driverId,
         );
         notifyListeners();
       }
@@ -259,7 +244,7 @@ class AppointmentProvider extends ChangeNotifier {
 
   // ========== HELPERS ==========
 
-  Appointment? getAppointmentById(int id) {
+  Appointment? getAppointmentById(String id) {
     try {
       return _appointments.firstWhere((a) => a.id == id);
     } catch (e) {
@@ -267,15 +252,15 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
-  List<Appointment> getAppointmentsByOwner(int ownerId) {
+  List<Appointment> getAppointmentsByOwner(String ownerId) {
     return _appointments
-        .where((a) => a.ownerId.toString() == ownerId.toString())
+        .where((a) => a.ownerId == ownerId)
         .toList();
   }
 
-  List<Appointment> getAppointmentsByDoctor(int doctorId) {
+  List<Appointment> getAppointmentsByDoctor(String doctorId) {
     return _appointments
-        .where((a) => a.doctorId?.toString() == doctorId.toString())
+        .where((a) => a.doctorId == doctorId)
         .toList();
   }
 
@@ -286,7 +271,7 @@ class AppointmentProvider extends ChangeNotifier {
       final serviceData = service.toMap();
       final id = await _supabaseService.insertService(serviceData);
 
-      final newService = service.copyWith(id: id.hashCode);
+      final newService = service.copyWith(id: id);
       _services.add(newService);
       notifyListeners();
     } catch (e) {
@@ -299,12 +284,9 @@ class AppointmentProvider extends ChangeNotifier {
     if (service.id == null) return;
 
     try {
-      // Find the service in local state to get the UUID
-      final localService = _services.firstWhere((s) => s.id == service.id);
-
       // Update in Supabase
       await _supabaseService.updateService(
-        localService.id.toString(),
+        service.id!,
         service.toMap(),
       );
 
@@ -319,13 +301,10 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteService(int id) async {
+  Future<void> deleteService(String id) async {
     try {
-      // Find the service in local state to get the UUID
-      final localService = _services.firstWhere((s) => s.id == id);
-
       // Delete from Supabase
-      await _supabaseService.deleteService(localService.id.toString());
+      await _supabaseService.deleteService(id);
 
       _services.removeWhere((s) => s.id == id);
       notifyListeners();
@@ -347,15 +326,15 @@ class AppointmentProvider extends ChangeNotifier {
           'INV-${appointment.id}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
 
       final paymentData = {
-        'appointment_id': appointment.id.toString(),
-        'user_id': appointment.ownerId.toString(),
+        'appointment_id': appointment.id,
+        'user_id': appointment.ownerId,
         'subtotal': subtotal,
         'tax': tax,
         'total': total,
         'currency': 'JOD',
         'method': appointment.paymentMethod ?? 'cash',
         'status': 'pending',
-        'service_description': appointment.serviceType ?? 'Veterinary Service',
+        'service_description': appointment.serviceType,
         'invoice_number': invoiceNumber,
       };
 

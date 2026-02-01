@@ -26,7 +26,6 @@ class ServiceProvider extends ChangeNotifier {
 
   Future<void> loadServices({String? category, bool? activeOnly}) async {
     _isLoading = true;
-    // Removed notifyListeners() here to prevent calling during build
 
     try {
       final data = await _supabaseService.getServices(
@@ -34,11 +33,7 @@ class ServiceProvider extends ChangeNotifier {
         activeOnly: activeOnly,
       );
 
-      // Convert String UUID to int for backward compatibility
-      _services = data.map((item) {
-        item['id'] = (item['id'] as String).hashCode;
-        return Service.fromMap(item);
-      }).toList();
+      _services = data.map((item) => Service.fromMap(item)).toList();
     } catch (e) {
       debugPrint('Error loading services: $e');
     } finally {
@@ -53,10 +48,7 @@ class ServiceProvider extends ChangeNotifier {
       serviceData.remove('id'); // Remove id for insert
 
       final id = await _supabaseService.insertService(serviceData);
-      // Convert String UUID to int for backward compatibility
-      final idInt = id.hashCode;
-
-      final newService = service.copyWith(id: idInt);
+      final newService = service.copyWith(id: id);
       _services.add(newService);
       notifyListeners();
       return true;
@@ -70,8 +62,7 @@ class ServiceProvider extends ChangeNotifier {
     if (service.id == null) return false;
 
     try {
-      final idStr = service.id.toString();
-      await _supabaseService.updateService(idStr, service.toMap());
+      await _supabaseService.updateService(service.id!, service.toMap());
 
       final index = _services.indexWhere((s) => s.id == service.id);
       if (index != -1) {
@@ -85,13 +76,11 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteService(dynamic id) async {
+  Future<bool> deleteService(String id) async {
     try {
-      final idStr = id.toString();
-      await _supabaseService.deleteService(idStr);
+      await _supabaseService.deleteService(id);
 
-      final idInt = id is int ? id : id.hashCode;
-      _services.removeWhere((s) => s.id == idInt);
+      _services.removeWhere((s) => s.id == id);
       notifyListeners();
       return true;
     } catch (e) {
@@ -104,10 +93,9 @@ class ServiceProvider extends ChangeNotifier {
     return _services.where((service) => service.category == category).toList();
   }
 
-  Service? getServiceById(dynamic id) {
-    final idInt = id is int ? id : id.hashCode;
+  Service? getServiceById(String id) {
     try {
-      return _services.firstWhere((service) => service.id == idInt);
+      return _services.firstWhere((service) => service.id == id);
     } catch (e) {
       return null;
     }
