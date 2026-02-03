@@ -7,7 +7,6 @@ import '../services/supabase_complete_service.dart';
 import '../models/service_request.dart';
 import '../models/user.dart';
 import '../models/appointment.dart';
-import '../providers/auth_provider.dart';
 
 /// ServiceRequestProvider - Supabase Database Integration
 ///
@@ -28,7 +27,7 @@ class ServiceRequestProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<void> loadServiceRequests({
-    dynamic? assignedDoctorId,
+    dynamic assignedDoctorId,
     String? status,
     String? requestType,
   }) async {
@@ -57,7 +56,7 @@ class ServiceRequestProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadEmergencyCases({dynamic? assignedDoctorId}) async {
+  Future<void> loadEmergencyCases({dynamic assignedDoctorId}) async {
     await loadServiceRequests(
       assignedDoctorId: assignedDoctorId?.toString(),
       status: 'pending',
@@ -69,7 +68,7 @@ class ServiceRequestProvider extends ChangeNotifier {
     dynamic requestId,
     String status, {
     String? rejectionReason,
-    dynamic? assignedDoctorId,
+    dynamic assignedDoctorId,
   }) async {
     try {
       final updateData = <String, dynamic>{
@@ -160,8 +159,8 @@ class ServiceRequestProvider extends ChangeNotifier {
       );
 
       // Create a basic appointment object for local reference
-      final createdAppointment = Appointment(
-        id: appointmentId.hashCode,
+      Appointment(
+        id: appointmentId,
         ownerId: serviceRequest.ownerId,
         petId: serviceRequest.petId,
         serviceType: 'Emergency Care',
@@ -174,7 +173,7 @@ class ServiceRequestProvider extends ChangeNotifier {
         urgencyLevel: 'emergency',
         locationLat: serviceRequest.latitude,
         locationLng: serviceRequest.longitude,
-        serviceRequestId: serviceRequest.id?.hashCode,
+        serviceRequestId: serviceRequest.id,
       );
 
       return true;

@@ -269,6 +269,21 @@ class SupabaseCompleteService {
           .toList();
     }
 
+    // Fetch services and associate with appointments
+    final servicesResponse = await servicesTable.select();
+    final services = List<Map<String, dynamic>>.from(servicesResponse);
+    final serviceMap = {
+      for (final service in services) service['name']: service,
+    };
+
+    // Add service data to each appointment
+    for (final appointment in results) {
+      final serviceType = appointment['service_type'] as String?;
+      if (serviceType != null && serviceMap.containsKey(serviceType)) {
+        appointment['service'] = serviceMap[serviceType];
+      }
+    }
+
     return results;
   }
 

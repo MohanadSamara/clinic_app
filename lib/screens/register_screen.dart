@@ -325,64 +325,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Social buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _googleSignUp,
-                      icon: Icon(Icons.g_mobiledata, color: colorScheme.error),
-                      label: Text(
-                        context.tr('google'),
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(
-                          color: colorScheme.outline.withOpacity(0.15),
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        backgroundColor: colorScheme.surface,
-                        foregroundColor: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _facebookSignUp,
-                      icon: Icon(Icons.facebook, color: colorScheme.secondary),
-                      label: Text(
-                        context.tr('facebook'),
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(
-                          color: colorScheme.outline.withOpacity(0.15),
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        backgroundColor: colorScheme.surface,
-                        foregroundColor: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Social Sign Up Buttons
+              _buildSocialSignUpButtons(),
 
               const SizedBox(height: 32),
 
@@ -532,51 +478,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _facebookSignUp() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-
-    setState(() => _loading = true);
-    try {
-      await auth.signInWithFacebook();
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          if (auth.needsRoleSelection) {
-            final pending = auth.pendingSocialUser!;
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => RoleSelectionScreen(
-                  name: pending['name'],
-                  email: pending['email'],
-                  provider: pending['provider'],
-                  providerId: pending['providerId'],
-                ),
-              ),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const RoleBasedHome()),
-            );
-          }
-        });
-      }
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Widget _buildSocialSignUpButtons() {
+    final auth = Provider.of<AuthProvider>(context);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Google Sign Up Button
+        _buildSocialButton(
+          icon: Icons.g_mobiledata,
+          label: 'Google',
+          onPressed: _googleSignUp,
+          isLoading: auth.isLoading,
+        ),
+        const SizedBox(width: 16),
+      ],
+    );
+  }
+
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required bool isLoading,
+  }) {
+    return SizedBox(
+      width: 150,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: Icon(icon, size: 24, color: Colors.black87),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.grey.shade300),
+          ),
+        ),
       ),
     );
   }

@@ -147,7 +147,11 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
       );
 
       if (_isEditing) {
-        await vanProvider.updateVan(_editingVan!.id!, van);
+        final editingId = _editingVan?.id;
+        if (editingId == null) {
+          throw ArgumentError('Editing van must have an ID');
+        }
+        await vanProvider.updateVan(editingId, van);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.tr('vanUpdatedSuccessfully'))),
         );
@@ -215,18 +219,26 @@ class _VanManagementScreenState extends State<VanManagementScreen> {
   Future<void> _assignVanToPair(Van van, Map<String, dynamic> pair) async {
     final doctor = pair['doctor'] as User;
     final driver = pair['driver'] as User;
+    final vanId = van.id;
+
+    if (vanId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: Van has no ID')));
+      return;
+    }
 
     try {
       final vanProvider = context.read<VanProvider>();
       await vanProvider.assignVanToDoctorAndDriver(
-        van.id!,
-        doctor.id!,
-        driver.id!,
+        vanId: vanId,
+        driverUserId: driver.id!,
+        doctorUserId: doctor.id!,
       );
 
       // Update the van's area to match the doctor's area
       final updatedVan = van.copyWith(area: doctor.area);
-      await vanProvider.updateVan(van.id!, updatedVan);
+      await vanProvider.updateVan(vanId, updatedVan);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

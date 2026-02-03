@@ -11,7 +11,6 @@ import '../../theme/app_theme.dart';
 import '../../components/ui_kit.dart';
 import '../../../translations.dart';
 
-
 class MedicalDocumentsScreen extends StatefulWidget {
   const MedicalDocumentsScreen({super.key});
 
@@ -46,7 +45,6 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
   }
 
   Future<void> _downloadDocument(Document document) async {
-    
     setState(() => _isLoading = true);
 
     try {
@@ -61,13 +59,15 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
           SnackBar(content: Text(context.tr('documentDownloadedSuccessfully'))),
         );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.tr('failedToDownloadDocument'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('failedToDownloadDocument'))),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${context.tr('errorDownloadingDocument')}: $e')),
+        SnackBar(
+          content: Text('${context.tr('errorDownloadingDocument')}: $e'),
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -75,7 +75,6 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
   }
 
   Future<void> _viewAuditLogs(Document document) async {
-    
     final documentProvider = Provider.of<DocumentProvider>(
       context,
       listen: false,
@@ -118,7 +117,6 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('medicalDocuments')),
@@ -197,7 +195,9 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                   return EmptyState(
                     icon: Icons.description,
                     title: context.tr('noMedicalDocumentsFound'),
-                    message: context.tr('documentsUploadedByDoctorWillAppearHere'),
+                    message: context.tr(
+                      'documentsUploadedByDoctorWillAppearHere',
+                    ),
                   );
                 }
 
@@ -216,7 +216,12 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                             Row(
                               children: [
                                 Icon(
-                                  _getFileIcon(document.fileType),
+                                  switch (document.fileType.toLowerCase()) {
+                                    'pdf' => Icons.picture_as_pdf,
+                                    'image' => Icons.image,
+                                    'document' => Icons.description,
+                                    _ => Icons.insert_drive_file,
+                                  },
                                   color: Theme.of(context).primaryColor,
                                   size: 32,
                                 ),
@@ -347,24 +352,4 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
       ),
     );
   }
-
-  IconData _getFileIcon(String fileType) {
-    switch (fileType.toLowerCase()) {
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'image':
-        return Icons.image;
-      case 'document':
-        return Icons.description;
-      default:
-        return Icons.insert_drive_file;
-    }
-  }
 }
-
-
-
-
-
-
-

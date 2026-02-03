@@ -332,11 +332,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
 
     if (selectedVan != null) {
+      final vanId = selectedVan.id!;
       try {
         await vanProvider.assignVanToDoctorAndDriver(
-          selectedVan.id!,
-          doctor.id!,
-          driver.id!,
+          vanId: vanId,
+          driverUserId: driver.id!,
+          doctorUserId: doctor.id!,
         );
 
         ScaffoldMessenger.of(context).showSnackBar(

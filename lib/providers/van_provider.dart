@@ -1,47 +1,38 @@
-// lib/providers/van_provider.dart
-// Van Provider using Supabase as the single source of truth
-// All data synced globally across devices
-// Migrated to Supabase database (PostgreSQL) - 2026-01-31
-
 import 'package:flutter/foundation.dart';
 import '../services/supabase_complete_service.dart';
 import '../models/van.dart';
 
-/// VanProvider - Supabase Database Integration
-///
-/// Database: Supabase (PostgreSQL)
-/// Tables used: vans
-///
-/// All database operations now use Supabase client exclusively.
-/// Firestore has been completely removed.
 class VanProvider with ChangeNotifier {
+  final SupabaseCompleteService _supabaseService =
+      SupabaseCompleteService.instance;
   List<Van> _vans = [];
   bool _isLoading = false;
   String? _error;
-
-  // Supabase service instance for database operations
-  final SupabaseCompleteService _supabaseService =
-      SupabaseCompleteService.instance;
 
   List<Van> get vans => _vans;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // ========== LOAD DATA ==========
+  /// UUID validation regex - matches standard UUID format
+  static final _uuidRegex = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
+  /// Validates that a string is a valid UUID format, throws if invalid
+  void _validateUUID(String id, String fieldName) {
+    if (id.isEmpty || !_uuidRegex.hasMatch(id)) {
+      throw ArgumentError('$fieldName must be a valid UUID, got: $id');
+    }
+  }
 
   Future<void> loadVans() async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
-
-      final vansData = await _supabaseService.getAllVans();
-
-      _vans = vansData.map((data) {
-        // Convert String UUID to int for backward compatibility
-        data['id'] = (data['id'] as String).hashCode;
-        return Van.fromMap(data);
-      }).toList();
+      final data = await _supabaseService.getAllVans();
+      _vans = data.map((e) => Van.fromSupabase(e)).toList();
     } catch (e) {
       debugPrint('Error loading vans: $e');
       _error = 'Error loading vans: $e';
@@ -52,36 +43,17 @@ class VanProvider with ChangeNotifier {
     }
   }
 
-  // ========== ADD VAN ==========
-
   Future<void> addVan(Van van) async {
     try {
       _isLoading = true;
       notifyListeners();
-
-      final vanData = {
-        'name': van.name,
-        'license_plate': van.licensePlate,
-        'model': van.model,
-        'capacity': van.capacity,
-        'status': van.status,
-        'description': van.description,
-        'area': van.area,
-        'assigned_driver_id': van.assignedDriverId?.toString(),
-        'assigned_doctor_id': van.assignedDoctorId?.toString(),
-        'created_at': DateTime.now().toIso8601String(),
-      };
-
-      final vanId = await _supabaseService.insertVan(vanData);
-
-      // Convert String UUID to int for backward compatibility
-      final vanIdInt = vanId.hashCode;
-
+      final vanId = await _supabaseService.insertVan(
+        van.toSupabase()..remove('id'),
+      );
       final newVan = van.copyWith(
-        id: vanIdInt,
+        id: vanId,
         createdAt: DateTime.now().toIso8601String(),
       );
-
       _vans.add(newVan);
       notifyListeners();
     } catch (e) {
@@ -94,30 +66,17 @@ class VanProvider with ChangeNotifier {
     }
   }
 
-  // ========== UPDATE VAN ==========
-
-  Future<void> updateVan(dynamic id, Van updatedVan) async {
+  Future<void> updateVan(String id, Van updatedVan) async {
     try {
-      final idInt = id is int ? id : id.hashCode;
-      final index = _vans.indexWhere((van) => van.id == idInt);
-      if (index == -1) return;
-
-      final vanIdStr = id.toString();
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'name': updatedVan.name,
-        'license_plate': updatedVan.licensePlate,
-        'model': updatedVan.model,
-        'capacity': updatedVan.capacity,
-        'status': updatedVan.status,
-        'description': updatedVan.description,
-        'area': updatedVan.area,
-        'assigned_driver_id': updatedVan.assignedDriverId?.toString(),
-        'assigned_doctor_id': updatedVan.assignedDoctorId?.toString(),
-      });
-
-      _vans[index] = updatedVan.copyWith(id: idInt);
-      notifyListeners();
+      await _supabaseService.updateVan(
+        id,
+        updatedVan.toSupabase()..remove('id'),
+      );
+      final index = _vans.indexWhere((v) => v.id == id);
+      if (index != -1) {
+        _vans[index] = updatedVan;
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error updating van: $e');
       _error = 'Error updating van: $e';
@@ -125,19 +84,10 @@ class VanProvider with ChangeNotifier {
     }
   }
 
-  // ========== DELETE VAN ==========
-
-  Future<void> deleteVan(dynamic id) async {
+  Future<void> deleteVan(String id) async {
     try {
-      final idInt = id is int ? id : id.hashCode;
-      final index = _vans.indexWhere((van) => van.id == idInt);
-      if (index == -1) return;
-
-      final vanIdStr = id.toString();
-
-      await _supabaseService.deleteVan(vanIdStr);
-
-      _vans.removeAt(index);
+      await _supabaseService.deleteVan(id);
+      _vans.removeWhere((v) => v.id == id);
       notifyListeners();
     } catch (e) {
       debugPrint('Error deleting van: $e');
@@ -146,255 +96,170 @@ class VanProvider with ChangeNotifier {
     }
   }
 
-  // ========== GET VAN BY ID ==========
-
-  Van? getVanById(dynamic id) {
-    final idInt = id is int ? id : id.hashCode;
+  Van? getVanById(String id) {
     try {
-      return _vans.firstWhere((van) => van.id == idInt);
+      return _vans.firstWhere((v) => v.id == id);
     } catch (e) {
       return null;
     }
   }
 
-  // ========== GET VAN BY DRIVER ID ==========
-
-  Future<Van?> getVanByDriverId(dynamic driverId) async {
+  Future<Van?> getVanByDriverId(String driverId) async {
     try {
-      final driverIdStr = driverId?.toString() ?? '';
-
-      final vanData = await _supabaseService.getVanByDriverId(driverIdStr);
-
-      if (vanData == null) return null;
-
-      // Convert String UUID to int for backward compatibility
-      vanData['id'] = (vanData['id'] as String).hashCode;
-      return Van.fromMap(vanData);
+      final data = await _supabaseService.getVanByDriverId(driverId);
+      if (data == null) return null;
+      return Van.fromSupabase(data);
     } catch (e) {
       debugPrint('Error getting van by driver id: $e');
       return null;
     }
   }
 
-  // ========== GET VAN BY DOCTOR ID ==========
-
-  Future<Van?> getVanByDoctorId(dynamic doctorId) async {
+  Future<Van?> getVanByDoctorId(String doctorId) async {
     try {
-      final doctorIdStr = doctorId?.toString() ?? '';
-
-      final vanData = await _supabaseService.getVanByDoctorId(doctorIdStr);
-
-      if (vanData == null) return null;
-
-      // Convert String UUID to int for backward compatibility
-      vanData['id'] = (vanData['id'] as String).hashCode;
-      return Van.fromMap(vanData);
+      final data = await _supabaseService.getVanByDoctorId(doctorId);
+      if (data == null) return null;
+      return Van.fromSupabase(data);
     } catch (e) {
       debugPrint('Error getting van by doctor id: $e');
       return null;
     }
   }
 
-  // ========== ASSIGN VAN ==========
-
-  Future<void> assignVanToDriver(dynamic vanId, dynamic driverId) async {
-    try {
-      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
-      final index = _vans.indexWhere((van) => van.id == vanIdInt);
-      if (index == -1) return;
-
-      final vanIdStr = vanId.toString();
-      final driverIdStr = driverId?.toString() ?? '';
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'assigned_driver_id': driverIdStr,
-        'status': 'assigned',
-      });
-
-      final updatedVan = _vans[index].copyWith(
-        assignedDriverId: driverId is int ? driverId : driverId.hashCode,
-        status: 'assigned',
-      );
-
-      _vans[index] = updatedVan;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error assigning van to driver: $e');
-      _error = 'Error assigning van: $e';
-      rethrow;
-    }
-  }
-
-  Future<void> assignVanToDoctor(dynamic vanId, dynamic doctorId) async {
-    try {
-      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
-      final index = _vans.indexWhere((van) => van.id == vanIdInt);
-      if (index == -1) return;
-
-      final vanIdStr = vanId.toString();
-      final doctorIdStr = doctorId?.toString() ?? '';
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'assigned_doctor_id': doctorIdStr,
-        'status': 'assigned',
-      });
-
-      final updatedVan = _vans[index].copyWith(
-        assignedDoctorId: doctorId is int ? doctorId : doctorId.hashCode,
-        status: 'assigned',
-      );
-
-      _vans[index] = updatedVan;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error assigning van to doctor: $e');
-      _error = 'Error assigning van: $e';
-      rethrow;
-    }
-  }
-
-  Future<void> assignVanToDoctorAndDriver(
-    dynamic vanId,
-    dynamic doctorId,
-    dynamic driverId,
-  ) async {
-    try {
-      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
-      final index = _vans.indexWhere((van) => van.id == vanIdInt);
-      if (index == -1) return;
-
-      final vanIdStr = vanId.toString();
-      final doctorIdStr = doctorId?.toString() ?? '';
-      final driverIdStr = driverId?.toString() ?? '';
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'assigned_doctor_id': doctorIdStr,
-        'assigned_driver_id': driverIdStr,
-        'status': 'assigned',
-      });
-
-      final updatedVan = _vans[index].copyWith(
-        assignedDoctorId: doctorId is int ? doctorId : doctorId.hashCode,
-        assignedDriverId: driverId is int ? driverId : driverId.hashCode,
-        status: 'assigned',
-      );
-
-      _vans[index] = updatedVan;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error assigning van to doctor and driver: $e');
-      _error = 'Error assigning van: $e';
-      rethrow;
-    }
-  }
-
-  // ========== UNASSIGN VAN ==========
-
-  Future<void> unassignVanFromDriver(dynamic vanId) async {
-    try {
-      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
-      final index = _vans.indexWhere((van) => van.id == vanIdInt);
-      if (index == -1) return;
-
-      final vanIdStr = vanId.toString();
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'assigned_driver_id': null,
-        'assigned_doctor_id': null,
-        'status': 'available',
-      });
-
-      final updatedVan = _vans[index].copyWith(
-        assignedDriverId: null,
-        assignedDoctorId: null,
-        status: 'available',
-      );
-
-      _vans[index] = updatedVan;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error unassigning van from driver: $e');
-      _error = 'Error unassigning van: $e';
-      rethrow;
-    }
-  }
-
-  Future<void> unassignVanFromDoctor(dynamic vanId) async {
-    try {
-      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
-      final index = _vans.indexWhere((van) => van.id == vanIdInt);
-      if (index == -1) return;
-
-      final vanIdStr = vanId.toString();
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'assigned_doctor_id': null,
-        'assigned_driver_id': null,
-        'status': 'available',
-      });
-
-      final updatedVan = _vans[index].copyWith(
-        assignedDoctorId: null,
-        assignedDriverId: null,
-        status: 'available',
-      );
-
-      _vans[index] = updatedVan;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error unassigning van from doctor: $e');
-      _error = 'Error unassigning van: $e';
-      rethrow;
-    }
-  }
-
-  Future<void> unassignVanFromDoctorAndDriver(dynamic vanId) async {
-    try {
-      final vanIdInt = vanId is int ? vanId : vanId.hashCode;
-      final index = _vans.indexWhere((van) => van.id == vanIdInt);
-      if (index == -1) return;
-
-      final vanIdStr = vanId.toString();
-
-      await _supabaseService.updateVan(vanIdStr, {
-        'assigned_doctor_id': null,
-        'assigned_driver_id': null,
-        'status': 'available',
-      });
-
-      final updatedVan = _vans[index].copyWith(
-        assignedDoctorId: null,
-        assignedDriverId: null,
-        status: 'available',
-      );
-
-      _vans[index] = updatedVan;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error unassigning van: $e');
-      _error = 'Error unassigning van: $e';
-      rethrow;
-    }
-  }
-
-  // ========== FILTERS ==========
-
-  List<Van> getAvailableVans() {
-    return _vans.where((van) => van.isAvailable).toList();
-  }
-
-  List<Van> getAssignedVans() {
-    return _vans.where((van) => van.isAssigned).toList();
-  }
-
-  List<Van> getVansByStatus(String status) {
-    return _vans.where((van) => van.status == status).toList();
-  }
-
-  // ========== CLEAR ==========
+  List<Van> getAvailableVans() => _vans.where((v) => v.isAvailable).toList();
+  List<Van> getAssignedVans() => _vans.where((v) => v.isAssigned).toList();
+  List<Van> getVansByStatus(String status) =>
+      _vans.where((v) => v.status == status).toList();
 
   void clearError() {
     _error = null;
     notifyListeners();
   }
+
+  Future<void> assignVanToDriver(String vanId, String driverId) async {
+    _validateUUID(vanId, 'vanId');
+    _validateUUID(driverId, 'driverId');
+    await _supabaseService.updateVan(vanId, {
+      'assigned_driver_id': driverId,
+      'status': 'assigned',
+    });
+    final index = _vans.indexWhere((v) => v.id == vanId);
+    if (index != -1) {
+      _vans[index] = _vans[index].copyWith(
+        assignedDriverId: driverId,
+        status: 'assigned',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> assignVanToDoctor(String vanId, String doctorId) async {
+    _validateUUID(vanId, 'vanId');
+    _validateUUID(doctorId, 'doctorId');
+    await _supabaseService.updateVan(vanId, {
+      'assigned_doctor_id': doctorId,
+      'status': 'assigned',
+    });
+    final index = _vans.indexWhere((v) => v.id == vanId);
+    if (index != -1) {
+      _vans[index] = _vans[index].copyWith(
+        assignedDoctorId: doctorId,
+        status: 'assigned',
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Assigns a van to both a doctor and driver using their user IDs (UUIDs)
+  /// All parameters MUST be valid UUIDs - validation is enforced
+  Future<void> assignVanToDoctorAndDriver({
+    required String vanId,
+    required String driverUserId,
+    required String doctorUserId,
+  }) async {
+    _validateUUID(vanId, 'vanId');
+    _validateUUID(driverUserId, 'driverUserId');
+    _validateUUID(doctorUserId, 'doctorUserId');
+    await _supabaseService.updateVan(vanId, {
+      'assigned_driver_id': driverUserId,
+      'assigned_doctor_id': doctorUserId,
+      'status': 'assigned',
+    });
+    final index = _vans.indexWhere((v) => v.id == vanId);
+    if (index != -1) {
+      _vans[index] = _vans[index].copyWith(
+        assignedDriverId: driverUserId,
+        assignedDoctorId: doctorUserId,
+        status: 'assigned',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> unassignVanFromDriver(String vanId) async {
+    _validateUUID(vanId, 'vanId');
+    await _supabaseService.updateVan(vanId, {
+      'assigned_driver_id': null,
+      'assigned_doctor_id': null,
+      'status': 'available',
+    });
+    final index = _vans.indexWhere((v) => v.id == vanId);
+    if (index != -1) {
+      _vans[index] = _vans[index].copyWith(
+        assignedDriverId: null,
+        assignedDoctorId: null,
+        status: 'available',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> unassignVanFromDoctor(String vanId) async {
+    _validateUUID(vanId, 'vanId');
+    await _supabaseService.updateVan(vanId, {
+      'assigned_doctor_id': null,
+      'assigned_driver_id': null,
+      'status': 'available',
+    });
+    final index = _vans.indexWhere((v) => v.id == vanId);
+    if (index != -1) {
+      _vans[index] = _vans[index].copyWith(
+        assignedDoctorId: null,
+        assignedDriverId: null,
+        status: 'available',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> unassignVanFromDoctorAndDriver(String vanId) async {
+    _validateUUID(vanId, 'vanId');
+    await _supabaseService.updateVan(vanId, {
+      'assigned_doctor_id': null,
+      'assigned_driver_id': null,
+      'status': 'available',
+    });
+    final index = _vans.indexWhere((v) => v.id == vanId);
+    if (index != -1) {
+      _vans[index] = _vans[index].copyWith(
+        assignedDoctorId: null,
+        assignedDriverId: null,
+        status: 'available',
+      );
+      notifyListeners();
+    }
+  }
 }
+
+/// Example of WRONG usage:
+/// ```dart
+/// final van = Van(...);
+/// provider.assignVanToDoctorAndDriver(vanId: van.id.hashCode, ...); // ❌ WRONG - hashCode is int
+/// provider.assignVanToDoctorAndDriver(vanId: van.id.toString(), ...); // ❌ WRONG - still might be wrong
+/// ```
+///
+/// Example of CORRECT usage:
+/// ```dart
+/// final van = Van(...); // van.id is already a String UUID
+/// provider.assignVanToDoctorAndDriver(vanId: van.id, driverUserId: driver.id, doctorUserId: doctor.id);
+/// // ✅ CORRECT - all IDs are UUID strings

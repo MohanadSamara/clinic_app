@@ -376,10 +376,12 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
             color: Theme.of(context).primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            _getFileIcon(document.fileType),
-            color: Theme.of(context).primaryColor,
-          ),
+          child: Icon(switch (document.fileType.toLowerCase()) {
+            'pdf' => Icons.picture_as_pdf,
+            'image' => Icons.image,
+            'document' => Icons.description,
+            _ => Icons.insert_drive_file,
+          }, color: Theme.of(context).primaryColor),
         ),
         title: Text(
           document.fileName,
@@ -444,19 +446,6 @@ class _MedicalRecordDetailScreenState extends State<MedicalRecordDetailScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getFileIcon(String fileType) {
-    switch (fileType.toLowerCase()) {
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'image':
-        return Icons.image;
-      case 'document':
-        return Icons.description;
-      default:
-        return Icons.insert_drive_file;
-    }
   }
 
   void _editRecord() {

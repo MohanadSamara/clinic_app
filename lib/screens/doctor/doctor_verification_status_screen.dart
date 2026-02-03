@@ -123,18 +123,6 @@ class _DoctorVerificationStatusScreenState
     }
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'approved':
-        return Icons.check_circle;
-      case 'rejected':
-        return Icons.cancel;
-      case 'pending':
-      default:
-        return Icons.pending;
-    }
-  }
-
   String _getStatusText(String status) {
     switch (status) {
       case 'approved':
@@ -158,7 +146,11 @@ class _DoctorVerificationStatusScreenState
             Row(
               children: [
                 Icon(
-                  _getStatusIcon(_overallStatus),
+                  switch (_overallStatus) {
+                    'approved' => Icons.check_circle,
+                    'rejected' => Icons.cancel,
+                    _ => Icons.pending,
+                  },
                   color: _getStatusColor(_overallStatus),
                   size: 24,
                 ),
@@ -308,10 +300,11 @@ class _DoctorVerificationStatusScreenState
                 return Column(
                   children: [
                     ListTile(
-                      leading: Icon(
-                        _getStatusIcon(status),
-                        color: _getStatusColor(status),
-                      ),
+                      leading: Icon(switch (status) {
+                        'approved' => Icons.check_circle,
+                        'rejected' => Icons.cancel,
+                        _ => Icons.pending,
+                      }, color: _getStatusColor(status)),
                       title: Text(
                         _getDocumentTitle(documentType),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(

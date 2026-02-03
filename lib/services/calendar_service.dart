@@ -30,10 +30,22 @@ class CalendarService {
 
       final account = await _googleSignIn!.signInSilently();
       if (account == null) {
-        // User needs to sign in
-        final account = await _googleSignIn!.signIn();
-        if (account == null) {
-          return false; // User cancelled
+        // User needs to sign in - try interactive sign in
+        try {
+          final account = await _googleSignIn!.signIn();
+          if (account == null) {
+            // User cancelled the sign-in popup
+            return false;
+          }
+        } catch (e) {
+          // Handle popup_closed error gracefully
+          if (e.toString().contains('popup_closed') ||
+              e.toString().contains('sign_in_canceled')) {
+            print('User cancelled Google Calendar sign-in');
+            return false;
+          }
+          // Re-throw other errors
+          rethrow;
         }
       }
 
@@ -53,6 +65,12 @@ class CalendarService {
 
       return true;
     } catch (e) {
+      // Handle popup_closed error gracefully
+      if (e.toString().contains('popup_closed') ||
+          e.toString().contains('sign_in_canceled')) {
+        print('User cancelled Google Calendar sign-in');
+        return false;
+      }
       print('Error authenticating for calendar: $e');
       return false;
     }
@@ -187,10 +205,3 @@ Urgency: ${appointment.urgencyLevel}
     return [];
   }
 }
-
-
-
-
-
-
-

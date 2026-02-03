@@ -266,12 +266,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   }
 
   void _addToCalendar(Appointment appointment) async {
+    // Show confirmation dialog for adding to calendar
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Appointment'),
+        title: const Text('Add to Calendar'),
         content: const Text(
-          'Are you sure you want to confirm this appointment? It will be added to your calendar after payment.',
+          'Would you like to add this appointment to your Google Calendar?',
         ),
         actions: [
           TextButton(
@@ -280,20 +281,30 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Yes, Confirm'),
+            child: const Text('Yes, Add to Calendar'),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
+      // Add to Google Calendar
       final success = await context
           .read<AppointmentProvider>()
-          .updateAppointmentStatus(appointment.id!, 'confirmed');
+          .addAppointmentToCalendar(appointment.id!);
+
       if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Appointment confirmed')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Appointment added to calendar')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Failed to add to calendar. You can add it manually.',
+            ),
+          ),
+        );
       }
     }
   }
@@ -395,6 +406,37 @@ class _AppointmentCard extends StatelessWidget {
               ),
 
               const SizedBox(height: 16),
+
+              // Service details if available
+              if (appointment.service != null) ...[
+                _buildDetailRow(
+                  context,
+                  Icons.category,
+                  'Category',
+                  appointment.service!.category.isNotEmpty
+                      ? appointment.service!.category[0].toUpperCase() +
+                            appointment.service!.category.substring(1)
+                      : 'General',
+                ),
+                if (appointment.service!.description.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Service Description',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    appointment.service!.description,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+              ],
 
               // Appointment details
               _buildDetailRow(
@@ -709,10 +751,3 @@ class _AppointmentCard extends StatelessWidget {
     }
   }
 }
-
-
-
-
-
-
-

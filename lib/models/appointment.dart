@@ -1,4 +1,6 @@
 // lib/models/appointment.dart
+import 'service.dart';
+
 class Appointment {
   final String? id;
   final String ownerId;
@@ -19,6 +21,7 @@ class Appointment {
   final String? calendarEventId;
   final String? paymentMethod; // 'online', 'cash'
   final String? serviceRequestId;
+  final Service? service;
 
   Appointment({
     this.id,
@@ -40,6 +43,7 @@ class Appointment {
     this.calendarEventId,
     this.paymentMethod,
     this.serviceRequestId,
+    this.service,
   });
 
   Map<String, dynamic> toMap() => {
@@ -60,6 +64,7 @@ class Appointment {
     'calendar_event_id': calendarEventId,
     'payment_method': paymentMethod,
     'service_request_id': serviceRequestId,
+    if (service != null) 'service': service!.toMap(),
   };
 
   Map<String, dynamic> toJson() => toMap();
@@ -88,6 +93,9 @@ class Appointment {
     calendarEventId: m['calendar_event_id']?.toString(),
     paymentMethod: m['payment_method']?.toString(),
     serviceRequestId: m['service_request_id']?.toString(),
+    service: m['service'] != null
+        ? Service.fromMap(m['service'] as Map<String, dynamic>)
+        : null,
   );
 
   Appointment copyWith({
@@ -110,6 +118,7 @@ class Appointment {
     String? calendarEventId,
     String? paymentMethod,
     String? serviceRequestId,
+    Service? service,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -131,6 +140,7 @@ class Appointment {
       calendarEventId: calendarEventId ?? this.calendarEventId,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       serviceRequestId: serviceRequestId ?? this.serviceRequestId,
+      service: service ?? this.service,
     );
   }
 

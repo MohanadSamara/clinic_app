@@ -42,12 +42,70 @@ class AppointmentProvider extends ChangeNotifier {
     try {
       final servicesData = await _supabaseService.getServices();
       _services = servicesData.map((data) => Service.fromMap(data)).toList();
+
+      // If no services exist, seed default services
+      if (_services.isEmpty) {
+        await _seedDefaultServices();
+      }
     } catch (e) {
       debugPrint('Error loading services: $e');
       _error = 'Error loading services: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _seedDefaultServices() async {
+    final defaultServices = [
+      Service(
+        name: 'Live Checkup',
+        description:
+            'A comprehensive health check for your pet performed at your location',
+        price: 35.0,
+        category: 'checkup',
+      ),
+      Service(
+        name: 'Vaccination',
+        description:
+            'Essential vaccinations to protect your pet from common diseases',
+        price: 50.0,
+        category: 'vaccination',
+      ),
+      Service(
+        name: 'Emergency Visit',
+        description:
+            'Urgent veterinary care for your pet in critical situations',
+        price: 100.0,
+        category: 'emergency',
+      ),
+      Service(
+        name: 'Dental Cleaning',
+        description: 'Professional teeth cleaning for your pet\'s oral health',
+        price: 75.0,
+        category: 'dental',
+      ),
+      Service(
+        name: 'Surgery Consultation',
+        description: 'Pre-surgical evaluation and consultation',
+        price: 60.0,
+        category: 'surgery',
+      ),
+      Service(
+        name: 'Grooming',
+        description:
+            'Full grooming service including bath, trim, and nail clipping',
+        price: 45.0,
+        category: 'grooming',
+      ),
+    ];
+
+    for (final service in defaultServices) {
+      try {
+        await addService(service);
+      } catch (e) {
+        debugPrint('Error seeding service ${service.name}: $e');
+      }
     }
   }
 
@@ -66,7 +124,9 @@ class AppointmentProvider extends ChangeNotifier {
         doctorId: doctorId,
       );
 
-      _appointments = appointmentsData.map((data) => Appointment.fromMap(data)).toList();
+      _appointments = appointmentsData
+          .map((data) => Appointment.fromMap(data))
+          .toList();
     } catch (e) {
       debugPrint('Error loading appointments: $e');
       _error = 'Error loading appointments: $e';
@@ -84,7 +144,7 @@ class AppointmentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Add to Supabase
+      // Add to Supabase - save appointment first
       final appointmentData = appointment.toMap();
       final id = await _supabaseService.insertAppointment(appointmentData);
 
@@ -93,27 +153,6 @@ class AppointmentProvider extends ChangeNotifier {
 
       _appointments.insert(0, newAppointment);
       notifyListeners();
-
-      // Schedule calendar event
-      try {
-        final calendarEventId = await CalendarService.addAppointmentToCalendar(
-          newAppointment,
-        );
-        if (calendarEventId != null) {
-          await _supabaseService.updateAppointment(id, {
-            'calendar_event_id': calendarEventId,
-          });
-          
-          // Update local state with calendar event ID
-          final index = _appointments.indexWhere((a) => a.id == id);
-          if (index != -1) {
-            _appointments[index] = _appointments[index].copyWith(calendarEventId: calendarEventId);
-            notifyListeners();
-          }
-        }
-      } catch (e) {
-        debugPrint('Error adding to calendar: $e');
-      }
 
       return true;
     } catch (e) {
@@ -126,6 +165,37 @@ class AppointmentProvider extends ChangeNotifier {
     }
   }
 
+  // ========== ADD TO CALENDAR ==========
+
+  Future<bool> addAppointmentToCalendar(String appointmentId) async {
+    try {
+      final index = _appointments.indexWhere((a) => a.id == appointmentId);
+      if (index == -1) return false;
+
+      final appointment = _appointments[index];
+      final calendarEventId = await CalendarService.addAppointmentToCalendar(
+        appointment,
+      );
+
+      if (calendarEventId != null) {
+        await _supabaseService.updateAppointment(appointmentId, {
+          'calendar_event_id': calendarEventId,
+        });
+
+        // Update local state with calendar event ID
+        _appointments[index] = _appointments[index].copyWith(
+          calendarEventId: calendarEventId,
+        );
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error adding appointment to calendar: $e');
+      return false;
+    }
+  }
+
   // ========== UPDATE STATUS ==========
 
   Future<bool> updateAppointmentStatus(
@@ -135,10 +205,7 @@ class AppointmentProvider extends ChangeNotifier {
   }) async {
     try {
       // Update in Supabase
-      await _supabaseService.updateAppointmentStatus(
-        id,
-        status,
-      );
+      await _supabaseService.updateAppointmentStatus(id, status);
 
       // Update local state
       final index = _appointments.indexWhere((a) => a.id == id);
@@ -148,7 +215,7 @@ class AppointmentProvider extends ChangeNotifier {
           doctorId: doctorId ?? _appointments[index].doctorId,
         );
         notifyListeners();
-        
+
         // Create payment when doctor accepts
         if (status == 'accepted') {
           await _createPaymentForAppointment(_appointments[index]);
@@ -253,15 +320,11 @@ class AppointmentProvider extends ChangeNotifier {
   }
 
   List<Appointment> getAppointmentsByOwner(String ownerId) {
-    return _appointments
-        .where((a) => a.ownerId == ownerId)
-        .toList();
+    return _appointments.where((a) => a.ownerId == ownerId).toList();
   }
 
   List<Appointment> getAppointmentsByDoctor(String doctorId) {
-    return _appointments
-        .where((a) => a.doctorId == doctorId)
-        .toList();
+    return _appointments.where((a) => a.doctorId == doctorId).toList();
   }
 
   // ========== SERVICES ==========
@@ -285,10 +348,7 @@ class AppointmentProvider extends ChangeNotifier {
 
     try {
       // Update in Supabase
-      await _supabaseService.updateService(
-        service.id!,
-        service.toMap(),
-      );
+      await _supabaseService.updateService(service.id!, service.toMap());
 
       final index = _services.indexWhere((s) => s.id == service.id);
       if (index != -1) {
@@ -328,6 +388,7 @@ class AppointmentProvider extends ChangeNotifier {
       final paymentData = {
         'appointment_id': appointment.id,
         'user_id': appointment.ownerId,
+        'amount': subtotal, // Required field in database
         'subtotal': subtotal,
         'tax': tax,
         'total': total,

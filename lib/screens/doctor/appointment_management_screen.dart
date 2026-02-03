@@ -186,7 +186,7 @@ class _AppointmentManagementScreenState
         .updateAppointmentStatus(
           appointment.id!,
           'accepted',
-          doctorId: int.tryParse(authProvider.user?.id ?? ''),
+          doctorId: authProvider.user?.id,
         );
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -551,8 +551,24 @@ class _AppointmentCard extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    final statusColor = _getStatusColor(appointment.status);
-    final statusIcon = _getStatusIcon(appointment.status);
+    final statusColor = switch (appointment.status) {
+      'pending' => Colors.orange,
+      'accepted' => Colors.teal,
+      'confirmed' => Colors.blue,
+      'en_route' => Colors.lightBlue,
+      'arrived' => Colors.indigo,
+      'waiting' => Colors.amber,
+      'on_hold' => Colors.deepOrange,
+      'in_progress' => Colors.purple,
+      'completed' => Colors.green,
+      'cancelled' => Colors.red,
+      'no_show' => Colors.redAccent,
+      'rescheduled' => Colors.cyan,
+      'delayed' => Colors.brown,
+      'paid' => Colors.green.shade700,
+      'refunded' => Colors.orange.shade700,
+      _ => Colors.grey,
+    };
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -569,7 +585,24 @@ class _AppointmentCard extends StatelessWidget {
                     color: statusColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(statusIcon, color: statusColor),
+                  child: Icon(switch (appointment.status) {
+                    'pending' => Icons.schedule,
+                    'accepted' => Icons.thumb_up,
+                    'confirmed' => Icons.check_circle,
+                    'en_route' => Icons.directions_car,
+                    'arrived' => Icons.location_on,
+                    'waiting' => Icons.hourglass_empty,
+                    'on_hold' => Icons.pause_circle,
+                    'in_progress' => Icons.work,
+                    'completed' => Icons.done_all,
+                    'cancelled' => Icons.cancel,
+                    'no_show' => Icons.person_off,
+                    'rescheduled' => Icons.event_repeat,
+                    'delayed' => Icons.access_time,
+                    'paid' => Icons.payment,
+                    'refunded' => Icons.undo,
+                    _ => Icons.help,
+                  }, color: statusColor),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -668,79 +701,5 @@ class _AppointmentCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'accepted':
-        return Colors.teal;
-      case 'confirmed':
-        return Colors.blue;
-      case 'en_route':
-        return Colors.lightBlue;
-      case 'arrived':
-        return Colors.indigo;
-      case 'waiting':
-        return Colors.amber;
-      case 'on_hold':
-        return Colors.deepOrange;
-      case 'in_progress':
-        return Colors.purple;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'no_show':
-        return Colors.redAccent;
-      case 'rescheduled':
-        return Colors.cyan;
-      case 'delayed':
-        return Colors.brown;
-      case 'paid':
-        return Colors.green.shade700;
-      case 'refunded':
-        return Colors.orange.shade700;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.schedule;
-      case 'accepted':
-        return Icons.thumb_up;
-      case 'confirmed':
-        return Icons.check_circle;
-      case 'en_route':
-        return Icons.directions_car;
-      case 'arrived':
-        return Icons.location_on;
-      case 'waiting':
-        return Icons.hourglass_empty;
-      case 'on_hold':
-        return Icons.pause_circle;
-      case 'in_progress':
-        return Icons.work;
-      case 'completed':
-        return Icons.done_all;
-      case 'cancelled':
-        return Icons.cancel;
-      case 'no_show':
-        return Icons.person_off;
-      case 'rescheduled':
-        return Icons.event_repeat;
-      case 'delayed':
-        return Icons.access_time;
-      case 'paid':
-        return Icons.payment;
-      case 'refunded':
-        return Icons.undo;
-      default:
-        return Icons.help;
-    }
   }
 }

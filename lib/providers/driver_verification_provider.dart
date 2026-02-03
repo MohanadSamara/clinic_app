@@ -162,9 +162,7 @@ class DriverVerificationProvider extends ChangeNotifier {
   /// Calculate and update verification status based on documents
   void _calculateVerificationStatus(String driverId) {
     if (_documents.isEmpty) {
-      _verificationStatus = DriverVerificationStatus(
-        driverId: int.parse(driverId),
-      );
+      _verificationStatus = DriverVerificationStatus(driverId: driverId);
       return;
     }
 
@@ -220,7 +218,7 @@ class DriverVerificationProvider extends ChangeNotifier {
     );
 
     _verificationStatus = DriverVerificationStatus(
-      driverId: int.parse(driverId),
+      driverId: driverId,
       overallStatus: overallStatus,
       lastUpdated: DateTime.now(),
       totalDocuments: _documents.length,
@@ -321,7 +319,7 @@ class DriverVerificationProvider extends ChangeNotifier {
 
       // Create document record
       final document = DriverVerificationDocument(
-        driverId: int.parse(driverId),
+        driverId: driverId,
         documentType: documentType,
         fileName: fileName,
         filePath: downloadUrl,
@@ -340,7 +338,7 @@ class DriverVerificationProvider extends ChangeNotifier {
           ..['file_path'] = downloadUrl
           ..['encryption_key'] = encryptionKey,
       );
-      final id = int.tryParse(idStr ?? '');
+      final id = idStr ?? '';
       final newDocument = document.copyWith(id: id);
 
       // Add audit log
@@ -385,14 +383,14 @@ class DriverVerificationProvider extends ChangeNotifier {
         _documents[index] = _documents[index].copyWith(
           status: 'approved',
           reviewDate: DateTime.now(),
-          reviewerId: reviewerId != null ? int.parse(reviewerId) : null,
+          reviewerId: reviewerId,
           reviewNotes: notes,
         );
         _calculateVerificationStatus(_documents[index].driverId.toString());
       }
 
       await _addAuditLog(
-        int.parse(documentId),
+        documentId,
         'verify',
         'Document approved${notes != null ? ': $notes' : ''}',
       );
@@ -429,17 +427,13 @@ class DriverVerificationProvider extends ChangeNotifier {
         _documents[index] = _documents[index].copyWith(
           status: 'rejected',
           reviewDate: DateTime.now(),
-          reviewerId: reviewerId != null ? int.parse(reviewerId) : null,
+          reviewerId: reviewerId,
           reviewNotes: reason,
         );
         _calculateVerificationStatus(_documents[index].driverId.toString());
       }
 
-      await _addAuditLog(
-        int.parse(documentId),
-        'reject',
-        'Document rejected: $reason',
-      );
+      await _addAuditLog(documentId, 'reject', 'Document rejected: $reason');
 
       Future.microtask(() => notifyListeners());
       return true;
@@ -472,7 +466,7 @@ class DriverVerificationProvider extends ChangeNotifier {
       await supabaseService.deleteDriverVerificationDocument(documentId);
 
       // Add audit log
-      await _addAuditLog(int.parse(documentId), 'delete', 'Document deleted');
+      await _addAuditLog(documentId, 'delete', 'Document deleted');
 
       _documents.removeWhere((doc) => doc.id == documentId);
       _calculateVerificationStatus(document.driverId.toString());
@@ -588,7 +582,7 @@ class DriverVerificationProvider extends ChangeNotifier {
   }
 
   Future<void> _addAuditLog(
-    int documentId,
+    String documentId,
     String action,
     String details,
   ) async {
@@ -596,7 +590,7 @@ class DriverVerificationProvider extends ChangeNotifier {
 
     final auditLog = DriverVerificationAuditLog(
       documentId: documentId,
-      userId: int.parse(_authProvider.user!.id!),
+      userId: _authProvider.user!.id!,
       action: action,
       timestamp: DateTime.now(),
       details: details,

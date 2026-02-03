@@ -20,7 +20,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPayments();
+    // Defer the call until after the first frame to avoid build-phase conflicts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPayments();
+    });
   }
 
   Future<void> _loadPayments() async {
