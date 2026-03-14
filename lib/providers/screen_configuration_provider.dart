@@ -24,9 +24,9 @@ class ScreenConfigurationProvider with ChangeNotifier {
 
   // Get enabled and visible configurations for a role
   List<ScreenConfiguration> getVisibleScreensForRole(String role) {
-    return getConfigurationsForRole(role)
-        .where((config) => config.isEnabled && config.isVisible)
-        .toList();
+    return getConfigurationsForRole(
+      role,
+    ).where((config) => config.isEnabled && config.isVisible).toList();
   }
 
   // Get configuration by screen ID and role
@@ -79,13 +79,15 @@ class ScreenConfigurationProvider with ChangeNotifier {
     _currentRole = role;
     try {
       final supabaseService = SupabaseCompleteService.instance;
-      final configs = await supabaseService.getScreenConfigurationsForRole(role);
-      
+      final configs = await supabaseService.getScreenConfigurationsForRole(
+        role,
+      );
+
       // Remove existing configs for this role
       _configurations.removeWhere(
         (config) => config.role.toLowerCase() == role.toLowerCase(),
       );
-      
+
       // Add new configs
       _configurations.addAll(
         configs.map((map) => ScreenConfiguration.fromMap(map)),
@@ -109,11 +111,13 @@ class ScreenConfigurationProvider with ChangeNotifier {
     _setLoading(true);
     try {
       final supabaseService = SupabaseCompleteService.instance;
-      
+
       for (final role in ScreenConfiguration.availableRoles) {
         // Check if configurations exist for this role
-        final existing = await supabaseService.getScreenConfigurationsForRole(role);
-        
+        final existing = await supabaseService.getScreenConfigurationsForRole(
+          role,
+        );
+
         if (existing.isEmpty) {
           // Insert default configurations
           final defaults = ScreenConfiguration.getDefaultScreensForRole(role);
@@ -122,7 +126,7 @@ class ScreenConfigurationProvider with ChangeNotifier {
           }
         }
       }
-      
+
       await loadConfigurations();
       _error = null;
     } catch (e) {
@@ -138,10 +142,15 @@ class ScreenConfigurationProvider with ChangeNotifier {
     _setLoading(true);
     try {
       final supabaseService = SupabaseCompleteService.instance;
-      final id = await supabaseService.insertScreenConfiguration(config.toMap());
+      final id = await supabaseService.insertScreenConfiguration(
+        config.toMap(),
+      );
       final newConfig = config.copyWith(id: id);
       _configurations.add(newConfig);
-      await _logAuditAction('create_screen_config', 'Created screen config: ${config.screenName} for ${config.role}');
+      await _logAuditAction(
+        'create_screen_config',
+        'Created screen config: ${config.screenName} for ${config.role}',
+      );
       notifyListeners();
       return true;
     } catch (e) {
@@ -159,12 +168,18 @@ class ScreenConfigurationProvider with ChangeNotifier {
     _setLoading(true);
     try {
       final supabaseService = SupabaseCompleteService.instance;
-      await supabaseService.updateScreenConfiguration(config.id!, config.toMap());
+      await supabaseService.updateScreenConfiguration(
+        config.id!,
+        config.toMap(),
+      );
       final index = _configurations.indexWhere((c) => c.id == config.id);
       if (index != -1) {
         _configurations[index] = config;
       }
-      await _logAuditAction('update_screen_config', 'Updated screen config: ${config.screenName} for ${config.role}');
+      await _logAuditAction(
+        'update_screen_config',
+        'Updated screen config: ${config.screenName} for ${config.role}',
+      );
       notifyListeners();
       return true;
     } catch (e) {
@@ -194,7 +209,11 @@ class ScreenConfigurationProvider with ChangeNotifier {
   }
 
   // Update screen sort order
-  Future<bool> updateSortOrder(String role, String screenId, int newOrder) async {
+  Future<bool> updateSortOrder(
+    String role,
+    String screenId,
+    int newOrder,
+  ) async {
     final config = getConfiguration(role, screenId);
     if (config == null) return false;
 
@@ -211,7 +230,10 @@ class ScreenConfigurationProvider with ChangeNotifier {
       final supabaseService = SupabaseCompleteService.instance;
       await supabaseService.deleteScreenConfiguration(config.id!);
       _configurations.removeWhere((c) => c.id == config.id);
-      await _logAuditAction('delete_screen_config', 'Deleted screen config: ${config.screenName} for ${config.role}');
+      await _logAuditAction(
+        'delete_screen_config',
+        'Deleted screen config: ${config.screenName} for ${config.role}',
+      );
       notifyListeners();
       return true;
     } catch (e) {
@@ -223,24 +245,32 @@ class ScreenConfigurationProvider with ChangeNotifier {
   }
 
   // Bulk update configurations for a role
-  Future<bool> bulkUpdateForRole(String role, List<ScreenConfiguration> configs) async {
+  Future<bool> bulkUpdateForRole(
+    String role,
+    List<ScreenConfiguration> configs,
+  ) async {
     _setLoading(true);
     try {
       final supabaseService = SupabaseCompleteService.instance;
-      
+
       // Delete existing configs for this role
       await supabaseService.deleteScreenConfigurationsForRole(role);
       _configurations.removeWhere(
         (config) => config.role.toLowerCase() == role.toLowerCase(),
       );
-      
+
       // Insert new configs
       for (final config in configs) {
-        final id = await supabaseService.insertScreenConfiguration(config.toMap());
+        final id = await supabaseService.insertScreenConfiguration(
+          config.toMap(),
+        );
         _configurations.add(config.copyWith(id: id));
       }
-      
-      await _logAuditAction('bulk_update_screen_configs', 'Bulk updated screen configs for $role');
+
+      await _logAuditAction(
+        'bulk_update_screen_configs',
+        'Bulk updated screen configs for $role',
+      );
       notifyListeners();
       return true;
     } catch (e) {
@@ -253,23 +283,16 @@ class ScreenConfigurationProvider with ChangeNotifier {
 
   // Reset to defaults for a role
   Future<bool> resetToDefaults(String role) async {
-    _setLoading(true);
-    try {
-      final defaults = ScreenConfiguration.getDefaultScreensForRole(role);
-      return await bulkUpdateForRole(role, defaults);
-    } catch (e) {
-      _error = 'Failed to reset configurations: $e';
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+    final defaults = ScreenConfiguration.getDefaultScreensForRole(role);
+    return bulkUpdateForRole(role, defaults);
   }
 
   // Get available icons
   Map<String, String> get availableIcons => ScreenConfiguration.iconMapping;
 
   // Get available categories
-  List<String> get availableCategories => ScreenConfiguration.availableCategories;
+  List<String> get availableCategories =>
+      ScreenConfiguration.availableCategories;
 
   // Get available roles
   List<String> get availableRoles => ScreenConfiguration.availableRoles;

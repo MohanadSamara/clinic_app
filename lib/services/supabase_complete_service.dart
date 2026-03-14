@@ -1292,6 +1292,48 @@ class SupabaseCompleteService {
       ..sort((a, b) => (a['day'] as String).compareTo(b['day'] as String));
   }
 
+  // ========== SCREEN CONFIGURATIONS ==========
+
+  Future<List<Map<String, dynamic>>> getAllScreenConfigurations() async {
+    final response = await _client.from('screen_configurations').select('*');
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<List<Map<String, dynamic>>> getScreenConfigurationsForRole(
+    String role,
+  ) async {
+    final response = await _client
+        .from('screen_configurations')
+        .select()
+        .eq('role', role)
+        .order('sort_order');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<String> insertScreenConfiguration(Map<String, dynamic> data) async {
+    final response = await _client
+        .from('screen_configurations')
+        .insert(data)
+        .select()
+        .single();
+    return response['id'] as String;
+  }
+
+  Future<void> updateScreenConfiguration(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    await _client.from('screen_configurations').update(data).eq('id', id);
+  }
+
+  Future<void> deleteScreenConfiguration(String id) async {
+    await _client.from('screen_configurations').delete().eq('id', id);
+  }
+
+  Future<void> deleteScreenConfigurationsForRole(String role) async {
+    await _client.from('screen_configurations').delete().eq('role', role);
+  }
+
   // ========== DISPOSE ==========
 
   void dispose() {}
